@@ -49,6 +49,29 @@ describe('chart layout', () => {
     });
   });
 
+  it('allocates a separate volume panel below the candle plot', () => {
+    const layout = createChartLayout(1000, 600, {
+      timeScaleHeight: 32,
+      volumeHeight: 120,
+    });
+
+    expect(layout.plotArea).toEqual({ x: 0, y: 0, width: 928, height: 448 });
+    expect(layout.volumeArea).toEqual({ x: 0, y: 448, width: 928, height: 120 });
+    expect(layout.rightPriceScaleArea.height).toBe(568);
+    expect(layout.timeScaleArea.y).toBe(568);
+  });
+
+  it('keeps a zero-height volume panel when volume is disabled', () => {
+    const layout = createChartLayout(800, 400);
+
+    expect(layout.volumeArea).toEqual({ x: 0, y: 368, width: 728, height: 0 });
+  });
+
+  it('rejects volume panels that consume the complete drawable height', () => {
+    expect(() => createChartLayout(800, 400, { volumeHeight: 368 })).toThrow(RangeError);
+    expect(() => createChartLayout(800, 400, { volumeHeight: -1 })).toThrow(RangeError);
+  });
+
   it('applies top and bottom insets without changing the outer bounds', () => {
     const layout = createChartLayout(900, 500, {
       topInset: 18,
