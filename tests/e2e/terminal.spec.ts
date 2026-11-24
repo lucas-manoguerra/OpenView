@@ -74,7 +74,7 @@ const installBinanceMock = async (page: Page): Promise<void> => {
 const webSocketRoutes = new WeakMap<Page, WebSocketRoute>();
 
 const installWebSocketMock = async (page: Page): Promise<void> => {
-  await page.routeWebSocket(/^wss:\/\/stream\\.binance\\.com:9443\/ws\//, (route) => {
+  await page.routeWebSocket(/^wss:\/\/stream\.binance\.com:9443\/ws\//, (route) => {
     webSocketRoutes.set(page, route);
   });
 };
