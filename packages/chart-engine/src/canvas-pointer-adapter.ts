@@ -80,11 +80,7 @@ export const attachCanvasPointerEvents = (
   };
 
   const handleWheel = (event: WheelEvent): void => {
-    const handled = controller.wheel(
-      getCanvasPosition(canvas, event),
-      event.deltaX,
-      event.deltaY,
-    );
+    const handled = controller.wheel(getCanvasPosition(canvas, event), event.deltaX, event.deltaY);
 
     if (handled) {
       event.preventDefault();
