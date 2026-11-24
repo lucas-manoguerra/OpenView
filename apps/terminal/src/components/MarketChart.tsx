@@ -772,7 +772,8 @@ export function MarketChart() {
 
     if (
       nextInstrument === undefined ||
-      (catalogStatus === 'ready' && !availableInstruments.some((item) => item.id === nextInstrumentId)) ||
+      (catalogStatus === 'ready' &&
+        !availableInstruments.some((item) => item.id === nextInstrumentId)) ||
       nextInstrument.id === selectedInstrumentId
     ) {
       return;
