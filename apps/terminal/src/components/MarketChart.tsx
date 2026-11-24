@@ -203,9 +203,7 @@ export function MarketChart() {
       }
 
       setOlderError(
-        cause instanceof Error
-          ? cause.message
-          : 'No se pudo cargar el bloque histórico anterior.',
+        cause instanceof Error ? cause.message : 'No se pudo cargar el bloque histórico anterior.',
       );
     } finally {
       if (requestId === requestIdRef.current) {
@@ -315,7 +313,10 @@ export function MarketChart() {
         onNeedMoreHistory={() => void loadOlderCandles()}
       />
       {(olderLoading || olderError !== null) && (
-        <div class="flex items-center justify-end gap-2 px-1 text-[11px] text-slate-500" role="status">
+        <div
+          class="flex items-center justify-end gap-2 px-1 text-[11px] text-slate-500"
+          role="status"
+        >
           {olderLoading && <span>Cargando histórico anterior…</span>}
           {olderError !== null && (
             <>
