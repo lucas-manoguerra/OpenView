@@ -8,6 +8,10 @@ import {
 type MarketWatchlistProps = Readonly<{
   instruments: readonly WatchlistInstrument[];
   availableInstruments: readonly WatchlistInstrument[];
+  availableInstrumentIds: readonly string[];
+  catalogStatus: 'loading' | 'ready' | 'unavailable';
+  catalogError: string | null;
+  providerName: string;
   selectedInstrumentId: string;
   quotes: Readonly<Record<string, QuoteUpdate>>;
   onSelect: (instrumentId: string) => void;
@@ -21,6 +25,10 @@ const formatQuoteValue = (value: number | null, maximumFractionDigits = 8): stri
 export function MarketWatchlist({
   instruments,
   availableInstruments,
+  availableInstrumentIds,
+  catalogStatus,
+  catalogError,
+  providerName,
   selectedInstrumentId,
   quotes,
   onSelect,
@@ -32,27 +40,31 @@ export function MarketWatchlist({
   const searchResults =
     normalizedSearch.length === 0
       ? []
-      : availableInstruments.filter(
-          (instrument) =>
-            !instruments.some((current) => current.id === instrument.id) &&
-            (instrument.symbol.toLocaleLowerCase().includes(normalizedSearch) ||
-              instrument.name.toLocaleLowerCase().includes(normalizedSearch) ||
-              instrument.id.toLocaleLowerCase().includes(normalizedSearch)),
-        );
+      : availableInstruments
+          .filter(
+            (instrument) =>
+              !instruments.some((current) => current.id === instrument.id) &&
+              (instrument.symbol.toLocaleLowerCase().includes(normalizedSearch) ||
+                instrument.name.toLocaleLowerCase().includes(normalizedSearch) ||
+                instrument.id.toLocaleLowerCase().includes(normalizedSearch)),
+          )
+          .slice(0, 20);
   const atCapacity = instruments.length >= MAX_WATCHLIST_INSTRUMENTS;
+  const availableIds = new Set(availableInstrumentIds);
 
   return (
     <section
       class="overflow-hidden rounded-xl border border-white/10 bg-[#0a101a]"
       aria-label="Lista de seguimiento"
       data-testid="market-watchlist"
+      data-catalog-status={catalogStatus}
     >
       <div class="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 px-3 py-2.5">
         <div class="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
           Lista de seguimiento
         </div>
         <div class="text-[10px] text-slate-600">
-          Spot · USDT · {instruments.length}/{MAX_WATCHLIST_INSTRUMENTS}
+          {providerName} · Spot · {instruments.length}/{MAX_WATCHLIST_INSTRUMENTS}
         </div>
       </div>
       <div class="border-b border-white/[0.06] p-3">
@@ -70,9 +82,21 @@ export function MarketWatchlist({
         </label>
         {normalizedSearch.length > 0 && (
           <div class="mt-2 space-y-1">
-            {searchResults.length === 0 ? (
+            {catalogStatus === 'loading' ? (
               <div class="px-2 py-2 text-xs text-slate-500" role="status">
-                No hay instrumentos disponibles en el catálogo para esta búsqueda.
+                Actualizando instrumentos disponibles…
+              </div>
+            ) : catalogStatus === 'unavailable' ? (
+              <div
+                class="px-2 py-2 text-xs text-amber-300"
+                role="status"
+                data-testid="watchlist-catalog-error"
+              >
+                {catalogError ?? 'No se pudo consultar el catálogo de este proveedor.'}
+              </div>
+            ) : searchResults.length === 0 ? (
+              <div class="px-2 py-2 text-xs text-slate-500" role="status">
+                No hay instrumentos disponibles para esta búsqueda.
               </div>
             ) : (
               searchResults.map((instrument) => (
@@ -103,8 +127,16 @@ export function MarketWatchlist({
             )}
           </div>
         )}
-        <div class="mt-1 text-[10px] text-slate-600">
-          Catálogo inicial de pares Spot USDT; la disponibilidad depende del proveedor.
+        <div
+          class="mt-1 text-[10px] text-slate-600"
+          data-testid="watchlist-catalog-status"
+          data-status={catalogStatus}
+        >
+          {catalogStatus === 'loading'
+            ? 'Consultando los mercados Spot del proveedor…'
+            : catalogStatus === 'unavailable'
+              ? 'Se conservó tu watchlist; el catálogo de búsqueda no está disponible.'
+              : 'Catálogo actualizado desde los mercados Spot del proveedor seleccionado.'}
         </div>
       </div>
       <div class="grid grid-cols-[minmax(0,1fr)_minmax(5rem,0.7fr)_4.5rem_4rem] gap-3 px-3 py-2 text-[9px] font-medium uppercase tracking-wider text-slate-600">
@@ -117,21 +149,28 @@ export function MarketWatchlist({
         {instruments.map((instrument) => {
           const quote = quotes[instrument.id];
           const change = quote?.changePercent24h ?? null;
+          const isAvailable = catalogStatus !== 'ready' || availableIds.has(instrument.id);
 
           return (
             <div
               key={instrument.id}
               class="grid grid-cols-[minmax(0,1fr)_minmax(5rem,0.7fr)_4.5rem_4rem] items-center gap-3 px-3 py-2"
+              data-instrument-availability={isAvailable ? 'available' : 'unavailable'}
             >
               <button
                 type="button"
                 aria-label={instrument.name + ' ' + instrument.symbol}
                 aria-pressed={selectedInstrumentId === instrument.id}
+                aria-disabled={!isAvailable}
+                title={
+                  isAvailable ? undefined : 'Este instrumento no está disponible en ' + providerName
+                }
                 data-testid="watchlist-instrument"
                 data-instrument-id={instrument.id}
+                disabled={!isAvailable}
                 onClick={() => onSelect(instrument.id)}
                 class={
-                  'flex min-w-0 items-center gap-2.5 rounded-lg py-1 text-left transition-colors hover:bg-white/[0.04] ' +
+                  'flex min-w-0 items-center gap-2.5 rounded-lg py-1 text-left transition-colors hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-50 ' +
                   (selectedInstrumentId === instrument.id ? 'text-blue-200' : 'text-slate-200')
                 }
               >
@@ -141,7 +180,7 @@ export function MarketWatchlist({
                 <span class="min-w-0">
                   <span class="block truncate text-xs font-semibold">{instrument.symbol}</span>
                   <span class="mt-0.5 block truncate text-[10px] text-slate-500">
-                    {instrument.name}
+                    {isAvailable ? instrument.name : 'No disponible en ' + providerName}
                   </span>
                 </span>
               </button>

@@ -94,6 +94,22 @@ const installBinanceMock = async (page: Page): Promise<void> => {
       body: JSON.stringify(candles),
     });
   });
+
+  await page.route('https://data-api.binance.vision/api/v3/exchangeInfo**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        symbols: [
+          { status: 'TRADING', isSpotTradingAllowed: true, baseAsset: 'BTC', quoteAsset: 'USDT' },
+          { status: 'TRADING', isSpotTradingAllowed: true, baseAsset: 'ETH', quoteAsset: 'USDT' },
+          { status: 'TRADING', isSpotTradingAllowed: true, baseAsset: 'SOL', quoteAsset: 'USDT' },
+          { status: 'TRADING', isSpotTradingAllowed: true, baseAsset: 'XRP', quoteAsset: 'USDT' },
+          { status: 'TRADING', isSpotTradingAllowed: true, baseAsset: 'ETH', quoteAsset: 'BTC' },
+        ],
+      }),
+    });
+  });
 };
 
 type WebSocketRoutes = Readonly<{
@@ -175,6 +191,43 @@ const installWebSocketMock = async (page: Page): Promise<void> => {
 
   await page.routeWebSocket('wss://ws.okx.com/ws/v5/public', (route) => {
     routes.okxQuotes = route;
+  });
+
+  await page.route('https://api.bybit.com/v5/market/instruments-info**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        retCode: 0,
+        retMsg: 'OK',
+        result: {
+          category: 'spot',
+          list: [
+            { status: 'Trading', baseCoin: 'BTC', quoteCoin: 'USDT' },
+            { status: 'Trading', baseCoin: 'ETH', quoteCoin: 'USDT' },
+            { status: 'Trading', baseCoin: 'SOL', quoteCoin: 'USDT' },
+            { status: 'Trading', baseCoin: 'ETH', quoteCoin: 'BTC' },
+          ],
+        },
+      }),
+    });
+  });
+
+  await page.route('https://www.okx.com/api/v5/public/instruments**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        code: '0',
+        msg: '',
+        data: [
+          { state: 'live', baseCcy: 'BTC', quoteCcy: 'USDT' },
+          { state: 'live', baseCcy: 'ETH', quoteCcy: 'USDT' },
+          { state: 'live', baseCcy: 'SOL', quoteCcy: 'USDT' },
+          { state: 'live', baseCcy: 'ETH', quoteCcy: 'BTC' },
+        ],
+      }),
+    });
   });
 };
 
@@ -421,6 +474,36 @@ test('adds, removes and restores watchlist preferences after reload', async ({ p
     'true',
   );
   await expect(page.getByRole('img', { name: /para SOL \/ USDT/ })).toBeVisible();
+});
+
+test('refreshes available instruments when the selected provider changes', async ({ page }) => {
+  await page.goto('/');
+
+  const watchlist = page.getByTestId('market-watchlist');
+  const search = page.getByTestId('watchlist-search');
+  const providerSelect = page.getByTestId('provider-select');
+
+  await expect(watchlist).toHaveAttribute('data-catalog-status', 'ready');
+
+  await search.fill('XRP');
+  await page.getByTestId('watchlist-add-instrument').click();
+  await expect(page.getByTestId('watchlist-remove-XRP-USDT')).toBeVisible();
+
+  await providerSelect.selectOption('bybit-spot');
+  await expect(watchlist).toHaveAttribute('data-catalog-status', 'ready');
+
+  const unavailableInstrument = page.getByTestId('watchlist-instrument').filter({
+    hasText: 'XRP / USDT',
+  });
+
+  await expect(unavailableInstrument).toBeDisabled();
+  await expect(unavailableInstrument).toHaveAttribute('aria-disabled', 'true');
+  await search.fill('XRP');
+  await expect(page.getByText('No hay instrumentos disponibles para esta búsqueda.')).toBeVisible();
+
+  await page.getByTestId('watchlist-remove-XRP-USDT').click();
+  await expect(page.getByTestId('watchlist-remove-XRP-USDT')).toHaveCount(0);
+  await expect(page.getByTestId('watchlist-instrument')).toHaveCount(3);
 });
 
 test('displays normalized live quotes and refreshes them across Spot providers', async ({
