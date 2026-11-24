@@ -313,9 +313,9 @@ describe('chart interaction controller', () => {
     expect(controller.snapshot.frame.timeScale.barSpacing).toBeGreaterThan(
       frame.timeScale.barSpacing,
     );
-    expect(
-      logicalIndexToCoordinate(logicalIndex, controller.snapshot.frame.timeScale),
-    ).toBeCloseTo(anchor);
+    expect(logicalIndexToCoordinate(logicalIndex, controller.snapshot.frame.timeScale)).toBeCloseTo(
+      anchor,
+    );
   });
 
   it('rejects invalid pointer, wheel and sensitivity values', () => {
