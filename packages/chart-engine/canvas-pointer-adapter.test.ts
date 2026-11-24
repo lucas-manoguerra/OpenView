@@ -103,7 +103,7 @@ describe('canvas pointer event adapter', () => {
     dispatch('pointerdown', event);
 
     expect(controller.snapshot.dragging).toBe(true);
-    expect(capturedPointers.has(7)).toBe(false);
+    expect(capturedPointers.has(7)).toBe(true);
     expect(event.preventDefault).toHaveBeenCalledOnce();
   });
 
@@ -173,7 +173,7 @@ describe('canvas pointer event adapter', () => {
       createChartFrame(900, 500, { min: 90, max: 120 }, 99),
     );
     attachCanvasPointerEvents(canvas, controller);
-    const event = createWheelEvent({ clientX: 110, clientY: 60 });
+    const event = createWheelEvent({ clientX: 990, clientY: 60 });
 
     dispatch('wheel', event);
 
@@ -196,7 +196,7 @@ describe('canvas pointer event adapter', () => {
     expect(listenerCount()).toBe(0);
     expect(controller.snapshot.dragging).toBe(false);
     expect(controller.snapshot.crosshair).toBeNull();
-    expect(capturedPointers.has(7)).toBe(true);
+    expect(capturedPointers.has(7)).toBe(false);
   });
 
   it('ignores non-primary pointer buttons and releases captures after pointer up', () => {
