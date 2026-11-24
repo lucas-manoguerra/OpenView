@@ -11,8 +11,10 @@ export {
   createChartRenderScene,
   DEFAULT_CHART_THEME,
   drawChartScene,
+  updateChartRenderScene,
   type ChartRenderCandle,
   type ChartRenderScene,
+  type ChartRenderSceneUpdate,
   type ChartRenderTheme,
 } from './canvas-painter';
 export {
@@ -27,6 +29,13 @@ export {
   type CanvasPointerAdapter,
 } from './canvas-pointer-adapter';
 export {
+  attachCanvasResizeObserver,
+  type CanvasResize,
+  type CanvasResizeAdapter,
+  type CanvasResizeAdapterOptions,
+  type CanvasResizeObserverHandle,
+} from './canvas-resize-adapter';
+export {
   CanvasRenderer,
   createCanvasRenderer,
   type CanvasFrameScheduler,
@@ -38,11 +47,14 @@ export {
   coordinateToPrice,
   createPriceScale,
   generatePriceTicks,
+  panPriceScale,
   type PriceScale,
   type PriceScaleMode,
   type PriceScaleOptions,
+  type PriceTickFormatOptions,
   type PriceScaleTick,
   priceToCoordinate,
+  zoomPriceScale,
 } from './price-scale';
 export {
   coordinateToLogicalIndex,
@@ -70,3 +82,14 @@ export {
   priceToVerticalCoordinate,
   timeToHorizontalCoordinate,
 } from './viewport';
+
+export {
+  createTimeAxisData,
+  formatTimeAxisLabel,
+  generateTimeAxisTicks,
+  selectNonOverlappingTimeAxisTicks,
+  type TimeAxisData,
+  type TimeAxisOptions,
+  type TimeAxisPoint,
+  type TimeAxisTick,
+} from './time-axis';

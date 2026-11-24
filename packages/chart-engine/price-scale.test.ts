@@ -3,7 +3,9 @@ import {
   coordinateToPrice,
   createPriceScale,
   generatePriceTicks,
+  panPriceScale,
   priceToCoordinate,
+  zoomPriceScale,
 } from './src/price-scale';
 
 describe('price scale transformations', () => {
@@ -57,12 +59,95 @@ describe('price scale transformations', () => {
     expect(coordinateToPrice(priceToCoordinate(125, scale), scale)).toBeCloseTo(125);
   });
 
+  it('pans the visible price range in the direction of a vertical drag', () => {
+    const scale = createPriceScale({ min: 100, max: 200 }, 400);
+    const nextScale = panPriceScale(scale, 20);
+
+    expect(nextScale.range).toEqual({ min: 105, max: 205 });
+    expect(priceToCoordinate(150, nextScale)).toBeCloseTo(220);
+  });
+
+  it('reverses price panning direction for inverted scales', () => {
+    const scale = createPriceScale({ min: 100, max: 200 }, 400, { inverted: true });
+    const nextScale = panPriceScale(scale, 20);
+
+    expect(nextScale.range).toEqual({ min: 95, max: 195 });
+    expect(priceToCoordinate(150, nextScale)).toBeCloseTo(220);
+  });
+
+  it('zooms around the price under the cursor without moving its coordinate', () => {
+    const scale = createPriceScale({ min: 100, max: 200 }, 400);
+    const anchorCoordinate = 120;
+    const anchorPrice = coordinateToPrice(anchorCoordinate, scale);
+    const nextScale = zoomPriceScale(scale, 2, anchorCoordinate);
+
+    expect(nextScale.range.max - nextScale.range.min).toBe(50);
+    expect(priceToCoordinate(anchorPrice, nextScale)).toBeCloseTo(anchorCoordinate);
+  });
+
+  it('supports anchored zoom on logarithmic and percentage scales', () => {
+    const logarithmic = createPriceScale({ min: 10, max: 1000 }, 500, {
+      mode: 'logarithmic',
+    });
+    const percentage = createPriceScale({ min: 90, max: 110 }, 500, {
+      mode: 'percentage',
+      baseValue: 100,
+    });
+
+    for (const scale of [logarithmic, percentage]) {
+      const anchorCoordinate = 175;
+      const anchorPrice = coordinateToPrice(anchorCoordinate, scale);
+      const nextScale = zoomPriceScale(scale, 1.5, anchorCoordinate);
+
+      expect(priceToCoordinate(anchorPrice, nextScale)).toBeCloseTo(anchorCoordinate);
+    }
+  });
+
+  it('keeps the anchored price fixed on inverted price scales', () => {
+    const scale = createPriceScale({ min: 100, max: 200 }, 400, { inverted: true });
+    const anchorCoordinate = 140;
+    const anchorPrice = coordinateToPrice(anchorCoordinate, scale);
+    const nextScale = zoomPriceScale(scale, 1.8, anchorCoordinate);
+
+    expect(priceToCoordinate(anchorPrice, nextScale)).toBeCloseTo(anchorCoordinate);
+  });
+
+  it('preserves the scale mode and base value when panning', () => {
+    const scale = createPriceScale({ min: 90, max: 110 }, 400, {
+      mode: 'percentage',
+      baseValue: 100,
+      inverted: true,
+    });
+    const nextScale = panPriceScale(scale, -40);
+
+    expect(nextScale.mode).toBe('percentage');
+    expect(nextScale.baseValue).toBe(100);
+    expect(nextScale.inverted).toBe(true);
+  });
+
+  it('rejects non-finite pan and invalid zoom arguments', () => {
+    const scale = createPriceScale({ min: 100, max: 200 }, 400);
+
+    expect(() => panPriceScale(scale, Number.NaN)).toThrow(RangeError);
+    expect(() => zoomPriceScale(scale, 0, 100)).toThrow(RangeError);
+    expect(() => zoomPriceScale(scale, 2, Number.POSITIVE_INFINITY)).toThrow(RangeError);
+  });
+
   it('generates evenly spaced linear ticks with precision derived from the step', () => {
     const scale = createPriceScale({ min: 1.01, max: 1.09 }, 400);
     const ticks = generatePriceTicks(scale, 5);
 
     expect(ticks.map((tick) => tick.label)).toEqual(['1.02', '1.04', '1.06', '1.08']);
     expect(ticks.map((tick) => tick.price)).toEqual([1.02, 1.04, 1.06, 1.08]);
+  });
+
+  it('formats large price ticks with locale-aware grouping and decimal precision', () => {
+    const scale = createPriceScale({ min: 12_340, max: 12_360 }, 400);
+    const defaultTicks = generatePriceTicks(scale, 5);
+    const localizedTicks = generatePriceTicks(scale, 5, { locale: 'es-AR' });
+
+    expect(defaultTicks.map((tick) => tick.label)).toContain('12,350');
+    expect(localizedTicks.map((tick) => tick.label)).toContain('12.350');
   });
 
   it('formats percentage ticks in relative units', () => {
