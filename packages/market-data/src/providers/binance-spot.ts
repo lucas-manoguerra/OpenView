@@ -14,7 +14,7 @@ import type {
   QuoteUpdate,
 } from '../contracts';
 import { MarketDataProviderError } from '../errors';
-import { createMarketInstrument, normalizeMarketInstruments } from '../instrument-catalog';
+import { normalizeMarketInstruments, tryCreateMarketInstrument } from '../instrument-catalog';
 import {
   createReconnectingWebSocketSubscription,
   type MarketDataWebSocketConnection,
@@ -473,7 +473,11 @@ export class BinanceSpotMarketDataProvider implements MarketDataProvider {
         throw new RangeError('Binance returned an instrument without base and quote assets.');
       }
 
-      instruments.push(createMarketInstrument(baseAsset, quoteAsset));
+      const instrument = tryCreateMarketInstrument(baseAsset, quoteAsset);
+
+      if (instrument !== null) {
+        instruments.push(instrument);
+      }
     }
 
     return normalizeMarketInstruments(instruments, filter);
