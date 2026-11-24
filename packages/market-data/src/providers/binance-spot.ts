@@ -315,8 +315,8 @@ export class BinanceSpotMarketDataProvider implements MarketDataProvider {
       webSocketFactory: this.webSocketFactory,
       reconnectDelayMs: this.reconnectDelayMs,
       maxReconnectDelayMs: this.maxReconnectDelayMs,
-      onStatus: handlers.onStatus,
-      onError: handlers.onError,
+      ...(handlers.onStatus === undefined ? {} : { onStatus: handlers.onStatus }),
+      ...(handlers.onError === undefined ? {} : { onError: handlers.onError }),
       onMessage: (message, connection) => {
         const payload: unknown = JSON.parse(message);
 
