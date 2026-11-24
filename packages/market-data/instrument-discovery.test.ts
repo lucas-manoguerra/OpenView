@@ -216,9 +216,9 @@ describe('market instrument discovery service', () => {
     expect(() => new MarketInstrumentDiscoveryService(registry, { cacheTtlMs: -1 })).toThrow(
       RangeError,
     );
-    expect(() => new MarketInstrumentDiscoveryService(registry, { cacheTtlMs: Number.NaN })).toThrow(
-      RangeError,
-    );
+    expect(
+      () => new MarketInstrumentDiscoveryService(registry, { cacheTtlMs: Number.NaN }),
+    ).toThrow(RangeError);
   });
 
   it('does not invoke the provider when the discovery request is already aborted', async () => {
