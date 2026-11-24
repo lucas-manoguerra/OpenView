@@ -220,9 +220,9 @@ describe('canvas chart painter', () => {
     }
 
     expect(() => createChartRenderScene(frame, [secondCandle, firstCandle])).toThrow(RangeError);
-    expect(() =>
-      createChartRenderScene(frame, [{ ...firstCandle, volume: -1 }]),
-    ).toThrow(RangeError);
+    expect(() => createChartRenderScene(frame, [{ ...firstCandle, volume: -1 }])).toThrow(
+      RangeError,
+    );
     expect(() => createChartRenderScene(frame, candles, { x: Number.NaN, y: 10 })).toThrow(
       RangeError,
     );
