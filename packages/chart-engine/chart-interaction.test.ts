@@ -1,0 +1,223 @@
+import { describe, expect, it, vi } from 'vitest';
+import { createChartFrame } from './src/chart-frame';
+import { coordinateToLogicalIndex, logicalIndexToCoordinate } from './src/time-scale';
+import { createChartInteractionController } from './src/chart-interaction';
+
+const createFrame = () =>
+  createChartFrame(900, 500, { min: 90, max: 120 }, 99, {
+    layout: {
+      leftPriceScaleWidth: 48,
+      rightPriceScaleWidth: 72,
+      topInset: 12,
+    },
+  });
+
+const centerOfPlot = (frame = createFrame()) => ({
+  x: frame.layout.plotArea.x + frame.layout.plotArea.width / 2,
+  y: frame.layout.plotArea.y + frame.layout.plotArea.height / 2,
+});
+
+describe('chart interaction controller', () => {
+  it('updates the crosshair while the pointer moves inside the plot', () => {
+    const frame = createFrame();
+    const controller = createChartInteractionController(frame);
+    const position = {
+      x: frame.layout.plotArea.x + 120,
+      y: frame.layout.plotArea.y + 80,
+    };
+
+    controller.pointerMove(position);
+
+    expect(controller.snapshot.crosshair).toEqual(position);
+    expect(controller.snapshot.dragging).toBe(false);
+    expect(controller.snapshot.frame).toBe(frame);
+  });
+
+  it('clears the crosshair when the pointer leaves the plot', () => {
+    const frame = createFrame();
+    const controller = createChartInteractionController(frame);
+
+    controller.pointerMove(centerOfPlot(frame));
+    controller.pointerMove({
+      x: frame.layout.plotArea.x + frame.layout.plotArea.width + 1,
+      y: centerOfPlot(frame).y,
+    });
+
+    expect(controller.snapshot.crosshair).toBeNull();
+  });
+
+  it('starts primary-button dragging only inside the plot area', () => {
+    const frame = createFrame();
+    const controller = createChartInteractionController(frame);
+    const center = centerOfPlot(frame);
+
+    expect(controller.pointerDown(center, 2)).toBe(false);
+    expect(controller.pointerDown({ x: 10, y: 10 })).toBe(false);
+    expect(controller.pointerDown(center)).toBe(true);
+    expect(controller.snapshot.dragging).toBe(true);
+  });
+
+  it('pans the time scale in the pointer drag direction', () => {
+    const frame = createFrame();
+    const controller = createChartInteractionController(frame);
+    const start = centerOfPlot(frame);
+    const previousIndex = 50;
+    const previousX =
+      frame.layout.plotArea.x + logicalIndexToCoordinate(previousIndex, frame.timeScale);
+
+    controller.pointerDown(start);
+    controller.pointerMove({ x: start.x + 64, y: start.y });
+
+    const nextFrame = controller.snapshot.frame;
+    const nextX =
+      nextFrame.layout.plotArea.x + logicalIndexToCoordinate(previousIndex, nextFrame.timeScale);
+
+    expect(nextFrame.timeScale.rightOffset).toBe(-8);
+    expect(nextX).toBe(previousX + 64);
+    expect(controller.snapshot.crosshair).toEqual({ x: start.x + 64, y: start.y });
+  });
+
+  it('ends a drag without losing the final crosshair position', () => {
+    const controller = createChartInteractionController(createFrame());
+    const start = centerOfPlot();
+
+    controller.pointerDown(start);
+    controller.pointerMove({ x: start.x + 30, y: start.y + 10 });
+    controller.pointerUp({ x: start.x + 30, y: start.y + 10 });
+
+    expect(controller.snapshot.dragging).toBe(false);
+    expect(controller.snapshot.crosshair).toEqual({
+      x: start.x + 30,
+      y: start.y + 10,
+    });
+  });
+
+  it('clears drag and crosshair state on pointer cancellation', () => {
+    const controller = createChartInteractionController(createFrame());
+
+    controller.pointerDown(centerOfPlot());
+    controller.pointerCancel();
+
+    expect(controller.snapshot.dragging).toBe(false);
+    expect(controller.snapshot.crosshair).toBeNull();
+  });
+
+  it('does not clear the crosshair when the pointer leaves during a captured drag', () => {
+    const controller = createChartInteractionController(createFrame());
+    const center = centerOfPlot();
+
+    controller.pointerDown(center);
+    controller.pointerLeave();
+
+    expect(controller.snapshot.dragging).toBe(true);
+    expect(controller.snapshot.crosshair).toEqual(center);
+  });
+
+  it('zooms around the logical index under the wheel pointer', () => {
+    const frame = createFrame();
+    const controller = createChartInteractionController(frame);
+    const anchor = {
+      x: frame.layout.plotArea.x + frame.layout.plotArea.width * 0.35,
+      y: frame.layout.plotArea.y + 100,
+    };
+    const localAnchorX = anchor.x - frame.layout.plotArea.x;
+    const logicalIndex = coordinateToLogicalIndex(localAnchorX, frame.timeScale);
+
+    expect(controller.wheel(anchor, 0, -120)).toBe(true);
+
+    const nextFrame = controller.snapshot.frame;
+
+    expect(nextFrame.timeScale.barSpacing).toBeGreaterThan(frame.timeScale.barSpacing);
+    expect(logicalIndexToCoordinate(logicalIndex, nextFrame.timeScale)).toBeCloseTo(localAnchorX);
+    expect(controller.snapshot.crosshair).toEqual(anchor);
+  });
+
+  it('pans horizontally for horizontal wheel input', () => {
+    const frame = createFrame();
+    const controller = createChartInteractionController(frame);
+    const anchor = centerOfPlot(frame);
+    const previousLogicalIndex = 50;
+    const previousX =
+      frame.layout.plotArea.x + logicalIndexToCoordinate(previousLogicalIndex, frame.timeScale);
+
+    expect(controller.wheel(anchor, 50, 0)).toBe(true);
+
+    const nextFrame = controller.snapshot.frame;
+    const nextX =
+      nextFrame.layout.plotArea.x +
+      logicalIndexToCoordinate(previousLogicalIndex, nextFrame.timeScale);
+
+    expect(nextX).toBe(previousX - 50);
+    expect(nextFrame.timeScale.barSpacing).toBe(frame.timeScale.barSpacing);
+  });
+
+  it('applies horizontal pan and vertical zoom for trackpad wheel deltas', () => {
+    const frame = createFrame();
+    const controller = createChartInteractionController(frame);
+
+    controller.wheel(centerOfPlot(frame), 20, -60);
+
+    expect(controller.snapshot.frame.timeScale.rightOffset).not.toBe(frame.timeScale.rightOffset);
+    expect(controller.snapshot.frame.timeScale.barSpacing).toBeGreaterThan(
+      frame.timeScale.barSpacing,
+    );
+  });
+
+  it('does not handle wheel input outside the plot or with no movement', () => {
+    const frame = createFrame();
+    const controller = createChartInteractionController(frame);
+
+    expect(controller.wheel({ x: 10, y: 10 }, 0, -100)).toBe(false);
+    expect(controller.wheel(centerOfPlot(frame), 0, 0)).toBe(false);
+  });
+
+  it('keeps the time scale within its configured zoom limits', () => {
+    const frame = createChartFrame(900, 500, { min: 90, max: 120 }, 99, {
+      timeScale: { barSpacing: 50, maxBarSpacing: 50 },
+    });
+    const controller = createChartInteractionController(frame);
+
+    controller.wheel(centerOfPlot(frame), 0, -120);
+
+    expect(controller.snapshot.frame.timeScale.barSpacing).toBe(50);
+  });
+
+  it('notifies subscribers only when interaction state changes', () => {
+    const onChange = vi.fn();
+    const controller = createChartInteractionController(createFrame(), { onChange });
+    const center = centerOfPlot();
+
+    controller.pointerMove(center);
+    controller.pointerMove(center);
+    controller.pointerLeave();
+    controller.pointerLeave();
+
+    expect(onChange).toHaveBeenCalledTimes(2);
+    expect(onChange.mock.calls[0]?.[0].crosshair).toEqual(center);
+    expect(onChange.mock.calls[1]?.[0].crosshair).toBeNull();
+  });
+
+  it('resets pointer state when the host replaces the chart frame', () => {
+    const controller = createChartInteractionController(createFrame());
+    const center = centerOfPlot();
+
+    controller.pointerDown(center);
+    controller.setFrame(createChartFrame(900, 500, { min: 80, max: 130 }, 120));
+
+    expect(controller.snapshot.dragging).toBe(false);
+    expect(controller.snapshot.crosshair).toBeNull();
+    expect(controller.snapshot.frame.priceScale.range).toEqual({ min: 80, max: 130 });
+  });
+
+  it('rejects invalid pointer, wheel and sensitivity values', () => {
+    expect(() =>
+      createChartInteractionController(createFrame(), { wheelZoomSensitivity: 0 }),
+    ).toThrow(RangeError);
+
+    const controller = createChartInteractionController(createFrame());
+
+    expect(() => controller.pointerMove({ x: Number.NaN, y: 0 })).toThrow(RangeError);
+    expect(() => controller.pointerDown({ x: 0, y: Number.POSITIVE_INFINITY })).toThrow(RangeError);
+    expect(() => controller.wheel(centerOfPlot(), 0, Number.NaN)).toThrow(RangeError);
+  });
+});
