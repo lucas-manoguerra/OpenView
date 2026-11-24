@@ -1,7 +1,7 @@
 import type { ChartCoordinate, ChartFrame } from './chart-frame';
 import { createPriceScale, panPriceScale, zoomPriceScale } from './price-scale';
 import type { NumericRange } from './viewport';
-import { panTimeScale, zoomTimeScale } from './time-scale';
+import { createTimeScale, panTimeScale, zoomTimeScale } from './time-scale';
 
 export type PointerPosition = Readonly<{
   x: number;
@@ -18,6 +18,7 @@ export type ChartInteractionSnapshot = Readonly<{
 export type ChartInteractionOptions = Readonly<{
   wheelZoomSensitivity?: number;
   onChange?: (snapshot: ChartInteractionSnapshot) => void;
+  onPriceScaleInteraction?: () => void;
 }>;
 
 type DragTarget = 'time' | 'price';
@@ -64,6 +65,8 @@ export class ChartInteractionController {
   private dragTarget: DragTarget | null = null;
   private readonly wheelZoomSensitivity: number;
   private readonly onChange: ((snapshot: ChartInteractionSnapshot) => void) | undefined;
+  private readonly onPriceScaleInteraction: (() => void) | undefined;
+  private priceScaleLocked = false;
 
   constructor(frame: ChartFrame, options: ChartInteractionOptions = {}) {
     const wheelZoomSensitivity = options.wheelZoomSensitivity ?? 0.002;
@@ -75,6 +78,7 @@ export class ChartInteractionController {
     this.frame = frame;
     this.wheelZoomSensitivity = wheelZoomSensitivity;
     this.onChange = options.onChange;
+    this.onPriceScaleInteraction = options.onPriceScaleInteraction;
   }
 
   get snapshot(): ChartInteractionSnapshot {
@@ -102,6 +106,11 @@ export class ChartInteractionController {
     }
 
     if (containsPriceScalePoint(position, this.frame)) {
+      if (this.priceScaleLocked) {
+        return false;
+      }
+
+      this.onPriceScaleInteraction?.();
       this.dragPosition = Object.freeze({ ...position });
       this.dragTarget = 'price';
       this.crosshair = null;
@@ -203,10 +212,11 @@ export class ChartInteractionController {
     }
 
     if (containsPriceScalePoint(position, this.frame)) {
-      if (deltaY === 0) {
+      if (this.priceScaleLocked || deltaY === 0) {
         return false;
       }
 
+      this.onPriceScaleInteraction?.();
       const exponent = Math.max(-20, Math.min(20, -deltaY * this.wheelZoomSensitivity));
       const zoomFactor = Math.exp(exponent);
       const anchorY = position.y - this.frame.layout.plotArea.y;
@@ -262,6 +272,91 @@ export class ChartInteractionController {
     }
 
     return timeScaleChanged || crosshairChanged;
+  }
+
+  scrollTimeByBars(bars: number): boolean {
+    if (!Number.isFinite(bars)) {
+      throw new RangeError('Time navigation distance must be a finite number.');
+    }
+
+    if (bars === 0) {
+      return false;
+    }
+
+    const deltaX =
+      (this.frame.timeScale.inverted ? 1 : -1) * bars * this.frame.timeScale.barSpacing;
+    const timeScale = panTimeScale(this.frame.timeScale, deltaX);
+
+    if (timeScale.rightOffset === this.frame.timeScale.rightOffset) {
+      return false;
+    }
+
+    this.frame = withTimeScale(this.frame, timeScale);
+    this.crosshair = null;
+    this.emit();
+    return true;
+  }
+
+  scrollToRealtime(): boolean {
+    const currentScale = this.frame.timeScale;
+
+    if (currentScale.rightOffset === 0) {
+      return false;
+    }
+
+    const timeScale = createTimeScale(currentScale.width, currentScale.rightmostLogicalIndex, {
+      barSpacing: currentScale.barSpacing,
+      rightOffset: 0,
+      minBarSpacing: currentScale.minBarSpacing,
+      maxBarSpacing: currentScale.maxBarSpacing,
+      inverted: currentScale.inverted,
+    });
+
+    this.frame = withTimeScale(this.frame, timeScale);
+    this.crosshair = null;
+    this.emit();
+    return true;
+  }
+
+  zoomTime(zoomFactor: number, anchorCoordinate = this.frame.timeScale.width / 2): boolean {
+    const timeScale = zoomTimeScale(this.frame.timeScale, zoomFactor, anchorCoordinate);
+
+    if (timeScale === this.frame.timeScale) {
+      return false;
+    }
+
+    this.frame = withTimeScale(this.frame, timeScale);
+    this.crosshair = null;
+    this.emit();
+    return true;
+  }
+
+  setPriceScaleLocked(locked: boolean): boolean {
+    if (this.priceScaleLocked === locked) {
+      return false;
+    }
+
+    this.priceScaleLocked = locked;
+
+    if (locked && this.dragTarget === 'price') {
+      this.pointerCancel();
+    }
+
+    return true;
+  }
+
+  invertPriceScale(): boolean {
+    const currentScale = this.frame.priceScale;
+    const priceScale = createPriceScale(currentScale.range, currentScale.height, {
+      mode: currentScale.mode,
+      ...(currentScale.baseValue === null ? {} : { baseValue: currentScale.baseValue }),
+      inverted: !currentScale.inverted,
+    });
+
+    this.frame = withPriceScale(this.frame, priceScale);
+    this.crosshair = null;
+    this.emit();
+    return true;
   }
 
   fitPriceScale(range: NumericRange): boolean {

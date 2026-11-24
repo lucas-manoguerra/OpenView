@@ -379,6 +379,104 @@ test('supports price axis drag, anchored zoom and double-click auto fit', async 
     .not.toBe(imageBeforeAutoFit);
 });
 
+test('changes price scale modes and restores the full chart viewport', async ({ page }) => {
+  await page.goto('/');
+
+  const canvas = page.locator('canvas[data-candles-count]');
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+
+  const logarithmicScale = page.getByTestId('price-scale-logarithmic');
+  const initialImage = await canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL());
+
+  await logarithmicScale.click();
+
+  await expect(logarithmicScale).toHaveAttribute('aria-pressed', 'true');
+  await expect
+    .poll(() => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL()))
+    .not.toBe(initialImage);
+
+  const percentageScale = page.getByTestId('price-scale-percentage');
+  await percentageScale.click();
+  await expect(percentageScale).toHaveAttribute('aria-pressed', 'true');
+
+  await page.getByTestId('chart-fit-prices').click();
+  await page.getByTestId('chart-fit-content').click();
+
+  await expect(canvas).toHaveAttribute('data-chart-ready', 'true');
+  await expect(canvas).toHaveAttribute('data-candles-count', '500');
+});
+
+test('navigates historical time, zooms the time scale and returns to realtime', async ({
+  page,
+}) => {
+  await page.goto('/');
+
+  const canvas = page.locator('canvas[data-candles-count]');
+  await expect.poll(async () => Number(await canvas.getAttribute('data-candles-count'))).toBe(500);
+
+  const initialImage = await canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL());
+
+  await page.getByTestId('chart-pan-older').click();
+  await expect
+    .poll(() => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL()))
+    .not.toBe(initialImage);
+
+  const historicalImage = await canvas.evaluate((element: HTMLCanvasElement) =>
+    element.toDataURL(),
+  );
+  await page.getByTestId('chart-pan-newer').click();
+  await expect
+    .poll(() => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL()))
+    .not.toBe(historicalImage);
+
+  const imageBeforeZoom = await canvas.evaluate((element: HTMLCanvasElement) =>
+    element.toDataURL(),
+  );
+  await page.getByTestId('chart-time-zoom-in').click();
+  await expect
+    .poll(() => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL()))
+    .not.toBe(imageBeforeZoom);
+
+  const imageBeforeRealtime = await canvas.evaluate((element: HTMLCanvasElement) =>
+    element.toDataURL(),
+  );
+  await page.getByTestId('chart-pan-older').click();
+  await page.getByTestId('chart-go-realtime').click();
+  await expect
+    .poll(() => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL()))
+    .not.toBe(imageBeforeRealtime);
+});
+
+test('exposes auto, lock and inverted price scale controls', async ({ page }) => {
+  await page.goto('/');
+
+  const canvas = page.locator('canvas[data-candles-count]');
+  await expect.poll(async () => Number(await canvas.getAttribute('data-candles-count'))).toBe(500);
+
+  const autoScale = page.getByTestId('chart-auto-scale');
+  const lockScale = page.getByTestId('chart-lock-price-scale');
+  const invertScale = page.getByTestId('chart-invert-price-scale');
+
+  await expect(autoScale).toHaveAttribute('aria-pressed', 'true');
+
+  await lockScale.click();
+  await expect(lockScale).toHaveAttribute('aria-pressed', 'true');
+  await expect(lockScale).toHaveAccessibleName('Desbloquear escala de precios');
+
+  await invertScale.click();
+  await expect(invertScale).toHaveAttribute('aria-pressed', 'true');
+
+  await autoScale.click();
+  await expect(autoScale).toHaveAttribute('aria-pressed', 'false');
+  await autoScale.click();
+  await expect(autoScale).toHaveAttribute('aria-pressed', 'true');
+
+  await lockScale.click();
+  await expect(lockScale).toHaveAttribute('aria-pressed', 'false');
+});
+
 test('renders timestamp based time labels instead of logical bar indices', async ({ page }) => {
   await page.addInitScript(() => {
     const labels: string[] = [];
