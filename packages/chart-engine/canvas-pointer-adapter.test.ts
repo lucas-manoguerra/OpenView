@@ -103,7 +103,7 @@ describe('canvas pointer event adapter', () => {
     dispatch('pointerdown', event);
 
     expect(controller.snapshot.dragging).toBe(true);
-    expect(capturedPointers.has(7)).toBe(true);
+    expect(capturedPointers.has(7)).toBe(false);
     expect(event.preventDefault).toHaveBeenCalledOnce();
   });
 
@@ -135,6 +135,22 @@ describe('canvas pointer event adapter', () => {
     expect(controller.snapshot.dragging).toBe(false);
     expect(controller.snapshot.crosshair).toBeNull();
     expect(capturedPointers.has(7)).toBe(false);
+  });
+
+  it('ignores a second pointer while a drag already owns pointer capture', () => {
+    const { canvas, dispatch, capturedPointers } = createCanvasTarget();
+    const controller = createChartInteractionController(
+      createChartFrame(900, 500, { min: 90, max: 120 }, 99),
+    );
+    attachCanvasPointerEvents(canvas, controller);
+
+    dispatch('pointerdown', createPointerEvent({ pointerId: 7 }));
+    dispatch('pointerdown', createPointerEvent({ pointerId: 12 }));
+    dispatch('pointermove', createPointerEvent({ pointerId: 12, clientX: 700 }));
+
+    expect(capturedPointers.has(7)).toBe(true);
+    expect(capturedPointers.has(12)).toBe(false);
+    expect(controller.snapshot.crosshair).toEqual({ x: 400, y: 200 });
   });
 
   it('prevents default wheel scrolling when the chart handles zoom input', () => {
