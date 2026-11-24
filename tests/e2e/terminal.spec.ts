@@ -83,3 +83,55 @@ test('updates the canvas backing store when the terminal layout changes', async 
   expect(dimensions.width).toBe(Math.round(dimensions.clientWidth * dimensions.devicePixelRatio));
   expect(dimensions.height).toBe(Math.round(dimensions.clientHeight * dimensions.devicePixelRatio));
 });
+
+test('supports price axis drag, anchored zoom and double-click auto fit', async ({ page }) => {
+  await page.goto('/');
+
+  const canvas = page.getByRole('img', {
+    name: /Gráfico interactivo de velas y volumen para BTC USDT/,
+  });
+
+  await expect(canvas).toHaveAttribute('data-chart-ready', 'true');
+
+  const bounds = await canvas.boundingBox();
+
+  expect(bounds).not.toBeNull();
+
+  if (bounds === null) {
+    throw new Error('The chart canvas must have a visible bounding box.');
+  }
+
+  const axisX = bounds.x + bounds.width - 36;
+  const axisY = bounds.y + bounds.height * 0.38;
+  const initialImage = await canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL());
+
+  await page.mouse.move(axisX, axisY);
+  await page.mouse.down();
+  await page.mouse.move(axisX, axisY + 42);
+  await page.mouse.up();
+
+  await expect
+    .poll(() => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL()))
+    .not.toBe(initialImage);
+
+  const imageBeforeAxisZoom = await canvas.evaluate((element: HTMLCanvasElement) =>
+    element.toDataURL(),
+  );
+
+  await page.mouse.move(axisX, axisY);
+  await page.mouse.wheel(0, -120);
+
+  await expect
+    .poll(() => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL()))
+    .not.toBe(imageBeforeAxisZoom);
+
+  const imageBeforeAutoFit = await canvas.evaluate((element: HTMLCanvasElement) =>
+    element.toDataURL(),
+  );
+
+  await page.mouse.dblclick(axisX, axisY);
+
+  await expect
+    .poll(() => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL()))
+    .not.toBe(imageBeforeAutoFit);
+});
