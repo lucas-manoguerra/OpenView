@@ -1010,25 +1010,8 @@ export function MarketChart() {
           )}
         </div>
       </div>
-      <MarketWatchlist
-        instruments={watchlist}
-        searchResults={searchResults}
-        searchCatalogStatus={searchCatalogStatus}
-        searchCatalogFailures={searchCatalogFailures}
-        onOpenSearch={() => void loadSearchCatalog()}
-        availableInstruments={availableInstruments}
-        availableInstrumentIds={availableInstruments.map((instrument) => instrument.id)}
-        catalogStatus={catalogStatus}
-        catalogError={catalogError}
-        providerName={selectedSource.displayName}
-        selectedInstrumentId={selectedInstrumentId}
-        quotes={quotes}
-        onSelect={handleInstrumentSelect}
-        onAdd={(instrument, sourceProviderId) =>
-          void handleInstrumentAdd(instrument, sourceProviderId)
-        }
-        onRemove={handleInstrumentRemove}
-      />
+      <div class="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_310px] xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div class="min-w-0 space-y-3">
       <section
         class="grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-[#0a101a] p-3 sm:grid-cols-5"
         aria-label="Cotización de mercado"
@@ -1145,6 +1128,29 @@ export function MarketChart() {
           )}
         </div>
       )}
+        </div>
+        <aside class="min-w-0 self-start lg:sticky lg:top-2">
+          <MarketWatchlist
+                  instruments={watchlist}
+                  searchResults={searchResults}
+                  searchCatalogStatus={searchCatalogStatus}
+                  searchCatalogFailures={searchCatalogFailures}
+                  onOpenSearch={() => void loadSearchCatalog()}
+                  availableInstruments={availableInstruments}
+                  availableInstrumentIds={availableInstruments.map((instrument) => instrument.id)}
+                  catalogStatus={catalogStatus}
+                  catalogError={catalogError}
+                  providerName={selectedSource.displayName}
+                  selectedInstrumentId={selectedInstrumentId}
+                  quotes={quotes}
+                  onSelect={handleInstrumentSelect}
+                  onAdd={(instrument, sourceProviderId) =>
+                    void handleInstrumentAdd(instrument, sourceProviderId)
+                  }
+                  onRemove={handleInstrumentRemove}
+                />
+        </aside>
+      </div>
     </div>
   );
 }
