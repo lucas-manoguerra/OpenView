@@ -491,12 +491,9 @@ export function MarketChart() {
           minute: '2-digit',
           second: '2-digit',
         });
-  const quoteLatency =
-    quote === null ? null : Math.max(0, quote.receivedAt - quote.timestamp);
+  const quoteLatency = quote === null ? null : Math.max(0, quote.receivedAt - quote.timestamp);
   const formatQuoteValue = (value: number | null, maximumFractionDigits = 8): string =>
-    value === null
-      ? '—'
-      : new Intl.NumberFormat('es-AR', { maximumFractionDigits }).format(value);
+    value === null ? '—' : new Intl.NumberFormat('es-AR', { maximumFractionDigits }).format(value);
   const streamStatusLabel = !selectedSource.streamingCandles
     ? 'Solo histórico'
     : streamStatus === 'connected'
@@ -650,18 +647,20 @@ export function MarketChart() {
           </div>
         </div>
         <div class="min-w-0">
-          <div class="text-[10px] font-medium uppercase tracking-wider text-slate-500">
-            Bid
-          </div>
-          <div class="mt-1 truncate text-sm font-medium tabular-nums text-emerald-300" data-testid="quote-bid">
+          <div class="text-[10px] font-medium uppercase tracking-wider text-slate-500">Bid</div>
+          <div
+            class="mt-1 truncate text-sm font-medium tabular-nums text-emerald-300"
+            data-testid="quote-bid"
+          >
             {formatQuoteValue(quote?.bid ?? null)}
           </div>
         </div>
         <div class="min-w-0">
-          <div class="text-[10px] font-medium uppercase tracking-wider text-slate-500">
-            Ask
-          </div>
-          <div class="mt-1 truncate text-sm font-medium tabular-nums text-rose-300" data-testid="quote-ask">
+          <div class="text-[10px] font-medium uppercase tracking-wider text-slate-500">Ask</div>
+          <div
+            class="mt-1 truncate text-sm font-medium tabular-nums text-rose-300"
+            data-testid="quote-ask"
+          >
             {formatQuoteValue(quote?.ask ?? null)}
           </div>
         </div>
@@ -669,7 +668,10 @@ export function MarketChart() {
           <div class="text-[10px] font-medium uppercase tracking-wider text-slate-500">
             Volumen 24h
           </div>
-          <div class="mt-1 truncate text-sm font-medium tabular-nums text-slate-200" data-testid="quote-volume-24h">
+          <div
+            class="mt-1 truncate text-sm font-medium tabular-nums text-slate-200"
+            data-testid="quote-volume-24h"
+          >
             {formatQuoteValue(quote?.volume24h ?? null, 2)}
           </div>
         </div>
@@ -682,7 +684,11 @@ export function MarketChart() {
           )}
           {quoteLatency !== null && <span data-testid="quote-latency">{quoteLatency} ms</span>}
           {quoteError !== null && (
-            <span class="truncate text-rose-300" data-testid="quote-stream-error" title={quoteError}>
+            <span
+              class="truncate text-rose-300"
+              data-testid="quote-stream-error"
+              title={quoteError}
+            >
               {quoteError}
             </span>
           )}
