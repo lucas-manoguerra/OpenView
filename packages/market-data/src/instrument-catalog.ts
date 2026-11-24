@@ -13,6 +13,18 @@ const normalizeAssetCode = (value: string, label: string): string => {
   return normalized;
 };
 
+export const createMarketInstrument = (baseAsset: string, quoteAsset: string): MarketInstrument => {
+  const normalizedBaseAsset = normalizeAssetCode(baseAsset, 'base asset');
+  const normalizedQuoteAsset = normalizeAssetCode(quoteAsset, 'quote asset');
+
+  return Object.freeze({
+    id: createInstrumentId(normalizedBaseAsset + '-' + normalizedQuoteAsset),
+    symbol: normalizedBaseAsset + '/' + normalizedQuoteAsset,
+    baseAsset: normalizedBaseAsset,
+    quoteAsset: normalizedQuoteAsset,
+  });
+};
+
 export const isSupportedMarketAssetCode = (value: string): boolean =>
   ASSET_CODE_PATTERN.test(value.trim().toUpperCase());
 
@@ -25,18 +37,6 @@ export const tryCreateMarketInstrument = (
   }
 
   return createMarketInstrument(baseAsset, quoteAsset);
-};
-
-export const createMarketInstrument = (baseAsset: string, quoteAsset: string): MarketInstrument => {
-  const normalizedBaseAsset = normalizeAssetCode(baseAsset, 'base asset');
-  const normalizedQuoteAsset = normalizeAssetCode(quoteAsset, 'quote asset');
-
-  return Object.freeze({
-    id: createInstrumentId(normalizedBaseAsset + '-' + normalizedQuoteAsset),
-    symbol: normalizedBaseAsset + '/' + normalizedQuoteAsset,
-    baseAsset: normalizedBaseAsset,
-    quoteAsset: normalizedQuoteAsset,
-  });
 };
 
 export const normalizeMarketInstruments = (
