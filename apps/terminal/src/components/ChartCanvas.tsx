@@ -168,9 +168,7 @@ const createFrame = (
                   ),
                 )
               : previousScale.barSpacing,
-            rightOffset: fitContent
-              ? 0
-              : (rightOffsetOverride ?? previousScale.rightOffset),
+            rightOffset: fitContent ? 0 : (rightOffsetOverride ?? previousScale.rightOffset),
             minBarSpacing: previousScale.minBarSpacing,
             maxBarSpacing: previousScale.maxBarSpacing,
             inverted: previousScale.inverted,
