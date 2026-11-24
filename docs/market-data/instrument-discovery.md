@@ -17,3 +17,9 @@ Bybit's Spot instruments endpoint returns the complete Spot list without paginat
 The optional quote-asset filter is applied after provider normalization. Results are deduplicated by normalized instrument ID and sorted by display symbol. Public metadata discovery is read-only and does not imply that historical candles or streaming are supported for every discovered instrument in every provider.
 
 All provider tests use mocked HTTP responses. They verify endpoint parameters, response normalization, active-market filtering and error handling; they do not claim a live availability or uptime test against exchange infrastructure.
+
+## Cache de catálogos
+
+`MarketInstrumentDiscoveryService` conserva en memoria las respuestas correctas durante 60 segundos por defecto. La clave separa proveedor y moneda cotizada; cambiar de proveedor o de filtro no reutiliza accidentalmente otro catálogo.
+
+La caché es volátil y no se persiste en el navegador. Los errores y las respuestas abortadas no se almacenan. Puede configurarse el TTL al construir el servicio, usar `cacheTtlMs: 0` para desactivar la caché o llamar a `clearCache(providerId)` para invalidar un proveedor; `clearCache()` elimina todas las entradas.
