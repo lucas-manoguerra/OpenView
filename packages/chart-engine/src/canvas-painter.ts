@@ -76,6 +76,37 @@ export const createChartRenderScene = (
   });
 };
 
+export type ChartRenderSceneUpdate = Readonly<{
+  frame?: ChartFrame;
+  crosshair?: ChartCoordinate | null;
+}>;
+
+export const updateChartRenderScene = (
+  scene: ChartRenderScene,
+  update: ChartRenderSceneUpdate,
+): ChartRenderScene => {
+  const frame = update.frame ?? scene.frame;
+  const crosshair = update.crosshair === undefined ? scene.crosshair : update.crosshair;
+
+  if (crosshair !== null && (!Number.isFinite(crosshair.x) || !Number.isFinite(crosshair.y))) {
+    throw new RangeError('Crosshair coordinates must be finite numbers.');
+  }
+
+  if (
+    frame === scene.frame &&
+    crosshair?.x === scene.crosshair?.x &&
+    crosshair?.y === scene.crosshair?.y
+  ) {
+    return scene;
+  }
+
+  return Object.freeze({
+    frame,
+    candles: scene.candles,
+    crosshair: crosshair === null ? null : Object.freeze({ ...crosshair }),
+  });
+};
+
 const getCandleColor = (candle: ChartRenderCandle, theme: ChartRenderTheme): string => {
   if (candle.close > candle.open) {
     return theme.bullish;
