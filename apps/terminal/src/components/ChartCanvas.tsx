@@ -63,12 +63,12 @@ const createFrame = (size: CanvasResize, controller: ChartInteractionController 
     DEMO_CANDLES.length - 1,
     {
       layout: {
-      rightPriceScaleWidth: 78,
-      timeScaleHeight: 32,
-      volumeHeight: 84,
-      topInset: 12,
-      bottomInset: 8,
-    },
+        rightPriceScaleWidth: 78,
+        timeScaleHeight: 32,
+        volumeHeight: 84,
+        topInset: 12,
+        bottomInset: 8,
+      },
       timeScale:
         previousScale === undefined
           ? { barSpacing: 7.5, minBarSpacing: 2, maxBarSpacing: 32 }
