@@ -53,7 +53,11 @@ export class MarketInstrumentDiscoveryService {
       );
     }
 
-    filter.signal?.throwIfAborted();
+    try {
+      filter.signal?.throwIfAborted();
+    } catch (cause) {
+      return Promise.reject(cause);
+    }
 
     const quoteAsset = filter.quoteAsset?.trim().toUpperCase();
     const cacheKey = quoteAsset === undefined ? 'all' : 'quote:' + quoteAsset;
