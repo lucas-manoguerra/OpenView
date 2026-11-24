@@ -336,7 +336,6 @@ export class BinanceSpotMarketDataProvider implements MarketDataProvider {
     });
   }
 
-
   subscribeToQuotes(
     instrumentIds: readonly InstrumentId[],
     handlers: QuoteStreamHandlers,
@@ -378,9 +377,10 @@ export class BinanceSpotMarketDataProvider implements MarketDataProvider {
           return;
         }
 
-        const data = isRecord(payload) && isRecord(Reflect.get(payload, 'data'))
-          ? Reflect.get(payload, 'data')
-          : payload;
+        const data =
+          isRecord(payload) && isRecord(Reflect.get(payload, 'data'))
+            ? Reflect.get(payload, 'data')
+            : payload;
 
         if (!isRecord(data) || Reflect.get(data, 'e') !== '24hrTicker') {
           return;
@@ -412,10 +412,7 @@ export class BinanceSpotMarketDataProvider implements MarketDataProvider {
           ask: toFiniteNumber(Reflect.get(data, 'a'), 'best ask price'),
           last: toFiniteNumber(Reflect.get(data, 'c'), 'last price'),
           volume24h: toFiniteNumber(Reflect.get(data, 'v'), '24-hour base volume'),
-          changePercent24h: toFiniteNumber(
-            Reflect.get(data, 'P'),
-            '24-hour percentage change',
-          ),
+          changePercent24h: toFiniteNumber(Reflect.get(data, 'P'), '24-hour percentage change'),
         });
 
         handlers.onQuote(quote);
