@@ -3,6 +3,7 @@ import type { Candle } from '@openview/market-domain';
 import type { CandleInterval } from '@openview/market-data';
 import {
   attachCanvasPointerEvents,
+  type CanvasDrawingEditGesture,
   type CanvasDrawingGesture,
   type CanvasDrawingTool,
   attachCanvasResizeObserver,
@@ -10,6 +11,9 @@ import {
   createChartInteractionController,
   createChartRenderScene,
   createCanvasRenderer,
+  getLogicalIndexAtTimestamp,
+  getTimestampAtLogicalIndex,
+  updateChartDrawing,
   calculateExponentialMovingAverage,
   calculateSimpleMovingAverage,
   countAppendedBars,
@@ -53,6 +57,7 @@ type ChartRuntime = Readonly<{
   invertPriceScale(): void;
   setIndicators(indicators: readonly ChartIndicatorSeries[]): void;
   setDrawings(drawings: readonly ChartRenderDrawing[]): void;
+  setSelectedDrawingId(drawingId: string | null): void;
   destroy(): void;
 }>;
 
@@ -78,51 +83,6 @@ const createRenderCandles = (candles: readonly Candle[]): readonly ChartRenderCa
       }),
     ),
   );
-
-const getTimestampForLogicalIndex = (
-  logicalIndex: number,
-  candles: readonly ChartRenderCandle[],
-): number | null => {
-  if (!Number.isFinite(logicalIndex) || candles.length === 0) {
-    return null;
-  }
-
-  if (candles.length === 1) {
-    return candles[0]?.timestamp ?? null;
-  }
-
-  const first = candles[0];
-  const last = candles[candles.length - 1];
-
-  if (first === undefined || last === undefined) {
-    return null;
-  }
-
-  let left: ChartRenderCandle;
-  let right: ChartRenderCandle;
-
-  if (logicalIndex <= first.logicalIndex) {
-    left = first;
-    right = candles[1] ?? first;
-  } else if (logicalIndex >= last.logicalIndex) {
-    left = candles[candles.length - 2] ?? last;
-    right = last;
-  } else {
-    const lowerIndex = Math.floor(logicalIndex);
-    const upperIndex = Math.ceil(logicalIndex);
-    left = candles[lowerIndex] ?? first;
-    right = candles[upperIndex] ?? last;
-  }
-
-  const indexSpan = right.logicalIndex - left.logicalIndex;
-
-  if (indexSpan <= 0) {
-    return left.timestamp;
-  }
-
-  const progress = (logicalIndex - left.logicalIndex) / indexSpan;
-  return left.timestamp + (right.timestamp - left.timestamp) * progress;
-};
 
 const getPriceRange = (candles: readonly ChartRenderCandle[]): NumericRange => {
   if (candles.length === 0) {
@@ -291,6 +251,7 @@ export function ChartCanvas({
   const [activeIndicators, setActiveIndicators] = useState<readonly string[]>([]);
   const [drawingTool, setDrawingTool] = useState<CanvasDrawingTool>('cursor');
   const [drawings, setDrawings] = useState<readonly ChartRenderDrawing[]>([]);
+  const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null);
   const [drawingUndoCount, setDrawingUndoCount] = useState(0);
   const [drawingRedoCount, setDrawingRedoCount] = useState(0);
   const [autoScale, setAutoScale] = useState(true);
@@ -301,6 +262,7 @@ export function ChartCanvas({
   const indicatorsRef = useRef<readonly ChartIndicatorSeries[]>([]);
   const drawingToolRef = useRef<CanvasDrawingTool>(drawingTool);
   const drawingsRef = useRef<readonly ChartRenderDrawing[]>(drawings);
+  const selectedDrawingIdRef = useRef<string | null>(selectedDrawingId);
   const drawingUndoStackRef = useRef<readonly (readonly ChartRenderDrawing[])[]>([]);
   const drawingRedoStackRef = useRef<readonly (readonly ChartRenderDrawing[])[]>([]);
   const commitDrawingsRef = useRef<(nextDrawings: readonly ChartRenderDrawing[]) => void>(() => {});
@@ -312,6 +274,7 @@ export function ChartCanvas({
   chartTypeRef.current = chartType;
   drawingToolRef.current = drawingTool;
   drawingsRef.current = drawings;
+  selectedDrawingIdRef.current = selectedDrawingId;
   commitDrawingsRef.current = (nextDrawings): void => {
     const previousDrawings = drawingsRef.current;
     const nextUndoStack = [...drawingUndoStackRef.current, previousDrawings].slice(-50);
@@ -425,6 +388,7 @@ export function ChartCanvas({
           chartTypeRef.current,
           indicatorsRef.current,
           drawingsRef.current,
+          selectedDrawingIdRef.current,
         );
         const interactionController = createChartInteractionController(frame, {
           onChange: handleControllerChange,
@@ -443,15 +407,65 @@ export function ChartCanvas({
         pointerAdapter = attachCanvasPointerEvents(canvas, interactionController, {
           getAutoScalePriceRange: () => getVisiblePriceRange(interactionController, currentCandles),
           getDrawingTool: () => drawingToolRef.current,
+          getDrawings: () => drawingsRef.current,
+          getCandles: () => currentCandles,
+          getSelectedDrawingId: () => selectedDrawingIdRef.current,
+          onDrawingSelect: (drawingId: string | null): void => {
+            selectedDrawingIdRef.current = drawingId;
+            setSelectedDrawingId(drawingId);
+            if (scene !== null) {
+              scene = updateChartRenderScene(scene, { selectedDrawingId: drawingId });
+              renderer.setScene(scene);
+            }
+          },
+          onDrawingEdit: (gesture: CanvasDrawingEditGesture): void => {
+            const drawing = drawingsRef.current.find(
+              (candidate) => candidate.id === gesture.drawingId,
+            );
+
+            if (drawing === undefined) {
+              return;
+            }
+
+            const updatedDrawing = updateChartDrawing(
+              drawing,
+              gesture.target,
+              gesture.origin,
+              gesture.current,
+              currentCandles,
+            );
+            commitDrawingsRef.current(
+              drawingsRef.current.map((candidate) =>
+                candidate.id === gesture.drawingId ? updatedDrawing : candidate,
+              ),
+            );
+          },
+          onDrawingDelete: (drawingId: string): void => {
+            const nextDrawings = drawingsRef.current.filter(
+              (drawing) => drawing.id !== drawingId,
+            );
+
+            if (nextDrawings.length === drawingsRef.current.length) {
+              return;
+            }
+
+            commitDrawingsRef.current(nextDrawings);
+            selectedDrawingIdRef.current = null;
+            setSelectedDrawingId(null);
+            if (scene !== null) {
+              scene = updateChartRenderScene(scene, { selectedDrawingId: null });
+              renderer.setScene(scene);
+            }
+          },
           onDrawingComplete: (gesture: CanvasDrawingGesture): void => {
-            const startTimestamp = getTimestampForLogicalIndex(
+            const startTimestamp = getTimestampAtLogicalIndex(
               gesture.start.logicalIndex,
               currentCandles,
             );
             const endTimestamp =
               gesture.end === null
                 ? null
-                : getTimestampForLogicalIndex(gesture.end.logicalIndex, currentCandles);
+                : getTimestampAtLogicalIndex(gesture.end.logicalIndex, currentCandles);
 
             if (startTimestamp === null || (gesture.end !== null && endTimestamp === null)) {
               return;
@@ -579,6 +593,14 @@ export function ChartCanvas({
         scene = updateChartRenderScene(scene, { drawings: nextDrawings });
         renderer.setScene(scene);
       },
+      setSelectedDrawingId: (drawingId: string | null): void => {
+        if (scene === null) {
+          return;
+        }
+
+        scene = updateChartRenderScene(scene, { selectedDrawingId: drawingId });
+        renderer.setScene(scene);
+      },
       setChartType: (nextChartType: ChartType): void => {
         if (scene === null) {
           return;
@@ -652,6 +674,8 @@ export function ChartCanvas({
         if (drawingSymbolRef.current !== symbol) {
           drawingSymbolRef.current = symbol;
           drawingSequenceRef.current = 0;
+          selectedDrawingIdRef.current = null;
+          setSelectedDrawingId(null);
           drawingsRef.current = Object.freeze([]);
           drawingUndoStackRef.current = Object.freeze([]);
           drawingRedoStackRef.current = Object.freeze([]);
@@ -692,7 +716,25 @@ export function ChartCanvas({
   const handleClearDrawings = (): void => {
     if (drawingsRef.current.length > 0) {
       commitDrawingsRef.current([]);
+      selectedDrawingIdRef.current = null;
+      setSelectedDrawingId(null);
+      runtimeRef.current?.setSelectedDrawingId(null);
     }
+  };
+
+  const handleDeleteSelectedDrawing = (): void => {
+    const selectedId = selectedDrawingIdRef.current;
+
+    if (selectedId === null) {
+      return;
+    }
+
+    commitDrawingsRef.current(
+      drawingsRef.current.filter((drawing) => drawing.id !== selectedId),
+    );
+    selectedDrawingIdRef.current = null;
+    setSelectedDrawingId(null);
+    runtimeRef.current?.setSelectedDrawingId(null);
   };
 
   const handleDrawingUndo = (): void => {
@@ -784,6 +826,22 @@ export function ChartCanvas({
         </button>
         <button
           type="button"
+          aria-label="Seleccionar y editar dibujos"
+          aria-pressed={drawingTool === 'select'}
+          data-testid="drawing-tool-select"
+          title="Seleccionar y editar dibujos"
+          onClick={() => handleDrawingToolChange('select')}
+          class={
+            'grid size-8 place-items-center rounded text-sm transition-colors ' +
+            (drawingTool === 'select'
+              ? 'bg-blue-500/20 text-blue-200'
+              : 'text-slate-400 hover:bg-white/5 hover:text-slate-100')
+          }
+        >
+          ◉
+        </button>
+        <button
+          type="button"
           aria-label="Línea de tendencia"
           aria-pressed={drawingTool === 'trend-line'}
           data-testid="drawing-tool-trend-line"
@@ -866,6 +924,17 @@ export function ChartCanvas({
         <span class="my-1 h-px w-6 bg-white/10" />
         <button
           type="button"
+          aria-label="Borrar dibujo seleccionado"
+          data-testid="drawing-delete-selected"
+          title="Borrar selección"
+          disabled={selectedDrawingId === null}
+          onClick={handleDeleteSelectedDrawing}
+          class="grid size-8 place-items-center rounded text-xs text-slate-400 transition-colors hover:bg-rose-500/10 hover:text-rose-200 disabled:opacity-30"
+        >
+          <span aria-hidden="true">⌦</span>
+        </button>
+        <button
+          type="button"
           aria-label="Deshacer dibujo"
           data-testid="drawing-undo"
           title="Deshacer"
@@ -905,7 +974,8 @@ export function ChartCanvas({
       >
         <canvas
           ref={bindCanvas}
-          class="block h-full w-full touch-none"
+          class="block h-full w-full touch-none outline-none focus-visible:ring-1 focus-visible:ring-blue-400/60"
+          tabIndex={0}
           role="img"
           aria-label={
             'Gráfico interactivo de velas y volumen para ' +
@@ -916,6 +986,7 @@ export function ChartCanvas({
           data-chart-type={chartType}
           data-indicator-count={renderIndicators.length}
           data-drawing-count={drawings.length}
+          data-selected-drawing-id={selectedDrawingId ?? ''}
           data-drawing-tool={drawingTool}
           data-drawing-undo-count={drawingUndoCount}
           data-drawing-redo-count={drawingRedoCount}
