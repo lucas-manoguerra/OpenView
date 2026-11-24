@@ -94,7 +94,7 @@ describe('canvas resize observer adapter', () => {
     const entry = {
       target: canvas,
       contentRect: { width: 820, height: 420 },
-    } as ResizeObserverEntry;
+    } as unknown as ResizeObserverEntry;
 
     observerCallback.current?.([entry]);
 
@@ -201,7 +201,9 @@ describe('canvas resize observer adapter', () => {
     const otherCanvas = createCanvas({ width: 320, height: 180 });
     const windowTarget = createWindowTarget();
     const onResize = vi.fn<(size: CanvasResize) => void>();
-    const observerCallback: { current: ((entries: readonly ResizeObserverEntry[]) => void) | null } = { current: null };
+    const observerCallback: {
+      current: ((entries: readonly ResizeObserverEntry[]) => void) | null;
+    } = { current: null };
 
     attachCanvasResizeObserver(canvas, onResize, {
       createObserver: (callback) => {
