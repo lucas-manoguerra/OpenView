@@ -1,10 +1,10 @@
+import type { InstrumentId } from '@openview/market-domain';
 import type {
   CandleStreamHandlers,
   CandleSubscriptionRequest,
-  InstrumentId,
-  QuoteStreamHandlers,
-  MarketDataSubscription,
   MarketDataProvider,
+  MarketDataSubscription,
+  QuoteStreamHandlers,
 } from './contracts';
 import { MarketDataProviderError } from './errors';
 import { MarketDataProviderRegistry } from './registry';
@@ -39,6 +39,7 @@ export class MarketDataStreamService {
 
     return provider.subscribeToCandles(request, handlers);
   }
+
   subscribeToQuotes(
     providerId: string,
     instrumentIds: readonly InstrumentId[],
@@ -69,5 +70,4 @@ export class MarketDataStreamService {
 
     return provider.subscribeToQuotes(Object.freeze([...instrumentIds]), handlers);
   }
-
 }
