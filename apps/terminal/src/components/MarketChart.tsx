@@ -385,7 +385,11 @@ export function MarketChart() {
             {streamStatusLabel}
           </span>
           {streamError !== null && (
-            <span class="max-w-48 truncate text-rose-300" title={streamError}>
+            <span
+              class="max-w-48 truncate text-rose-300"
+              data-testid="market-stream-error"
+              title={streamError}
+            >
               {streamError}
             </span>
           )}
