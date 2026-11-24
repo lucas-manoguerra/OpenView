@@ -58,9 +58,7 @@ const createProvider = (
     attributionRequired: false,
     ...overrides,
   }),
-  getHistoricalCandles: vi.fn(async (_request: HistoricalCandleRequest) =>
-    Object.freeze([CANDLE]),
-  ),
+  getHistoricalCandles: vi.fn(async (_request: HistoricalCandleRequest) => Object.freeze([CANDLE])),
 });
 
 describe('historical candle service', () => {
@@ -107,9 +105,7 @@ describe('historical candle service', () => {
   it('routes a historical request only to the explicitly selected provider', async () => {
     const binance = createProvider('binance-spot');
     const bybit = createProvider('bybit-spot');
-    const service = new HistoricalCandleService(
-      new MarketDataProviderRegistry([binance, bybit]),
-    );
+    const service = new HistoricalCandleService(new MarketDataProviderRegistry([binance, bybit]));
     const request = createRequest();
 
     await expect(service.getHistoricalCandles('bybit-spot', request)).resolves.toEqual([CANDLE]);
