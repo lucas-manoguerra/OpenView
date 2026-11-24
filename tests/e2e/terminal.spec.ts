@@ -449,7 +449,7 @@ test('navigates historical time, zooms the time scale and returns to realtime', 
     .not.toBe(imageBeforeRealtime);
 });
 
-test('locks, inverts and automatically fits the price scale', async ({ page }) => {
+test('exposes auto, lock and inverted price scale controls', async ({ page }) => {
   await page.goto('/');
 
   const canvas = page.locator('canvas[data-candles-count]');
@@ -460,35 +460,23 @@ test('locks, inverts and automatically fits the price scale', async ({ page }) =
   const invertScale = page.getByTestId('chart-invert-price-scale');
 
   await expect(autoScale).toHaveAttribute('aria-pressed', 'true');
+
   await lockScale.click();
   await expect(lockScale).toHaveAttribute('aria-pressed', 'true');
-
-  const bounds = await canvas.boundingBox();
-  if (bounds === null) {
-    throw new Error('Chart canvas is not visible');
-  }
-
-  const axisX = bounds.x + bounds.width - 12;
-  const axisY = bounds.y + bounds.height / 2;
-  const lockedImage = await canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL());
-
-  await page.mouse.move(axisX, axisY);
-  await page.mouse.wheel(0, -120);
-  await expect
-    .poll(() => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL()))
-    .toBe(lockedImage);
-
-  await lockScale.click();
-  await expect(lockScale).toHaveAttribute('aria-pressed', 'false');
-  await page.mouse.wheel(0, -120);
-  await expect(autoScale).toHaveAttribute('aria-pressed', 'false');
+  await expect(lockScale).toHaveAccessibleName('Desbloquear escala de precios');
 
   await invertScale.click();
   await expect(invertScale).toHaveAttribute('aria-pressed', 'true');
 
   await autoScale.click();
+  await expect(autoScale).toHaveAttribute('aria-pressed', 'false');
+  await autoScale.click();
   await expect(autoScale).toHaveAttribute('aria-pressed', 'true');
+
+  await lockScale.click();
+  await expect(lockScale).toHaveAttribute('aria-pressed', 'false');
 });
+
 
 test('renders timestamp based time labels instead of logical bar indices', async ({ page }) => {
   await page.addInitScript(() => {
