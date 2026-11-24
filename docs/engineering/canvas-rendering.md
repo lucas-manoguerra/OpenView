@@ -42,16 +42,20 @@ El host debe reconstruir el `ChartFrame` cuando cambie el tamaño lógico o el D
 `ChartInteractionController` posee el estado de navegación independiente del DOM: frame actual, posición del crosshair y estado de arrastre.
 
 - Movimiento dentro del plot actualiza el crosshair; al salir del plot lo oculta.
-- El arrastre con botón primario desplaza el eje temporal en la dirección del puntero.
-- La rueda horizontal desplaza el eje temporal.
-- La rueda vertical aplica zoom anclado al índice lógico situado bajo el cursor.
+- El arrastre con botón primario dentro del plot desplaza el eje temporal.
+- El arrastre sobre un eje de precios desplaza verticalmente el rango de precios.
+- La rueda horizontal dentro del plot desplaza el eje temporal.
+- La rueda vertical dentro del plot aplica zoom temporal anclado al índice lógico bajo el cursor.
+- La rueda vertical sobre un eje de precios aplica zoom de precios anclado al precio bajo el cursor.
+- El doble clic sobre el eje de precios puede ejecutar autoajuste usando un rango calculado por el host a partir de las velas visibles.
+- El autoajuste y los datos permanecen desacoplados: el adaptador entrega un rango y el controlador aplica ese rango preservando el modo de escala.
 - Los gestos de trackpad pueden combinar desplazamiento horizontal y zoom vertical.
 - El zoom respeta los límites de separación de barras definidos en `TimeScale`.
 - Cambiar el frame cancela el arrastre y limpia el crosshair.
 
 `attachCanvasPointerEvents` es el adaptador DOM. Convierte coordenadas de cliente a píxeles CSS lógicos del Canvas, captura un único puntero primario durante el arrastre, evita el scroll de página solo cuando la rueda se consume dentro del plot y libera la captura y los listeners al destruirse.
 
-El host debe configurar `touch-action: none` en el Canvas cuando quiera que los gestos táctiles se entreguen íntegramente al gráfico. El adaptador no modifica estilos del elemento que pertenece a la aplicación.
+El host debe configurar `touch-action: none` en el Canvas cuando quiera que los gestos táctiles se entreguen íntegramente al gráfico. El host debe preservar tanto la escala temporal como el rango y modo de la escala de precios cuando reconstruya el frame tras un resize. El adaptador no modifica estilos del elemento que pertenece a la aplicación.
 
 ## Limitaciones actuales
 
