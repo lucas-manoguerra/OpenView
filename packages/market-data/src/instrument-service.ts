@@ -1,8 +1,4 @@
-import type {
-  InstrumentDiscoveryFilter,
-  MarketDataProvider,
-  MarketInstrument,
-} from './contracts';
+import type { InstrumentDiscoveryFilter, MarketDataProvider, MarketInstrument } from './contracts';
 import { MarketDataProviderError } from './errors';
 import { MarketDataProviderRegistry } from './registry';
 
