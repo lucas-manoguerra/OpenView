@@ -9,6 +9,17 @@ export {
   priceToCoordinate,
 } from './price-scale';
 export {
+  coordinateToLogicalIndex,
+  createTimeScale,
+  logicalIndexToCoordinate,
+  panTimeScale,
+  resizeTimeScale,
+  type LogicalRange,
+  type TimeScale,
+  type TimeScaleOptions,
+  zoomTimeScale,
+} from './time-scale';
+export {
   type ChartViewport,
   createChartViewport,
   type NumericRange,
