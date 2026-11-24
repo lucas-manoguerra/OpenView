@@ -19,32 +19,167 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verify:
-    name: Format, architecture, types, tests, and build
+  format:
+    name: Format
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 12.23.0
+      - name: Set up OpenView
+        uses: ./.github/actions/setup-environment
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24.22.3
-          cache: pnpm
+      - name: Check formatting
+        run: pnpm format:check
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
 
-      - name: Run quality checks
-        run: pnpm check
+      - name: Set up OpenView
+        uses: ./.github/actions/setup-environment
 
-      - name: Install browser
+      - name: Run Biome lint
+        run: pnpm lint
+
+  architecture:
+    name: Architecture boundaries
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up OpenView
+        uses: ./.github/actions/setup-environment
+
+      - name: Verify architecture
+        run: pnpm architecture:check
+
+  typecheck:
+    name: TypeScript · ${{ matrix.package }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - market-domain
+          - chart-engine
+          - market-data
+          - terminal
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up OpenView
+        uses: ./.github/actions/setup-environment
+
+      - name: Check package types
+        run: pnpm --filter @openview/${{ matrix.package }} typecheck
+
+  unit-tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up OpenView
+        uses: ./.github/actions/setup-environment
+
+      - name: Run Vitest
+        run: pnpm test
+
+  build:
+    name: Astro build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up OpenView
+        uses: ./.github/actions/setup-environment
+
+      - name: Build terminal application
+        run: pnpm build
+
+  e2e:
+    name: Browser tests · Chromium
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up OpenView
+        uses: ./.github/actions/setup-environment
+
+      - name: Install Chromium
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Run end-to-end tests
+      - name: Run Playwright
         run: pnpm test:e2e
+
+      - name: Upload browser test reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  quality-gate:
+    name: All quality checks
+    if: always()
+    needs:
+      - format
+      - lint
+      - architecture
+      - typecheck
+      - unit-tests
+      - build
+      - e2e
+    runs-on: ubuntu-latest
+    env:
+      FORMAT_RESULT: ${{ needs.format.result }}
+      LINT_RESULT: ${{ needs.lint.result }}
+      ARCHITECTURE_RESULT: ${{ needs.architecture.result }}
+      TYPECHECK_RESULT: ${{ needs.typecheck.result }}
+      UNIT_TESTS_RESULT: ${{ needs.unit-tests.result }}
+      BUILD_RESULT: ${{ needs.build.result }}
+      E2E_RESULT: ${{ needs.e2e.result }}
+    steps:
+      - name: Require every quality check to pass
+        shell: bash
+        run: |
+          check_results=(
+            "format=${FORMAT_RESULT}"
+            "lint=${LINT_RESULT}"
+            "architecture=${ARCHITECTURE_RESULT}"
+            "typecheck=${TYPECHECK_RESULT}"
+            "unit-tests=${UNIT_TESTS_RESULT}"
+            "build=${BUILD_RESULT}"
+            "e2e=${E2E_RESULT}"
+          )
+
+          failed=0
+
+          for check_result in "${check_results[@]}"; do
+            check_name="${check_result%%=*}"
+            result="${check_result#*=}"
+
+            if [[ "${result}" != "success" ]]; then
+              printf '::error title=Quality check failed::%s finished with %s\n' "${check_name}" "${result}"
+              failed=1
+            fi
+          done
+
+          if [[ "${failed}" -ne 0 ]]; then
+            exit 1
+          fi
+
+          printf 'All OpenView quality checks passed.\n'
