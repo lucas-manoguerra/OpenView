@@ -92,12 +92,7 @@ for (const root of sourceRoots) {
   for (const filePath of files) {
     const content = await readFile(filePath, 'utf8');
     const extension = path.extname(filePath);
-    const sourceFile = ts.createSourceFile(
-      filePath,
-      content,
-      ts.ScriptTarget.Latest,
-      true,
-    );
+    const sourceFile = ts.createSourceFile(filePath, content, ts.ScriptTarget.Latest, true);
     const scanner = ts.createScanner(
       ts.ScriptTarget.Latest,
       false,
