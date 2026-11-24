@@ -3,6 +3,8 @@ import type { Candle } from '@openview/market-domain';
 import type { CandleInterval } from '@openview/market-data';
 import {
   attachCanvasPointerEvents,
+  type CanvasDrawingGesture,
+  type CanvasDrawingTool,
   attachCanvasResizeObserver,
   createChartFrame,
   createChartInteractionController,
@@ -22,6 +24,8 @@ import {
   type ChartRenderScene,
   type ChartType,
   type ChartIndicatorSeries,
+  type ChartDrawingPoint,
+  type ChartRenderDrawing,
   type NumericRange,
   type PriceScaleMode,
 } from '@openview/chart-engine';
@@ -49,6 +53,7 @@ type ChartRuntime = Readonly<{
   setPriceScaleLocked(locked: boolean): void;
   invertPriceScale(): void;
   setIndicators(indicators: readonly ChartIndicatorSeries[]): void;
+  setDrawings(drawings: readonly ChartRenderDrawing[]): void;
   destroy(): void;
 }>;
 
@@ -74,6 +79,51 @@ const createRenderCandles = (candles: readonly Candle[]): readonly ChartRenderCa
       }),
     ),
   );
+
+const getTimestampForLogicalIndex = (
+  logicalIndex: number,
+  candles: readonly ChartRenderCandle[],
+): number | null => {
+  if (!Number.isFinite(logicalIndex) || candles.length === 0) {
+    return null;
+  }
+
+  if (candles.length === 1) {
+    return candles[0]?.timestamp ?? null;
+  }
+
+  const first = candles[0];
+  const last = candles[candles.length - 1];
+
+  if (first === undefined || last === undefined) {
+    return null;
+  }
+
+  let left: ChartRenderCandle;
+  let right: ChartRenderCandle;
+
+  if (logicalIndex <= first.logicalIndex) {
+    left = first;
+    right = candles[1] ?? first;
+  } else if (logicalIndex >= last.logicalIndex) {
+    left = candles[candles.length - 2] ?? last;
+    right = last;
+  } else {
+    const lowerIndex = Math.floor(logicalIndex);
+    const upperIndex = Math.ceil(logicalIndex);
+    left = candles[lowerIndex] ?? first;
+    right = candles[upperIndex] ?? last;
+  }
+
+  const indexSpan = right.logicalIndex - left.logicalIndex;
+
+  if (indexSpan <= 0) {
+    return left.timestamp;
+  }
+
+  const progress = (logicalIndex - left.logicalIndex) / indexSpan;
+  return left.timestamp + (right.timestamp - left.timestamp) * progress;
+};
 
 const getPriceRange = (candles: readonly ChartRenderCandle[]): NumericRange => {
   if (candles.length === 0) {
@@ -240,16 +290,24 @@ export function ChartCanvas({
   const [priceScaleMode, setPriceScaleMode] = useState<PriceScaleMode>('linear');
   const [chartType, setChartType] = useState<ChartType>('candles');
   const [activeIndicators, setActiveIndicators] = useState<readonly string[]>([]);
+  const [drawingTool, setDrawingTool] = useState<CanvasDrawingTool>('cursor');
+  const [drawings, setDrawings] = useState<readonly ChartRenderDrawing[]>([]);
   const [autoScale, setAutoScale] = useState(true);
   const [priceScaleLocked, setPriceScaleLocked] = useState(false);
   const [priceScaleInverted, setPriceScaleInverted] = useState(false);
   const priceScaleModeRef = useRef<PriceScaleMode>(priceScaleMode);
   const chartTypeRef = useRef<ChartType>(chartType);
   const indicatorsRef = useRef<readonly ChartIndicatorSeries[]>([]);
+  const drawingToolRef = useRef<CanvasDrawingTool>(drawingTool);
+  const drawingsRef = useRef<readonly ChartRenderDrawing[]>(drawings);
+  const drawingSequenceRef = useRef(0);
+  const drawingSymbolRef = useRef(symbol);
   const autoScaleRef = useRef(autoScale);
   const priceScaleLockedRef = useRef(priceScaleLocked);
   priceScaleModeRef.current = priceScaleMode;
   chartTypeRef.current = chartType;
+  drawingToolRef.current = drawingTool;
+  drawingsRef.current = drawings;
   autoScaleRef.current = autoScale;
   priceScaleLockedRef.current = priceScaleLocked;
   const renderCandles = useMemo(() => createRenderCandles(candles), [candles]);
@@ -351,6 +409,7 @@ export function ChartCanvas({
           null,
           chartTypeRef.current,
           indicatorsRef.current,
+          drawingsRef.current,
         );
         const interactionController = createChartInteractionController(frame, {
           onChange: handleControllerChange,
@@ -368,6 +427,47 @@ export function ChartCanvas({
           frame.timeScale.rightOffset >= 0 ? 'realtime' : 'historical';
         pointerAdapter = attachCanvasPointerEvents(canvas, interactionController, {
           getAutoScalePriceRange: () => getVisiblePriceRange(interactionController, currentCandles),
+          getDrawingTool: () => drawingToolRef.current,
+          onDrawingComplete: (gesture: CanvasDrawingGesture): void => {
+            const startTimestamp = getTimestampForLogicalIndex(
+              gesture.start.logicalIndex,
+              currentCandles,
+            );
+            const endTimestamp =
+              gesture.end === null
+                ? null
+                : getTimestampForLogicalIndex(gesture.end.logicalIndex, currentCandles);
+
+            if (startTimestamp === null || (gesture.end !== null && endTimestamp === null)) {
+              return;
+            }
+
+            drawingSequenceRef.current += 1;
+            const drawing: ChartRenderDrawing = Object.freeze({
+              id: 'drawing-' + drawingSequenceRef.current,
+              type: gesture.type,
+              start: Object.freeze({
+                timestamp: startTimestamp,
+                price: gesture.start.price,
+              }),
+              end:
+                gesture.end === null || endTimestamp === null
+                  ? null
+                  : Object.freeze({
+                      timestamp: endTimestamp,
+                      price: gesture.end.price,
+                    }),
+              color: '#60a5fa',
+            });
+            const nextDrawings = Object.freeze([...drawingsRef.current, drawing]);
+            drawingsRef.current = nextDrawings;
+            setDrawings(nextDrawings);
+
+            if (scene !== null) {
+              scene = updateChartRenderScene(scene, { drawings: nextDrawings });
+              renderer.setScene(scene);
+            }
+          },
         });
       } else {
         controller.setFrame(frame);
@@ -423,6 +523,7 @@ export function ChartCanvas({
           controller.snapshot.crosshair,
           chartTypeRef.current,
           indicatorsRef.current,
+          drawingsRef.current,
         );
         controller.setFrame(frame);
         if (autoScaleRef.current) {
@@ -449,6 +550,7 @@ export function ChartCanvas({
           controller.snapshot.crosshair,
           chartTypeRef.current,
           indicatorsRef.current,
+          drawingsRef.current,
         );
         controller.setFrame(frame);
         renderer.setScene(scene);
@@ -459,6 +561,14 @@ export function ChartCanvas({
         }
 
         scene = updateChartRenderScene(scene, { indicators: nextIndicators });
+        renderer.setScene(scene);
+      },
+      setDrawings: (nextDrawings: readonly ChartRenderDrawing[]): void => {
+        if (scene === null) {
+          return;
+        }
+
+        scene = updateChartRenderScene(scene, { drawings: nextDrawings });
         renderer.setScene(scene);
       },
       setChartType: (nextChartType: ChartType): void => {
@@ -489,6 +599,7 @@ export function ChartCanvas({
           null,
           chartTypeRef.current,
           indicatorsRef.current,
+          drawingsRef.current,
         );
         controller.setFrame(frame);
         renderer.setScene(scene);
@@ -530,10 +641,18 @@ export function ChartCanvas({
   const bindDataUpdate = useCallback(
     (element: HTMLSpanElement | null): void => {
       if (element !== null) {
+        if (drawingSymbolRef.current !== symbol) {
+          drawingSymbolRef.current = symbol;
+          drawingSequenceRef.current = 0;
+          drawingsRef.current = Object.freeze([]);
+          setDrawings(drawingsRef.current);
+          runtimeRef.current?.setDrawings(drawingsRef.current);
+        }
+
         runtimeRef.current?.updateCandles(renderDataRef.current.candles, priceScaleMode);
       }
     },
-    [renderCandles, priceScaleMode],
+    [renderCandles, priceScaleMode, symbol],
   );
 
   const bindIndicatorsUpdate = useCallback(
@@ -551,6 +670,17 @@ export function ChartCanvas({
         ? current.filter((activeId) => activeId !== indicatorId)
         : [...current, indicatorId],
     );
+  };
+
+  const handleDrawingToolChange = (nextTool: CanvasDrawingTool): void => {
+    drawingToolRef.current = nextTool;
+    setDrawingTool(nextTool);
+  };
+
+  const handleClearDrawings = (): void => {
+    drawingsRef.current = Object.freeze([]);
+    setDrawings(drawingsRef.current);
+    runtimeRef.current?.setDrawings(drawingsRef.current);
   };
 
   const handleAutoScaleChange = (): void => {
@@ -586,11 +716,74 @@ export function ChartCanvas({
   };
 
   return (
-    <div
-      class="relative h-[390px] min-h-[340px] w-full bg-[#0b0f17]"
-      data-testid="chart-surface"
-      data-provider-error={error === null ? 'false' : 'true'}
-    >
+    <div class="grid h-[390px] min-h-[340px] w-full grid-cols-[38px_minmax(0,1fr)] bg-[#0b0f17]">
+      <aside class="flex min-w-0 flex-col items-center gap-1 border-r border-white/10 bg-[#101723] py-2">
+        <button
+          type="button"
+          aria-label="Cursor y navegación"
+          aria-pressed={drawingTool === 'cursor'}
+          data-testid="drawing-tool-cursor"
+          title="Cursor y navegación"
+          onClick={() => handleDrawingToolChange('cursor')}
+          class={
+            'grid size-8 place-items-center rounded text-sm transition-colors ' +
+            (drawingTool === 'cursor'
+              ? 'bg-blue-500/20 text-blue-200'
+              : 'text-slate-400 hover:bg-white/5 hover:text-slate-100')
+          }
+        >
+          ↖
+        </button>
+        <button
+          type="button"
+          aria-label="Línea de tendencia"
+          aria-pressed={drawingTool === 'trend-line'}
+          data-testid="drawing-tool-trend-line"
+          title="Línea de tendencia"
+          onClick={() => handleDrawingToolChange('trend-line')}
+          class={
+            'grid size-8 place-items-center rounded text-sm transition-colors ' +
+            (drawingTool === 'trend-line'
+              ? 'bg-blue-500/20 text-blue-200'
+              : 'text-slate-400 hover:bg-white/5 hover:text-slate-100')
+          }
+        >
+          ╱
+        </button>
+        <button
+          type="button"
+          aria-label="Línea horizontal"
+          aria-pressed={drawingTool === 'horizontal-line'}
+          data-testid="drawing-tool-horizontal-line"
+          title="Línea horizontal"
+          onClick={() => handleDrawingToolChange('horizontal-line')}
+          class={
+            'grid size-8 place-items-center rounded text-sm transition-colors ' +
+            (drawingTool === 'horizontal-line'
+              ? 'bg-blue-500/20 text-blue-200'
+              : 'text-slate-400 hover:bg-white/5 hover:text-slate-100')
+          }
+        >
+          —
+        </button>
+        <span class="my-1 h-px w-6 bg-white/10" />
+        <button
+          type="button"
+          aria-label="Borrar todos los dibujos"
+          data-testid="drawing-clear-all"
+          title="Borrar todos los dibujos"
+          disabled={drawings.length === 0}
+          onClick={handleClearDrawings}
+          class="grid size-8 place-items-center rounded text-xs text-slate-500 transition-colors hover:bg-rose-500/10 hover:text-rose-200 disabled:opacity-30"
+        >
+          <span aria-hidden="true">⌫</span>
+        </button>
+      </aside>
+      <div
+        class="relative h-full min-w-0 bg-[#0b0f17]"
+        data-testid="chart-surface"
+        data-provider-error={error === null ? 'false' : 'true'}
+      >
       <canvas
         ref={bindCanvas}
         class="block h-full w-full touch-none"
@@ -603,6 +796,8 @@ export function ChartCanvas({
         data-candles-count={renderCandles.length}
         data-chart-type={chartType}
         data-indicator-count={renderIndicators.length}
+        data-drawing-count={drawings.length}
+        data-drawing-tool={drawingTool}
         data-interval={interval}
       />
       <span ref={bindDataUpdate} class="hidden" aria-hidden="true" />
@@ -841,6 +1036,7 @@ export function ChartCanvas({
       )}
       <div class="pointer-events-none absolute bottom-3 right-4 rounded border border-white/10 bg-[#101723]/90 px-2 py-1 text-[10px] text-slate-500">
         Drag to pan · Scroll to zoom · Double-click price axis to fit
+      </div>
       </div>
     </div>
   );
