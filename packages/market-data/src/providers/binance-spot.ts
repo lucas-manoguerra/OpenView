@@ -139,10 +139,12 @@ const getRetryAfterMs = (response: Response): number | null => {
 };
 
 const getApiErrorMessage = (payload: unknown, status: number): string => {
-  if (isRecord(payload) && typeof payload['msg'] === 'string') {
-    const message = payload['msg'];
+  if (isRecord(payload)) {
+    const message: unknown = Reflect.get(payload, 'msg');
 
-    return `Binance API request failed with HTTP ${status}: ${message}`;
+    if (typeof message === 'string') {
+      return `Binance API request failed with HTTP ${status}: ${message}`;
+    }
   }
 
   return `Binance API request failed with HTTP ${status}.`;
