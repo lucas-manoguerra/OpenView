@@ -52,6 +52,10 @@ El host debe reconstruir el `ChartFrame` cuando cambie el tamaño lógico o el D
 - Los gestos de trackpad pueden combinar desplazamiento horizontal y zoom vertical.
 - El zoom respeta los límites de separación de barras definidos en `TimeScale`.
 - Cambiar el frame cancela el arrastre y limpia el crosshair.
+- El margen derecho se expresa en barras futuras y puede configurarse sin alterar el zoom temporal.
+- Un offset no negativo mantiene el extremo más reciente anclado al margen configurado cuando llegan barras nuevas.
+- Un offset negativo conserva el rango histórico visible: el motor compensa cada barra agregada al final para que las mismas velas sigan bajo las mismas coordenadas.
+- Las actualizaciones de una vela existente no modifican el offset; volver al extremo reciente restablece el seguimiento.
 
 `attachCanvasPointerEvents` es el adaptador DOM. Convierte coordenadas de cliente a píxeles CSS lógicos del Canvas, captura un único puntero primario durante el arrastre, evita el scroll de página solo cuando la rueda se consume dentro del plot y libera la captura y los listeners al destruirse.
 
