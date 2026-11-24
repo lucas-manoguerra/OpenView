@@ -181,6 +181,52 @@ describe('chart interaction controller', () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
+  it('locks price scale interactions while preserving time navigation', () => {
+    const frame = createFrame();
+    const controller = createChartInteractionController(frame);
+    const axis = centerOfPriceScale(frame);
+
+    expect(controller.setPriceScaleLocked(true)).toBe(true);
+    expect(controller.pointerDown(axis)).toBe(false);
+    expect(controller.wheel(axis, 0, -120)).toBe(false);
+    expect(controller.snapshot.frame.priceScale.range).toEqual(frame.priceScale.range);
+
+    expect(controller.scrollTimeByBars(-10)).toBe(true);
+    expect(controller.setPriceScaleLocked(false)).toBe(true);
+    expect(controller.wheel(axis, 0, -120)).toBe(true);
+  });
+
+  it('inverts the price scale without changing its range or time scale', () => {
+    const frame = createFrame();
+    const controller = createChartInteractionController(frame);
+    const price = 105;
+    const normalCoordinate = priceToCoordinate(price, frame.priceScale);
+
+    expect(controller.invertPriceScale()).toBe(true);
+
+    const invertedScale = controller.snapshot.frame.priceScale;
+    expect(invertedScale.inverted).toBe(true);
+    expect(invertedScale.range).toEqual(frame.priceScale.range);
+    expect(invertedScale.height).toBe(frame.priceScale.height);
+    expect(controller.snapshot.frame.timeScale).toBe(frame.timeScale);
+    expect(priceToCoordinate(price, invertedScale)).toBeCloseTo(
+      frame.priceScale.height - normalCoordinate,
+    );
+  });
+
+  it('notifies when a user manually interacts with the price scale', () => {
+    const onPriceScaleInteraction = vi.fn();
+    const controller = createChartInteractionController(createFrame(), {
+      onPriceScaleInteraction,
+    });
+
+    controller.pointerDown(centerOfPriceScale());
+    expect(onPriceScaleInteraction).toHaveBeenCalledTimes(1);
+    controller.pointerCancel();
+    controller.wheel(centerOfPriceScale(), 0, -120);
+    expect(onPriceScaleInteraction).toHaveBeenCalledTimes(2);
+  });
+
   it('zooms around the logical index under the wheel pointer', () => {
     const frame = createFrame();
     const controller = createChartInteractionController(frame);
