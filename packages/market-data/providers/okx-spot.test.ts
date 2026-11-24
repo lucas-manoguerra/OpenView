@@ -392,7 +392,14 @@ describe('OKX Spot candle stream', () => {
       {
         instrumentId: 'OKX:BTC-USDT',
         interval: '1m',
-        candle: { timestamp: START_TIME, open: 100, high: 105, low: 98, close: 103.5, volume: 12.5 },
+        candle: {
+          timestamp: START_TIME,
+          open: 100,
+          high: 105,
+          low: 98,
+          close: 103.5,
+          volume: 12.5,
+        },
         isFinal: false,
       },
       {
