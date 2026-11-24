@@ -351,7 +351,6 @@ const drawCandles = (
   context.restore();
 };
 
-
 const drawBars = (
   context: CanvasRenderingContext2D,
   scene: ChartRenderScene,
