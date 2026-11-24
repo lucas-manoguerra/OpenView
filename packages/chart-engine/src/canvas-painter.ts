@@ -780,10 +780,7 @@ const drawDrawings = (context: CanvasRenderingContext2D, scene: ChartRenderScene
       }
 
       context.beginPath();
-      context.moveTo(
-        plotArea.x + logicalIndexToCoordinate(startIndex, frame.timeScale),
-        startY,
-      );
+      context.moveTo(plotArea.x + logicalIndexToCoordinate(startIndex, frame.timeScale), startY);
       context.lineTo(
         plotArea.x + logicalIndexToCoordinate(endIndex, frame.timeScale),
         plotArea.y + priceToCoordinate(drawing.end.price, frame.priceScale),
