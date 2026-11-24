@@ -297,7 +297,7 @@ test('switches providers, streams Bybit candles and recovers history after recon
     .toBeGreaterThan(400);
   expect(bybitHistoryRequestCount).toBe(1);
 
-  getWebSocketRoute(page, 'bybit').close();
+  await getWebSocketRoute(page, 'bybit').close();
   await expect(streamStatus).toHaveText('Reconectando');
   await expect
     .poll(() => bybitHistoryRequestCount)
