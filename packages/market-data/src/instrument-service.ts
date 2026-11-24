@@ -122,7 +122,9 @@ export class MarketInstrumentDiscoveryService {
   async listInstrumentsFromAllProviders(
     filter: InstrumentDiscoveryFilter = {},
   ): Promise<MarketInstrumentDiscoveryBatch> {
-    const providers = this.registry.list().filter((provider) => provider.listInstruments !== undefined);
+    const providers = this.registry
+      .list()
+      .filter((provider) => provider.listInstruments !== undefined);
     const results = await Promise.all(
       providers.map(async (provider) => {
         try {
