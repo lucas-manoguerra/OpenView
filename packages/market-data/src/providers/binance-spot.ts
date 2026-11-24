@@ -372,12 +372,19 @@ export class BinanceSpotMarketDataProvider implements MarketDataProvider {
       };
 
       const handleMessage = (event: Event): void => {
-        if (!active || socket !== connection || !(event instanceof MessageEvent)) {
+        if (!active || socket !== connection) {
+          return;
+        }
+
+        const messageData = Reflect.get(event, 'data');
+
+        if (typeof messageData !== 'string') {
+          emitError(new RangeError('Binance returned a WebSocket message without text data.'));
           return;
         }
 
         try {
-          const payload: unknown = JSON.parse(String(event.data));
+          const payload: unknown = JSON.parse(messageData);
           const update = parseStreamCandle(payload, request, symbol);
 
           if (update !== null) {
