@@ -26,6 +26,7 @@ type ChartCanvasProps = Readonly<{
   loading: boolean;
   error: string | null;
   onRetry: () => void;
+  onNeedMoreHistory: () => void;
 }>;
 
 type ChartRuntime = Readonly<{
@@ -195,9 +196,12 @@ export function ChartCanvas({
   loading,
   error,
   onRetry,
+  onNeedMoreHistory,
 }: ChartCanvasProps) {
   const runtimeRef = useRef<ChartRuntime | null>(null);
   const renderCandles = useMemo(() => createRenderCandles(candles), [candles]);
+  const onNeedMoreHistoryRef = useRef(onNeedMoreHistory);
+  onNeedMoreHistoryRef.current = onNeedMoreHistory;
   const renderDataRef = useRef<ChartRenderData>({ candles: renderCandles });
   renderDataRef.current = { candles: renderCandles };
 
@@ -229,6 +233,13 @@ export function ChartCanvas({
         crosshair: snapshot.crosshair,
       });
       renderer.setScene(scene);
+
+      if (
+        snapshot.frame.timeScale.visibleLogicalRange.from <= 120 &&
+        currentCandles.length > 0
+      ) {
+        onNeedMoreHistoryRef.current();
+      }
     };
 
     const handleResize = (size: CanvasResize): void => {
