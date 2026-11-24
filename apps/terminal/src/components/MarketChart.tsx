@@ -14,7 +14,6 @@ const DEFAULT_PROVIDER_ID = 'binance-spot';
 const DEFAULT_INTERVAL: CandleInterval = '1m';
 const INSTRUMENT_ID = createInstrumentId('BTC-USDT');
 const HISTORY_CANDLE_COUNT = 500;
-const OLDER_HISTORY_TRIGGER_LOGICAL_INDEX = 120;
 
 const INTERVAL_DURATION_MS: Readonly<Record<CandleInterval, number>> = Object.freeze({
   '1s': 1_000,
