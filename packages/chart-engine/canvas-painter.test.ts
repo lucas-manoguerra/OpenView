@@ -143,7 +143,10 @@ describe('canvas chart painter', () => {
 
   it('does not draw a crosshair outside the plot area', () => {
     const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 10);
-    const scene = createChartRenderScene(frame, [], { x: 10, y: 10 });
+    const scene = createChartRenderScene(frame, [], {
+      x: frame.layout.plotArea.x + frame.layout.plotArea.width + 1,
+      y: frame.layout.plotArea.y + 10,
+    });
     const { context, calls } = createMockContext();
 
     drawChartScene(context, scene);
@@ -170,14 +173,12 @@ describe('canvas chart painter', () => {
     expect(Object.isFrozen(scene)).toBe(true);
     expect(Object.isFrozen(scene.candles)).toBe(true);
     expect(Object.isFrozen(scene.candles[0])).toBe(true);
-    expect(() =>
-      createChartRenderScene(frame, [candles[1]!, candles[0]!]),
-    ).toThrow(RangeError);
-    expect(() =>
-      createChartRenderScene(frame, [{ ...candles[0]!, volume: -1 }]),
-    ).toThrow(RangeError);
-    expect(() =>
-      createChartRenderScene(frame, candles, { x: Number.NaN, y: 10 }),
-    ).toThrow(RangeError);
+    expect(() => createChartRenderScene(frame, [candles[1]!, candles[0]!])).toThrow(RangeError);
+    expect(() => createChartRenderScene(frame, [{ ...candles[0]!, volume: -1 }])).toThrow(
+      RangeError,
+    );
+    expect(() => createChartRenderScene(frame, candles, { x: Number.NaN, y: 10 })).toThrow(
+      RangeError,
+    );
   });
 });
