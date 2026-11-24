@@ -500,7 +500,9 @@ test('searches valid instruments when the provider catalog contains unsupported 
   await addInstrument.click();
 
   await expect(page.getByTestId('watchlist-remove-AVAX-USDT')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'AVAX AVAX / USDT' })).toBeVisible();
+  await expect(
+    page.getByTestId('watchlist-instrument').filter({ hasText: 'AVAX / USDT' }),
+  ).toBeVisible();
 });
 
 test('refreshes available instruments when the selected provider changes', async ({ page }) => {
