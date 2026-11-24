@@ -318,7 +318,9 @@ test('streams Binance live candles and updates the current bar without duplicate
   await expect(streamStatus).toHaveText('En vivo');
 });
 
-test('displays normalized live quotes and refreshes them across Spot providers', async ({ page }) => {
+test('displays normalized live quotes and refreshes them across Spot providers', async ({
+  page,
+}) => {
   await page.goto('/');
 
   const providerSelect = page.getByTestId('provider-select');
