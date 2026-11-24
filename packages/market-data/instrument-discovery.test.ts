@@ -54,6 +54,103 @@ describe('market instrument discovery service', () => {
     );
   });
 
+  it('returns separate provider catalogs for every registered discovery source', async () => {
+    const bitcoin = createInstruments();
+    const ethereum: readonly MarketInstrument[] = [
+      {
+        id: createInstrumentId('ETH-USDT'),
+        symbol: 'ETH/USDT',
+        baseAsset: 'ETH',
+        quoteAsset: 'USDT',
+      },
+    ];
+    const binance = createProvider({
+      id: 'binance-spot',
+      displayName: 'Binance Spot',
+      listInstruments: vi.fn(async () => bitcoin),
+    });
+    const bybit = createProvider({
+      id: 'bybit-spot',
+      displayName: 'Bybit Spot',
+      listInstruments: vi.fn(async () => ethereum),
+    });
+    const historyOnly = createProvider({
+      id: 'history-only',
+      displayName: 'History only',
+    });
+    const service = new MarketInstrumentDiscoveryService(
+      new MarketDataProviderRegistry([binance, bybit, historyOnly]),
+    );
+
+    const batch = await service.listInstrumentsFromAllProviders();
+
+    expect(batch.catalogs).toEqual([
+      {
+        providerId: 'binance-spot',
+        providerName: 'Binance Spot',
+        instruments: bitcoin,
+      },
+      {
+        providerId: 'bybit-spot',
+        providerName: 'Bybit Spot',
+        instruments: ethereum,
+      },
+    ]);
+    expect(batch.failures).toEqual([]);
+  });
+
+  it('keeps successful providers available when another provider fails', async () => {
+    const successfulProvider = createProvider({
+      id: 'binance-spot',
+      displayName: 'Binance Spot',
+      listInstruments: async () => createInstruments(),
+    });
+    const unavailableProvider = createProvider({
+      id: 'okx-spot',
+      displayName: 'OKX',
+      listInstruments: async () => {
+        throw new Error('Exchange temporarily unavailable');
+      },
+    });
+    const service = new MarketInstrumentDiscoveryService(
+      new MarketDataProviderRegistry([successfulProvider, unavailableProvider]),
+    );
+
+    const batch = await service.listInstrumentsFromAllProviders();
+
+    expect(batch.catalogs.map((catalog) => catalog.providerId)).toEqual(['binance-spot']);
+    expect(batch.failures).toEqual([
+      {
+        providerId: 'okx-spot',
+        providerName: 'OKX',
+        message: 'Exchange temporarily unavailable',
+      },
+    ]);
+  });
+
+  it('reports all provider failures without hiding the individual causes', async () => {
+    const providers = ['binance-spot', 'bybit-spot', 'okx-spot'].map((id) =>
+      createProvider({
+        id,
+        listInstruments: async () => {
+          throw new Error(id + ' unavailable');
+        },
+      }),
+    );
+    const service = new MarketInstrumentDiscoveryService(
+      new MarketDataProviderRegistry(providers),
+    );
+
+    const batch = await service.listInstrumentsFromAllProviders();
+
+    expect(batch.catalogs).toEqual([]);
+    expect(batch.failures.map((failure) => failure.message)).toEqual([
+      'binance-spot unavailable',
+      'bybit-spot unavailable',
+      'okx-spot unavailable',
+    ]);
+  });
+
   it('caches successful catalogs for the configured TTL and freezes the snapshot', async () => {
     let currentTime = 1_000;
     let requestCount = 0;
