@@ -46,8 +46,7 @@ const dataSources = historicalService.listSources();
 
 const getFallbackInterval = (
   supportedIntervals: readonly CandleInterval[],
-): CandleInterval | undefined =>
-  supportedIntervals.includes('1m') ? '1m' : supportedIntervals[0];
+): CandleInterval | undefined => (supportedIntervals.includes('1m') ? '1m' : supportedIntervals[0]);
 
 export function MarketChart() {
   const [providerId, setProviderId] = useState(DEFAULT_PROVIDER_ID);
