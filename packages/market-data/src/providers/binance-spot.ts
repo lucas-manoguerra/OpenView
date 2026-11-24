@@ -46,9 +46,10 @@ const CAPABILITIES: MarketDataCapabilities = Object.freeze({
   attributionRequired: false,
 });
 
-export type BinanceWebSocketConnection = EventTarget & Readonly<{
-  close: (code?: number, reason?: string) => void;
-}>;
+export type BinanceWebSocketConnection = EventTarget &
+  Readonly<{
+    close: (code?: number, reason?: string) => void;
+  }>;
 
 export type BinanceWebSocketFactory = (url: string) => BinanceWebSocketConnection;
 
@@ -146,7 +147,9 @@ const parseStreamCandle = (
   });
 
   if (!result.ok) {
-    throw new RangeError('Binance returned an invalid streamed OHLCV candle: ' + result.error + '.');
+    throw new RangeError(
+      'Binance returned an invalid streamed OHLCV candle: ' + result.error + '.',
+    );
   }
 
   const isFinal = Reflect.get(kline, 'x');
@@ -267,7 +270,9 @@ export class BinanceSpotMarketDataProvider implements MarketDataProvider {
     }
 
     if (!Number.isInteger(maxReconnectDelayMs) || maxReconnectDelayMs < reconnectDelayMs) {
-      throw new RangeError('Binance Spot maximum reconnect delay must be at least the initial delay.');
+      throw new RangeError(
+        'Binance Spot maximum reconnect delay must be at least the initial delay.',
+      );
     }
 
     if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > DEFAULT_PAGE_SIZE) {
@@ -293,11 +298,16 @@ export class BinanceSpotMarketDataProvider implements MarketDataProvider {
     handlers: CandleStreamHandlers,
   ): MarketDataSubscription {
     if (!this.capabilities.supportedIntervals.includes(request.interval)) {
-      throw new RangeError('Binance Spot does not support the ' + request.interval + ' candle interval.');
+      throw new RangeError(
+        'Binance Spot does not support the ' + request.interval + ' candle interval.',
+      );
     }
 
     const symbol = normalizeSymbol(request.instrumentId);
-    const url = new URL('/ws/' + symbol.toLowerCase() + '@kline_' + request.interval, this.streamBaseUrl);
+    const url = new URL(
+      '/ws/' + symbol.toLowerCase() + '@kline_' + request.interval,
+      this.streamBaseUrl,
+    );
     let active = true;
     let reconnectAttempt = 0;
     let socket: BinanceWebSocketConnection | null = null;
