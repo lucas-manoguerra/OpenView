@@ -75,7 +75,12 @@ export const createChartLayout = (
 
   const bounds = createRect(0, 0, width, height);
   const plotArea = createRect(leftPriceScaleWidth, topInset, plotWidth, plotHeight);
-  const volumeArea = createRect(leftPriceScaleWidth, topInset + plotHeight, plotWidth, volumeHeight);
+  const volumeArea = createRect(
+    leftPriceScaleWidth,
+    topInset + plotHeight,
+    plotWidth,
+    volumeHeight,
+  );
   const leftPriceScaleArea = createRect(0, topInset, leftPriceScaleWidth, drawableHeight);
   const rightPriceScaleArea = createRect(
     width - rightPriceScaleWidth,
