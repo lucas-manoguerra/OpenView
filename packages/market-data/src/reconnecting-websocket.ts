@@ -77,7 +77,9 @@ export const createReconnectingWebSocketSubscription = (
       }
 
       if (connection.send === undefined) {
-        emitError(new Error('The WebSocket connection does not support outgoing heartbeat messages.'));
+        emitError(
+          new Error('The WebSocket connection does not support outgoing heartbeat messages.'),
+        );
         connection.close();
         return;
       }
@@ -137,7 +139,9 @@ export const createReconnectingWebSocketSubscription = (
       const messageData = Reflect.get(event, 'data');
 
       if (typeof messageData !== 'string') {
-        emitError(new RangeError('The market data WebSocket returned a message without text data.'));
+        emitError(
+          new RangeError('The market data WebSocket returned a message without text data.'),
+        );
         return;
       }
 
