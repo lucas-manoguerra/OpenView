@@ -106,6 +106,7 @@ const installBinanceMock = async (page: Page): Promise<void> => {
           { status: 'TRADING', isSpotTradingAllowed: true, baseAsset: 'SOL', quoteAsset: 'USDT' },
           { status: 'TRADING', isSpotTradingAllowed: true, baseAsset: 'XRP', quoteAsset: 'USDT' },
           { status: 'TRADING', isSpotTradingAllowed: true, baseAsset: 'ETH', quoteAsset: 'BTC' },
+          { status: 'TRADING', isSpotTradingAllowed: true, baseAsset: 'ADA', quoteAsset: 'USDT' },
           {
             status: 'TRADING',
             isSpotTradingAllowed: true,
@@ -212,6 +213,7 @@ const installWebSocketMock = async (page: Page): Promise<void> => {
           list: [
             { status: 'Trading', baseCoin: 'BTC', quoteCoin: 'USDT' },
             { status: 'Trading', baseCoin: 'ETH', quoteCoin: 'USDT' },
+            { status: 'Trading', baseCoin: 'ADA', quoteCoin: 'USDT' },
             { status: 'Trading', baseCoin: 'SOL', quoteCoin: 'USDT' },
             { status: 'Trading', baseCoin: 'ETH', quoteCoin: 'BTC' },
           ],
@@ -230,6 +232,7 @@ const installWebSocketMock = async (page: Page): Promise<void> => {
         data: [
           { state: 'live', baseCcy: 'BTC', quoteCcy: 'USDT' },
           { state: 'live', baseCcy: 'ETH', quoteCcy: 'USDT' },
+          { state: 'live', baseCcy: 'ADA', quoteCcy: 'USDT' },
           { state: 'live', baseCcy: 'SOL', quoteCcy: 'USDT' },
           { state: 'live', baseCcy: 'ETH', quoteCcy: 'BTC' },
         ],
