@@ -160,7 +160,9 @@ export function MarketWatchlist({
                 aria-label={instrument.name + ' ' + instrument.symbol}
                 aria-pressed={selectedInstrumentId === instrument.id}
                 aria-disabled={!isAvailable}
-                title={isAvailable ? undefined : 'Este instrumento no está disponible en ' + providerName}
+                title={
+                  isAvailable ? undefined : 'Este instrumento no está disponible en ' + providerName
+                }
                 data-testid="watchlist-instrument"
                 data-instrument-id={instrument.id}
                 disabled={!isAvailable}
