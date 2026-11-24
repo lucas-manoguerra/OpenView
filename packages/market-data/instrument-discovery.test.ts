@@ -137,9 +137,7 @@ describe('market instrument discovery service', () => {
         },
       }),
     );
-    const service = new MarketInstrumentDiscoveryService(
-      new MarketDataProviderRegistry(providers),
-    );
+    const service = new MarketInstrumentDiscoveryService(new MarketDataProviderRegistry(providers));
 
     const batch = await service.listInstrumentsFromAllProviders();
 
