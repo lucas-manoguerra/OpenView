@@ -1,4 +1,4 @@
-import type { TimeScale } from './time-scale';
+import { logicalIndexToCoordinate, type TimeScale } from './time-scale';
 
 export type TimeAxisPoint = Readonly<{
   logicalIndex: number;
@@ -190,8 +190,7 @@ export const generateTimeAxisTicks = (
     }
   }
 
-  const firstVisibleIndex = Math.max(0, start - 1);
-  start = firstVisibleIndex;
+  const firstVisibleIndex = start;
   end = points.length;
 
   while (start < end) {
@@ -204,7 +203,7 @@ export const generateTimeAxisTicks = (
     }
   }
 
-  const lastVisibleIndex = Math.min(points.length, start + 1);
+  const lastVisibleIndex = start;
 
   if (firstVisibleIndex >= lastVisibleIndex) {
     return Object.freeze([]);
@@ -221,9 +220,7 @@ export const generateTimeAxisTicks = (
       Object.freeze({
         logicalIndex: point.logicalIndex,
         timestamp: point.timestamp,
-        coordinate: scale.inverted
-          ? (scale.visibleLogicalRange.to - point.logicalIndex) * scale.barSpacing
-          : scale.width - (scale.visibleLogicalRange.to - point.logicalIndex) * scale.barSpacing,
+        coordinate: logicalIndexToCoordinate(point.logicalIndex, scale),
         label: formatTimeAxisLabel(point.timestamp, MINUTE, visibleSpan, options),
       }),
     ]);
@@ -250,10 +247,7 @@ export const generateTimeAxisTicks = (
       continue;
     }
 
-    const distanceFromRight = scale.visibleLogicalRange.to - point.logicalIndex;
-    const coordinate = scale.inverted
-      ? distanceFromRight * scale.barSpacing
-      : scale.width - distanceFromRight * scale.barSpacing;
+    const coordinate = logicalIndexToCoordinate(point.logicalIndex, scale);
 
     if (coordinate >= 0 && coordinate <= scale.width) {
       ticks.push(
@@ -270,10 +264,7 @@ export const generateTimeAxisTicks = (
 
   if (ticks.length === 0) {
     const point = points[Math.min(firstVisibleIndex, lastVisibleIndex - 1)]!;
-    const distanceFromRight = scale.visibleLogicalRange.to - point.logicalIndex;
-    const coordinate = scale.inverted
-      ? distanceFromRight * scale.barSpacing
-      : scale.width - distanceFromRight * scale.barSpacing;
+    const coordinate = logicalIndexToCoordinate(point.logicalIndex, scale);
 
     ticks.push(
       Object.freeze({
