@@ -59,7 +59,7 @@ El host debe configurar `touch-action: none` en el Canvas cuando quiera que los 
 
 ## Limitaciones actuales
 
-- El eje temporal utiliza timestamps Unix en milisegundos y selecciona intervalos legibles según el rango visible y el ancho del plot. Las etiquetas siguen la zona horaria local por defecto; se puede especificar una zona horaria y locale al generar ticks.
+- El eje temporal utiliza timestamps Unix en milisegundos y selecciona intervalos legibles según el rango visible y el ancho del plot. Las etiquetas siguen la zona horaria local por defecto; el generador admite locale y zona horaria explícitos.
 - El renderer no observa directamente el DOM; el host conecta `attachCanvasResizeObserver` con `CanvasRenderer.resize` y reconstruye el frame.
 - No hay todavía navegación por teclado, overlays configurables ni paneles sincronizados. La zona horaria del eje aún no tiene un selector visual en la terminal.
 - No se fija un presupuesto de tiempo por frame ni de memoria hasta medir un baseline repetible.
