@@ -436,19 +436,26 @@ export class BybitSpotMarketDataProvider implements MarketDataProvider {
       instrumentsBySymbol.set(symbol, instrumentId);
     }
 
-    const quoteStates = new Map(
-      [...instrumentsBySymbol.keys()].map((symbol) => [
-        symbol,
-        {
-          timestamp: 0,
-          bid: null,
-          ask: null,
-          last: null,
-          volume24h: null,
-          changePercent24h: null,
-        },
-      ]),
-    );
+    type MutableQuoteState = {
+      timestamp: number;
+      bid: number | null;
+      ask: number | null;
+      last: number | null;
+      volume24h: number | null;
+      changePercent24h: number | null;
+    };
+    const quoteStates = new Map<string, MutableQuoteState>();
+
+    for (const symbol of instrumentsBySymbol.keys()) {
+      quoteStates.set(symbol, {
+        timestamp: 0,
+        bid: null,
+        ask: null,
+        last: null,
+        volume24h: null,
+        changePercent24h: null,
+      });
+    }
     const topics = [...instrumentsBySymbol.keys()].flatMap((symbol) => [
       'tickers.' + symbol,
       'orderbook.1.' + symbol,
