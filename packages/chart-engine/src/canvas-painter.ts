@@ -155,7 +155,9 @@ const drawGrid = (
     }
   }
 
-  for (const tick of generateTimeAxisTicks(frame.timeScale, scene.timeAxisData, { targetTickCount: getTargetTimeTickCount(plotArea.width) })) {
+  for (const tick of generateTimeAxisTicks(frame.timeScale, scene.timeAxisData, {
+    targetTickCount: getTargetTimeTickCount(plotArea.width),
+  })) {
     const x = plotArea.x + tick.coordinate;
     context.moveTo(x, plotArea.y);
     context.lineTo(x, plotArea.y + plotArea.height + volumeArea.height);
