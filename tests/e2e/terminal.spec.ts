@@ -290,12 +290,22 @@ test('switches historical data between Binance, Bybit and OKX Spot', async ({ pa
 
   await providerSelect.selectOption('bybit-spot');
   await expect(providerSelect).toHaveValue('bybit-spot');
+  await expect(page.getByTestId('market-stream-status')).toHaveAttribute(
+    'data-stream-status',
+    'unsupported',
+  );
+  await expect(page.getByTestId('market-stream-status')).toHaveText('Solo histórico');
   await expect
     .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
     .toBeGreaterThan(400);
 
   await providerSelect.selectOption('okx-spot');
   await expect(providerSelect).toHaveValue('okx-spot');
+  await expect(page.getByTestId('market-stream-status')).toHaveAttribute(
+    'data-stream-status',
+    'unsupported',
+  );
+  await expect(page.getByTestId('market-stream-status')).toHaveText('Solo histórico');
   await expect
     .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
     .toBeGreaterThan(400);
