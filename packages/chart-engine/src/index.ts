@@ -31,6 +31,7 @@ export {
 export {
   attachCanvasPointerEvents,
   type CanvasPointerAdapter,
+  type CanvasDrawingEditGesture,
   type CanvasDrawingGesture,
   type CanvasDrawingTool,
 } from './canvas-pointer-adapter';
