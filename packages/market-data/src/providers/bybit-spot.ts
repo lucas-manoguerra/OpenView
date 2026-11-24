@@ -415,7 +415,6 @@ export class BybitSpotMarketDataProvider implements MarketDataProvider {
     });
   }
 
-
   subscribeToQuotes(
     instrumentIds: readonly InstrumentId[],
     handlers: QuoteStreamHandlers,
@@ -577,7 +576,7 @@ export class BybitSpotMarketDataProvider implements MarketDataProvider {
         const timestamp = toFiniteNumber(readProperty(payload, 'ts'), 'quote timestamp');
 
         for (const item of items) {
-          if (!isRecord(item) || readProperty(item, 'symbol') !== symbol && isTicker) {
+          if (!isRecord(item) || (readProperty(item, 'symbol') !== symbol && isTicker)) {
             throw new RangeError('Bybit returned a quote for an unexpected instrument.');
           }
 
