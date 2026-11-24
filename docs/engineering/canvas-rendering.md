@@ -31,6 +31,22 @@ Las conversiones de precio e índice lógico reutilizan las escalas del motor. L
 
 Las barras de volumen se normalizan con el volumen máximo del segmento visible. El clipping de velas y volumen se limita a sus respectivas áreas.
 
+## Interacción de puntero
+
+`ChartInteractionController` posee el estado de navegación independiente del DOM: frame actual, posición del crosshair y estado de arrastre.
+
+- Movimiento dentro del plot actualiza el crosshair; al salir del plot lo oculta.
+- El arrastre con botón primario desplaza el eje temporal en la dirección del puntero.
+- La rueda horizontal desplaza el eje temporal.
+- La rueda vertical aplica zoom anclado al índice lógico situado bajo el cursor.
+- Los gestos de trackpad pueden combinar desplazamiento horizontal y zoom vertical.
+- El zoom respeta los límites de separación de barras definidos en `TimeScale`.
+- Cambiar el frame cancela el arrastre y limpia el crosshair.
+
+`attachCanvasPointerEvents` es el adaptador DOM. Convierte coordenadas de cliente a píxeles CSS lógicos del Canvas, captura un único puntero primario durante el arrastre, evita el scroll de página solo cuando la rueda se consume dentro del plot y libera la captura y los listeners al destruirse.
+
+El host debe configurar `touch-action: none` en el Canvas cuando quiera que los gestos táctiles se entreguen íntegramente al gráfico. El adaptador no modifica estilos del elemento que pertenece a la aplicación.
+
 ## Limitaciones actuales
 
 - Las etiquetas del eje temporal muestran índices lógicos, no timestamps formateados del mercado.
