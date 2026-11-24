@@ -145,7 +145,8 @@ describe('chart interaction controller', () => {
       x: centerOfPriceScale(frame).x,
       y: frame.layout.plotArea.y + 80,
     };
-    const anchorPrice = frame.priceScale.range.min +
+    const anchorPrice =
+      frame.priceScale.range.min +
       (1 - 80 / frame.priceScale.height) *
         (frame.priceScale.range.max - frame.priceScale.range.min);
 
