@@ -98,6 +98,20 @@ describe('canvas pointer event adapter', () => {
     expect(controller.snapshot.crosshair).toEqual({ x: 320, y: 120 });
   });
 
+  it('registers and removes the double click listener with the rest of the adapter', () => {
+    const { canvas, listenerCount } = createCanvasTarget();
+    const controller = createChartInteractionController(
+      createChartFrame(900, 500, { min: 90, max: 120 }, 99),
+    );
+    const adapter = attachCanvasPointerEvents(canvas, controller);
+
+    expect(listenerCount()).toBe(7);
+
+    adapter.destroy();
+
+    expect(listenerCount()).toBe(0);
+  });
+
   it('captures the primary pointer while dragging the plot', () => {
     const { canvas, dispatch, capturedPointers } = createCanvasTarget();
     const controller = createChartInteractionController(
