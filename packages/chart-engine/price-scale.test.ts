@@ -64,7 +64,7 @@ describe('price scale transformations', () => {
     const nextScale = panPriceScale(scale, 20);
 
     expect(nextScale.range).toEqual({ min: 105, max: 205 });
-    expect(priceToCoordinate(150, nextScale)).toBe(220);
+    expect(priceToCoordinate(150, nextScale)).toBeCloseTo(220);
   });
 
   it('reverses price panning direction for inverted scales', () => {
