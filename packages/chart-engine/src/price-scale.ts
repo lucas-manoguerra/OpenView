@@ -16,6 +16,10 @@ export type PriceScale = Readonly<{
   inverted: boolean;
 }>;
 
+export type PriceTickFormatOptions = Readonly<{
+  locale?: string;
+}>;
+
 export type PriceScaleTick = Readonly<{
   price: number;
   value: number;
@@ -125,14 +129,18 @@ const getDecimalPlaces = (step: number): number => {
   return 12;
 };
 
-const formatNumber = (value: number, precision: number): string => {
+const formatNumber = (value: number, precision: number, locale: string): string => {
   const normalizedValue = normalizeZero(value);
 
   if (Math.abs(normalizedValue) >= 1e21) {
     return normalizedValue.toExponential(precision);
   }
 
-  return normalizedValue.toFixed(precision);
+  return new Intl.NumberFormat(locale, {
+    useGrouping: true,
+    minimumFractionDigits: precision,
+    maximumFractionDigits: precision,
+  }).format(normalizedValue);
 };
 
 const generateLinearValues = (
@@ -353,6 +361,7 @@ export const zoomPriceScale = (
 export const generatePriceTicks = (
   scale: PriceScale,
   targetTickCount = 6,
+  options: PriceTickFormatOptions = {},
 ): readonly PriceScaleTick[] => {
   if (!Number.isInteger(targetTickCount) || targetTickCount < 2 || targetTickCount > 50) {
     throw new RangeError('Target tick count must be an integer between 2 and 50.');
@@ -364,13 +373,14 @@ export const generatePriceTicks = (
       ? generateLogarithmicValues(scale.range, targetTickCount)
       : generateLinearValues(transformedRange, targetTickCount);
   const precision = getDecimalPlaces(generated.step);
+  const locale = options.locale ?? 'en-US';
 
   return Object.freeze(
     generated.values.map((generatedValue) => {
       const price =
         scale.mode === 'logarithmic' ? generatedValue : fromScaleValue(generatedValue, scale);
       const value = scale.mode === 'logarithmic' ? price : generatedValue;
-      const numberLabel = formatNumber(value, precision);
+      const numberLabel = formatNumber(value, precision, locale);
       const label =
         scale.mode === 'percentage' ? `${value > 0 ? '+' : ''}${numberLabel}%` : numberLabel;
 
