@@ -16,7 +16,28 @@ Cada paquete ejecuta TypeScript con modo estricto, comprobación de tipos exacto
 
 ### Integración y navegador
 
-Playwright valida rutas, accesibilidad observable, interacción entre secciones e integración de las islas Preact con Astro.
+Playwright valida rutas, accesibilidad observable, interacción entre secciones e integración de las islas Preact con Astro. El reporte HTML y los traces se publican como artefactos de GitHub Actions para facilitar el diagnóstico de fallos.
+
+## Jobs de CI
+
+El workflow `.github/workflows/quality.yml` mantiene verificaciones independientes y ejecuta los jobs en paralelo:
+
+| Job | Verificación |
+| --- | --- |
+| Format | Formato de archivos con Biome |
+| Lint | Reglas estáticas de Biome |
+| Architecture boundaries | Prohibición de `useEffect`, comentarios y dependencias fuera de los límites |
+| TypeScript · market-domain | Tipos del dominio de mercado |
+| TypeScript · chart-engine | Tipos del motor de gráficos |
+| TypeScript · market-data | Tipos de proveedores y contratos de datos |
+| TypeScript · terminal | Tipos de la aplicación Astro y Preact |
+| Unit tests | Tests unitarios con Vitest |
+| Astro build | Compilación de la aplicación |
+| Browser tests · Chromium | Pruebas E2E con Playwright |
+
+El job `All quality checks` agrega los resultados y falla cuando cualquier verificación termina en error, es cancelada o no se ejecuta. Así se conserva un único check agregado para protección de ramas sin perder el diagnóstico individual.
+
+La configuración de Node.js, pnpm y dependencias se centraliza en `.github/actions/setup-environment`.
 
 ## Reglas
 
@@ -29,6 +50,17 @@ Playwright valida rutas, accesibilidad observable, interacción entre secciones 
 ## Verificación local
 
 ```bash
-pnpm check
+pnpm format:check
+pnpm lint
+pnpm architecture:check
+pnpm typecheck
+pnpm test
+pnpm build
 pnpm test:e2e
-```
+``
+
+Para ejecutar las verificaciones de formato, arquitectura, tipos, tests unitarios y build en un solo comando:
+
+```bash
+pnpm check
+``
