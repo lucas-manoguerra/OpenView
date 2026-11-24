@@ -136,9 +136,7 @@ test('loads older historical candles when panning to the left boundary', async (
   await page.goto('/');
 
   const canvas = page.locator('canvas[data-candles-count]');
-  await expect
-    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
-    .toBe(500);
+  await expect.poll(async () => Number(await canvas.getAttribute('data-candles-count'))).toBe(500);
 
   const bounds = await canvas.boundingBox();
 
