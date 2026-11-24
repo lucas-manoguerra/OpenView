@@ -344,7 +344,7 @@ test('tracks multiple instruments and changes the selected chart market', async 
   const sendTicker = (symbol: string, last: string, bid: string, ask: string, change: string) => {
     quotesRoute.send(
       JSON.stringify({
-        stream: symbol.toLowerCase() + '@ticker',
+        stream: `${symbol.toLowerCase()}@ticker`,
         data: {
           e: '24hrTicker',
           E: Date.now(),
@@ -379,6 +379,48 @@ test('tracks multiple instruments and changes the selected chart market', async 
   sendTicker('BTCUSDT', '65100', '65099', '65101', '1.7');
   await expect(page.getByTestId('watchlist-last-BTC-USDT')).toHaveText('65.100');
   await expect(page.getByTestId('quote-last')).toHaveText('3.500');
+});
+
+test('adds, removes and restores watchlist preferences after reload', async ({ page }) => {
+  await page.goto('/');
+
+  const watchlist = page.getByTestId('market-watchlist');
+  const search = page.getByTestId('watchlist-search');
+
+  await expect(page.getByTestId('watchlist-instrument')).toHaveCount(3);
+
+  await search.fill('XRP');
+  await page.getByTestId('watchlist-add-instrument').click();
+
+  await expect(page.getByTestId('watchlist-instrument')).toHaveCount(4);
+  await expect(
+    page.getByTestId('watchlist-instrument').filter({ hasText: 'XRP / USDT' }),
+  ).toBeVisible();
+
+  await page.getByRole('button', { name: 'Ethereum ETH / USDT' }).click();
+  await page.getByTestId('watchlist-remove-ETH-USDT').click();
+  await expect(page.getByTestId('watchlist-instrument')).toHaveCount(3);
+  await expect(page.getByTestId('watchlist-remove-ETH-USDT')).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Solana SOL / USDT' }).click();
+  await expect(page.getByRole('button', { name: 'Solana SOL / USDT' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+
+  await page.reload();
+
+  await expect(watchlist).toBeVisible();
+  await expect(page.getByTestId('watchlist-instrument')).toHaveCount(3);
+  await expect(
+    page.getByTestId('watchlist-instrument').filter({ hasText: 'XRP / USDT' }),
+  ).toBeVisible();
+  await expect(page.getByTestId('watchlist-remove-ETH-USDT')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Solana SOL / USDT' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(page.getByRole('img', { name: /para SOL \/ USDT/ })).toBeVisible();
 });
 
 test('displays normalized live quotes and refreshes them across Spot providers', async ({

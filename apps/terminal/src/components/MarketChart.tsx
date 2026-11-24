@@ -13,33 +13,27 @@ import {
   type MarketDataSubscription,
   type QuoteUpdate,
 } from '@openview/market-data';
-import { MarketWatchlist, type WatchlistInstrument } from './MarketWatchlist';
+import { MarketWatchlist } from './MarketWatchlist';
+import {
+  DEFAULT_WATCHLIST,
+  MAX_WATCHLIST_INSTRUMENTS,
+  WATCHLIST_CATALOG,
+  loadBrowserWatchlistPreferences,
+  saveBrowserWatchlistPreferences,
+  type WatchlistInstrument,
+} from '../watchlist/watchlist-preferences';
 import { ChartCanvas } from './ChartCanvas';
 
 const DEFAULT_PROVIDER_ID = 'binance-spot';
 const DEFAULT_INTERVAL: CandleInterval = '1m';
-const WATCHLIST_INSTRUMENTS = Object.freeze([
-  Object.freeze({
-    id: createInstrumentId('BTC-USDT'),
-    symbol: 'BTC / USDT',
-    name: 'Bitcoin',
-    chartSymbol: 'BTC / USDT',
-  }),
-  Object.freeze({
-    id: createInstrumentId('ETH-USDT'),
-    symbol: 'ETH / USDT',
-    name: 'Ethereum',
-    chartSymbol: 'ETH / USDT',
-  }),
-  Object.freeze({
-    id: createInstrumentId('SOL-USDT'),
-    symbol: 'SOL / USDT',
-    name: 'Solana',
-    chartSymbol: 'SOL / USDT',
-  }),
-] as const satisfies readonly WatchlistInstrument[]);
-const WATCHLIST_INSTRUMENT_IDS = WATCHLIST_INSTRUMENTS.map((instrument) => instrument.id);
-const DEFAULT_INSTRUMENT_ID = WATCHLIST_INSTRUMENTS[0].id;
+const FALLBACK_WATCHLIST_INSTRUMENT: WatchlistInstrument = Object.freeze({
+  id: 'BTC-USDT',
+  symbol: 'BTC / USDT',
+  name: 'Bitcoin',
+  chartSymbol: 'BTC / USDT',
+});
+const DEFAULT_WATCHLIST_INSTRUMENT = DEFAULT_WATCHLIST[0] ?? FALLBACK_WATCHLIST_INSTRUMENT;
+const DEFAULT_INSTRUMENT_ID = createInstrumentId(DEFAULT_WATCHLIST_INSTRUMENT.id);
 const HISTORY_CANDLE_COUNT = 500;
 
 const INTERVAL_DURATION_MS: Readonly<Record<CandleInterval, number>> = Object.freeze({
@@ -121,6 +115,7 @@ const getHistoryStartTime = (endTime: number, interval: CandleInterval): number 
 export function MarketChart() {
   const [providerId, setProviderId] = useState(DEFAULT_PROVIDER_ID);
   const [interval, setInterval] = useState<CandleInterval>(DEFAULT_INTERVAL);
+  const [watchlist, setWatchlist] = useState<readonly WatchlistInstrument[]>(DEFAULT_WATCHLIST);
   const [selectedInstrumentId, setSelectedInstrumentId] =
     useState<InstrumentId>(DEFAULT_INSTRUMENT_ID);
   const [candles, setCandles] = useState<
@@ -213,58 +208,61 @@ export function MarketChart() {
     }
   };
 
-  const loadQuotes = useCallback((nextProviderId: string): void => {
-    const requestId = quoteRequestIdRef.current + 1;
-    quoteRequestIdRef.current = requestId;
-    quoteSubscriptionRef.current?.unsubscribe();
-    quoteSubscriptionRef.current = null;
-    setQuotes({});
-    setQuoteStatus('disconnected');
-    setQuoteError(null);
-
-    const selectedSource = historicalService.getSource(nextProviderId);
-
-    if (!selectedSource.streamingQuotes) {
-      return;
-    }
-
-    try {
-      quoteSubscriptionRef.current = streamService.subscribeToQuotes(
-        nextProviderId,
-        WATCHLIST_INSTRUMENT_IDS,
-        {
-          onQuote: (nextQuote) => {
-            if (requestId !== quoteRequestIdRef.current) {
-              return;
-            }
-
-            setQuotes((current) => ({
-              ...current,
-              [nextQuote.instrumentId]: nextQuote,
-            }));
-            setQuoteError(null);
-          },
-          onStatus: (status) => {
-            if (requestId === quoteRequestIdRef.current) {
-              setQuoteStatus(status);
-            }
-          },
-          onError: (quoteCause) => {
-            if (requestId === quoteRequestIdRef.current) {
-              setQuoteError(quoteCause.message);
-            }
-          },
-        },
-      );
-    } catch (quoteCause) {
+  const loadQuotes = useCallback(
+    (nextProviderId: string, nextInstruments: readonly WatchlistInstrument[]): void => {
+      const requestId = quoteRequestIdRef.current + 1;
+      quoteRequestIdRef.current = requestId;
+      quoteSubscriptionRef.current?.unsubscribe();
+      quoteSubscriptionRef.current = null;
+      setQuotes({});
       setQuoteStatus('disconnected');
-      setQuoteError(
-        quoteCause instanceof Error
-          ? quoteCause.message
-          : 'No se pudo iniciar el flujo de cotizaciones en vivo.',
-      );
-    }
-  }, []);
+      setQuoteError(null);
+
+      const selectedSource = historicalService.getSource(nextProviderId);
+
+      if (!selectedSource.streamingQuotes) {
+        return;
+      }
+
+      try {
+        quoteSubscriptionRef.current = streamService.subscribeToQuotes(
+          nextProviderId,
+          nextInstruments.map((instrument) => createInstrumentId(instrument.id)),
+          {
+            onQuote: (nextQuote) => {
+              if (requestId !== quoteRequestIdRef.current) {
+                return;
+              }
+
+              setQuotes((current) => ({
+                ...current,
+                [nextQuote.instrumentId]: nextQuote,
+              }));
+              setQuoteError(null);
+            },
+            onStatus: (status) => {
+              if (requestId === quoteRequestIdRef.current) {
+                setQuoteStatus(status);
+              }
+            },
+            onError: (quoteCause) => {
+              if (requestId === quoteRequestIdRef.current) {
+                setQuoteError(quoteCause.message);
+              }
+            },
+          },
+        );
+      } catch (quoteCause) {
+        setQuoteStatus('disconnected');
+        setQuoteError(
+          quoteCause instanceof Error
+            ? quoteCause.message
+            : 'No se pudo iniciar el flujo de cotizaciones en vivo.',
+        );
+      }
+    },
+    [],
+  );
 
   const loadCandles = useCallback(
     async (
@@ -507,8 +505,12 @@ export function MarketChart() {
       }
 
       initializedRef.current = true;
-      loadQuotes(DEFAULT_PROVIDER_ID);
-      void loadCandles(DEFAULT_PROVIDER_ID, DEFAULT_INTERVAL, DEFAULT_INSTRUMENT_ID);
+      const preferences = loadBrowserWatchlistPreferences();
+      const restoredSelectedInstrumentId = createInstrumentId(preferences.selectedInstrumentId);
+      setWatchlist(preferences.instruments);
+      setSelectedInstrumentId(restoredSelectedInstrumentId);
+      loadQuotes(DEFAULT_PROVIDER_ID, preferences.instruments);
+      void loadCandles(DEFAULT_PROVIDER_ID, DEFAULT_INTERVAL, restoredSelectedInstrumentId);
     },
     [loadCandles, loadQuotes],
   );
@@ -517,8 +519,8 @@ export function MarketChart() {
   const displayedStreamStatus = selectedSource.streamingCandles ? streamStatus : 'unsupported';
   const quote = quotes[selectedInstrumentId] ?? null;
   const selectedInstrument =
-    WATCHLIST_INSTRUMENTS.find((instrument) => instrument.id === selectedInstrumentId) ??
-    WATCHLIST_INSTRUMENTS[0];
+    watchlist.find((instrument) => instrument.id === selectedInstrumentId) ??
+    DEFAULT_WATCHLIST_INSTRUMENT;
   const quoteStatusLabel = !selectedSource.streamingQuotes
     ? 'No disponible'
     : quoteStatus === 'connected'
@@ -569,7 +571,7 @@ export function MarketChart() {
 
     setProviderId(nextProviderId);
     setInterval(nextInterval);
-    loadQuotes(nextProviderId);
+    loadQuotes(nextProviderId, watchlist);
     void loadCandles(nextProviderId, nextInterval, selectedInstrumentId);
   };
 
@@ -585,16 +587,60 @@ export function MarketChart() {
   };
 
   const handleInstrumentSelect = (nextInstrumentId: string): void => {
-    const nextInstrument = WATCHLIST_INSTRUMENTS.find(
-      (instrument) => instrument.id === nextInstrumentId,
-    );
+    const nextInstrument = watchlist.find((instrument) => instrument.id === nextInstrumentId);
 
     if (nextInstrument === undefined || nextInstrument.id === selectedInstrumentId) {
       return;
     }
 
-    setSelectedInstrumentId(nextInstrument.id);
-    void loadCandles(providerId, interval, nextInstrument.id);
+    const nextSelectedInstrumentId = createInstrumentId(nextInstrument.id);
+    setSelectedInstrumentId(nextSelectedInstrumentId);
+    saveBrowserWatchlistPreferences({
+      instruments: watchlist,
+      selectedInstrumentId: nextSelectedInstrumentId,
+    });
+    void loadCandles(providerId, interval, nextSelectedInstrumentId);
+  };
+
+  const handleInstrumentAdd = (nextInstrument: WatchlistInstrument): void => {
+    if (
+      watchlist.some((instrument) => instrument.id === nextInstrument.id) ||
+      watchlist.length >= MAX_WATCHLIST_INSTRUMENTS
+    ) {
+      return;
+    }
+
+    const nextWatchlist = [...watchlist, nextInstrument];
+    setWatchlist(nextWatchlist);
+    saveBrowserWatchlistPreferences({
+      instruments: nextWatchlist,
+      selectedInstrumentId,
+    });
+    loadQuotes(providerId, nextWatchlist);
+  };
+
+  const handleInstrumentRemove = (instrumentId: string): void => {
+    if (watchlist.length <= 1 || !watchlist.some((instrument) => instrument.id === instrumentId)) {
+      return;
+    }
+
+    const nextWatchlist = watchlist.filter((instrument) => instrument.id !== instrumentId);
+    const nextSelectedInstrumentId =
+      selectedInstrumentId === instrumentId
+        ? createInstrumentId(nextWatchlist[0]?.id ?? DEFAULT_WATCHLIST_INSTRUMENT.id)
+        : selectedInstrumentId;
+
+    setWatchlist(nextWatchlist);
+    setSelectedInstrumentId(nextSelectedInstrumentId);
+    saveBrowserWatchlistPreferences({
+      instruments: nextWatchlist,
+      selectedInstrumentId: nextSelectedInstrumentId,
+    });
+    loadQuotes(providerId, nextWatchlist);
+
+    if (nextSelectedInstrumentId !== selectedInstrumentId) {
+      void loadCandles(providerId, interval, nextSelectedInstrumentId);
+    }
   };
 
   return (
@@ -669,10 +715,13 @@ export function MarketChart() {
         </div>
       </div>
       <MarketWatchlist
-        instruments={WATCHLIST_INSTRUMENTS}
+        instruments={watchlist}
+        availableInstruments={WATCHLIST_CATALOG}
         selectedInstrumentId={selectedInstrumentId}
         quotes={quotes}
         onSelect={handleInstrumentSelect}
+        onAdd={handleInstrumentAdd}
+        onRemove={handleInstrumentRemove}
       />
       <section
         class="grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-[#0a101a] p-3 sm:grid-cols-5"
