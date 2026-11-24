@@ -1,4 +1,13 @@
 export {
+  chartCoordinateToDataPoint,
+  createChartFrame,
+  dataPointToChartCoordinate,
+  type ChartCoordinate,
+  type ChartDataPoint,
+  type ChartFrame,
+  type ChartFrameOptions,
+} from './chart-frame';
+export {
   coordinateToPrice,
   createPriceScale,
   generatePriceTicks,
