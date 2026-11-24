@@ -109,6 +109,7 @@ export function MarketChart() {
   const [streamError, setStreamError] = useState<string | null>(null);
   const [streamCandleCount, setStreamCandleCount] = useState(0);
   const [recoveringHistory, setRecoveringHistory] = useState(false);
+  const [historyRecoveryCount, setHistoryRecoveryCount] = useState(0);
   const initializedRef = useRef(false);
   const requestIdRef = useRef(0);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -161,6 +162,7 @@ export function MarketChart() {
       candlesRef.current = nextCandles;
       setCandles(nextCandles);
       setStreamError(null);
+      setHistoryRecoveryCount((count) => count + 1);
     } catch (cause) {
       if (controller.signal.aborted || requestId !== requestIdRef.current) {
         return;
@@ -191,6 +193,7 @@ export function MarketChart() {
       recoveryRequestRef.current = false;
       streamHasConnectedRef.current = false;
       setRecoveringHistory(false);
+      setHistoryRecoveryCount(0);
       streamSubscriptionRef.current?.unsubscribe();
       streamSubscriptionRef.current = null;
       setStreamStatus('disconnected');
@@ -509,6 +512,7 @@ export function MarketChart() {
             data-testid="market-stream-status"
             data-stream-status={displayedStreamStatus}
             data-stream-candle-count={streamCandleCount}
+            data-history-recovery-count={historyRecoveryCount}
           >
             {streamStatusLabel}
           </span>
