@@ -462,11 +462,22 @@ describe('Bybit Spot candle stream', () => {
     connections[0]?.open();
     connections[0]?.emit({
       topic: 'kline.1.BTCUSDT',
-      data: [{ start: START_TIME, interval: '1', open: '100', high: '90', low: '95', close: '101', volume: '1', confirm: false }],
+      data: [
+        {
+          start: START_TIME,
+          interval: '1',
+          open: '100',
+          high: '90',
+          low: '95',
+          close: '101',
+          volume: '1',
+          confirm: false,
+        },
+      ],
     });
 
     expect(errors).toHaveLength(1);
-    expect(errors[0]?.message).toContain('invalid OHLCV candle');
+    expect(errors[0]?.message).toContain('invalid streamed OHLCV candle');
     expect(() =>
       provider.subscribeToCandles(
         { instrumentId: createInstrumentId('BTC-USDT'), interval: '8h' },
