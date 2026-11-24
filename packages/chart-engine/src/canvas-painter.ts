@@ -9,6 +9,7 @@ import {
 } from './time-axis';
 import type { ChartCoordinate, ChartFrame } from './chart-frame';
 import type { MovingAveragePoint } from './indicators';
+import { getLogicalIndexAtTimestamp } from './drawing-geometry';
 
 export type ChartRenderCandle = Candle &
   Readonly<{
@@ -45,6 +46,7 @@ export type ChartRenderScene = Readonly<{
   chartType: ChartType;
   indicators: readonly ChartIndicatorSeries[];
   drawings: readonly ChartRenderDrawing[];
+  selectedDrawingId: string | null;
 }>;
 
 export type ChartRenderTheme = Readonly<{
@@ -161,6 +163,7 @@ export const createChartRenderScene = (
   chartType: ChartType = 'candles',
   indicators: readonly ChartIndicatorSeries[] = [],
   drawings: readonly ChartRenderDrawing[] = [],
+  selectedDrawingId: string | null = null,
 ): ChartRenderScene => {
   let previousLogicalIndex = Number.NEGATIVE_INFINITY;
   const normalizedCandles: ChartRenderCandle[] = [];
@@ -198,6 +201,7 @@ export const createChartRenderScene = (
     chartType,
     indicators: frozenIndicators,
     drawings: frozenDrawings,
+    selectedDrawingId,
   });
 };
 
@@ -207,6 +211,7 @@ export type ChartRenderSceneUpdate = Readonly<{
   chartType?: ChartType;
   indicators?: readonly ChartIndicatorSeries[];
   drawings?: readonly ChartRenderDrawing[];
+  selectedDrawingId?: string | null;
 }>;
 
 export const updateChartRenderScene = (
@@ -216,6 +221,8 @@ export const updateChartRenderScene = (
   const frame = update.frame ?? scene.frame;
   const crosshair = update.crosshair === undefined ? scene.crosshair : update.crosshair;
   const chartType = update.chartType ?? scene.chartType;
+  const selectedDrawingId =
+    update.selectedDrawingId === undefined ? scene.selectedDrawingId : update.selectedDrawingId;
   const indicators =
     update.indicators === undefined || update.indicators === scene.indicators
       ? scene.indicators
@@ -235,7 +242,8 @@ export const updateChartRenderScene = (
     crosshair?.y === scene.crosshair?.y &&
     chartType === scene.chartType &&
     indicators === scene.indicators &&
-    drawings === scene.drawings
+    drawings === scene.drawings &&
+    selectedDrawingId === scene.selectedDrawingId
   ) {
     return scene;
   }
@@ -248,6 +256,7 @@ export const updateChartRenderScene = (
     chartType,
     indicators,
     drawings,
+    selectedDrawingId,
   });
 };
 
@@ -688,71 +697,6 @@ const drawIndicators = (context: CanvasRenderingContext2D, scene: ChartRenderSce
   context.restore();
 };
 
-const getLogicalIndexAtTimestamp = (
-  timestamp: number,
-  candles: readonly ChartRenderCandle[],
-): number | null => {
-  if (candles.length === 0 || !Number.isFinite(timestamp)) {
-    return null;
-  }
-
-  if (candles.length === 1) {
-    return candles[0]?.logicalIndex ?? null;
-  }
-
-  const first = candles[0];
-  const last = candles[candles.length - 1];
-
-  if (first === undefined || last === undefined) {
-    return null;
-  }
-
-  let left: ChartRenderCandle;
-  let right: ChartRenderCandle;
-
-  if (timestamp <= first.timestamp) {
-    left = first;
-    right = candles[1] ?? first;
-  } else if (timestamp >= last.timestamp) {
-    left = candles[candles.length - 2] ?? last;
-    right = last;
-  } else {
-    let lower = 0;
-    let upper = candles.length - 1;
-
-    while (lower <= upper) {
-      const middle = Math.floor((lower + upper) / 2);
-      const candle = candles[middle];
-
-      if (candle === undefined) {
-        return null;
-      }
-
-      if (candle.timestamp === timestamp) {
-        return candle.logicalIndex;
-      }
-
-      if (candle.timestamp < timestamp) {
-        lower = middle + 1;
-      } else {
-        upper = middle - 1;
-      }
-    }
-
-    left = candles[upper] ?? first;
-    right = candles[lower] ?? last;
-  }
-
-  const duration = right.timestamp - left.timestamp;
-
-  if (duration <= 0) {
-    return left.logicalIndex;
-  }
-
-  const progress = (timestamp - left.timestamp) / duration;
-  return left.logicalIndex + (right.logicalIndex - left.logicalIndex) * progress;
-};
-
 const drawDrawings = (context: CanvasRenderingContext2D, scene: ChartRenderScene): void => {
   if (scene.drawings.length === 0 || scene.candles.length === 0) {
     return;
@@ -842,8 +786,23 @@ const drawDrawings = (context: CanvasRenderingContext2D, scene: ChartRenderScene
     }
 
     context.strokeStyle = drawing.color;
-    context.lineWidth = 1.5;
+    context.lineWidth = scene.selectedDrawingId === drawing.id ? 2.5 : 1.5;
     context.stroke();
+
+    if (scene.selectedDrawingId === drawing.id) {
+      const handles = [start];
+
+      if (drawing.end !== null && end !== null) {
+        handles.push(end);
+      }
+
+      for (const handle of handles) {
+        context.fillStyle = '#0b0f17';
+        context.fillRect(handle.x - 5, handle.y - 5, 10, 10);
+        context.fillStyle = '#e2e8f0';
+        context.fillRect(handle.x - 3, handle.y - 3, 6, 6);
+      }
+    }
   }
 
   context.restore();
