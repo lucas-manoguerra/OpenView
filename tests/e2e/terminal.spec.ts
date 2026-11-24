@@ -71,8 +71,47 @@ const installBinanceMock = async (page: Page): Promise<void> => {
   });
 };
 
+const installWebSocketMock = async (page: Page): Promise<void> => {
+  await page.addInitScript(() => {
+    type StreamSocket = Readonly<{
+      url: string;
+      emit: (payload: string) => void;
+      close: () => void;
+    }>;
+    const sockets: StreamSocket[] = [];
+
+    class MockWebSocket extends EventTarget {
+      readonly url: string;
+      readyState = 0;
+
+      constructor(url: string) {
+        super();
+        this.url = url;
+        sockets.push({
+          url,
+          emit: (payload) => this.dispatchEvent(new MessageEvent('message', { data: payload })),
+          close: () => this.close(),
+        });
+        queueMicrotask(() => {
+          this.readyState = 1;
+          this.dispatchEvent(new Event('open'));
+        });
+      }
+
+      close(): void {
+        this.readyState = 3;
+        this.dispatchEvent(new Event('close'));
+      }
+    }
+
+    Object.defineProperty(window, '__openViewSockets', { value: sockets });
+    Object.defineProperty(window, 'WebSocket', { configurable: true, value: MockWebSocket });
+  });
+};
+
 test.beforeEach(async ({ page }) => {
   await installBinanceMock(page);
+  await installWebSocketMock(page);
 });
 
 test('loads the OpenView terminal foundation', async ({ page }) => {
@@ -156,42 +195,6 @@ test('loads older historical candles when panning to the left boundary', async (
 });
 
 test('streams Binance live candles and updates the current bar without duplicates', async ({ page }) => {
-  await page.addInitScript(() => {
-    type StreamSocket = Readonly<{
-      url: string;
-      emit: (payload: string) => void;
-      close: () => void;
-    }>;
-    const sockets: StreamSocket[] = [];
-
-    class MockWebSocket extends EventTarget {
-      readonly url: string;
-      readyState = 0;
-
-      constructor(url: string) {
-        super();
-        this.url = url;
-        sockets.push({
-          url,
-          emit: (payload) => this.dispatchEvent(new MessageEvent('message', { data: payload })),
-          close: () => this.close(),
-        });
-        queueMicrotask(() => {
-          this.readyState = 1;
-          this.dispatchEvent(new Event('open'));
-        });
-      }
-
-      close(): void {
-        this.readyState = 3;
-        this.dispatchEvent(new Event('close'));
-      }
-    }
-
-    Object.defineProperty(window, '__openViewSockets', { value: sockets });
-    Object.defineProperty(window, 'WebSocket', { configurable: true, value: MockWebSocket });
-  });
-
   await page.goto('/');
 
   const canvas = page.locator('canvas[data-candles-count]');
