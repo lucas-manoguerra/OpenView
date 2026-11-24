@@ -54,12 +54,7 @@ const DEMO_PRICE_RANGE = Object.freeze({
 const createFrame = (size: CanvasResize, controller: ChartInteractionController | null) => {
   const previousScale = controller?.snapshot.frame.timeScale;
 
-  return createChartFrame(
-    size.width,
-    size.height,
-    DEMO_PRICE_RANGE,
-    DEMO_CANDLES.length - 1,
-    {
+  return createChartFrame(size.width, size.height, DEMO_PRICE_RANGE, DEMO_CANDLES.length - 1, {
       layout: {
         rightPriceScaleWidth: 78,
         timeScaleHeight: 32,
@@ -77,8 +72,7 @@ const createFrame = (size: CanvasResize, controller: ChartInteractionController 
               maxBarSpacing: previousScale.maxBarSpacing,
               inverted: previousScale.inverted,
             },
-    },
-  );
+  });
 };
 
 const hasSameSize = (first: CanvasResize | null, second: CanvasResize): boolean =>
@@ -144,20 +138,17 @@ export function ChartCanvas() {
         controller.setFrame(frame);
       }
 
-      canvas.dataset.chartReady = 'true';
+      canvas.dataset['chartReady'] = 'true';
     };
 
-    const resizeAdapter: CanvasResizeAdapter = attachCanvasResizeObserver(
-      canvas,
-      handleResize,
-    );
+    const resizeAdapter: CanvasResizeAdapter = attachCanvasResizeObserver(canvas, handleResize);
 
     runtimeRef.current = Object.freeze({
       destroy: (): void => {
         pointerAdapter?.destroy();
         resizeAdapter.destroy();
         renderer.destroy();
-        delete canvas.dataset.chartReady;
+        delete canvas.dataset['chartReady'];
       },
     });
   }, []);
