@@ -79,7 +79,7 @@ describe('chart frame composition', () => {
 
     const coordinate = dataPointToChartCoordinate({ logicalIndex: 99, price: 100 }, frame);
 
-    expect(coordinate.x).toBe(frame.layout.plotArea.x + frame.layout.plotArea.width - 4);
+    expect(coordinate.x).toBe(frame.layout.plotArea.x + 4);
     expect(coordinate.y).toBe(frame.layout.plotArea.y);
     expect(chartCoordinateToDataPoint(coordinate, frame)).toEqual({
       logicalIndex: 99,
