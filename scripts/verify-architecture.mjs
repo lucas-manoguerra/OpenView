@@ -92,18 +92,11 @@ for (const root of sourceRoots) {
   for (const filePath of files) {
     const content = await readFile(filePath, 'utf8');
     const extension = path.extname(filePath);
-    const scriptKind =
-      extension === '.tsx' || extension === '.jsx'
-        ? ts.ScriptKind.TSX
-        : extension === '.js' || extension === '.mjs' || extension === '.cjs'
-          ? ts.ScriptKind.JS
-          : ts.ScriptKind.TS;
     const sourceFile = ts.createSourceFile(
       filePath,
       content,
       ts.ScriptTarget.Latest,
       true,
-      scriptKind,
     );
     const scanner = ts.createScanner(
       ts.ScriptTarget.Latest,
