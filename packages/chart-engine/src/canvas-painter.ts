@@ -1,6 +1,6 @@
 import type { Candle } from '@openview/market-domain';
-import { generatePriceTicks } from './price-scale';
-import { generateTimeTicks } from './time-scale';
+import { generatePriceTicks, priceToCoordinate } from './price-scale';
+import { generateTimeTicks, logicalIndexToCoordinate } from './time-scale';
 import type { ChartCoordinate, ChartFrame } from './chart-frame';
 
 export type ChartRenderCandle = Candle &
@@ -230,17 +230,13 @@ const drawCandles = (
   context.clip();
 
   for (const candle of candles) {
-    const x = plotArea.x + logicalIndexToCanvasCoordinate(candle.logicalIndex, frame);
-    const bodyTop = plotArea.y + priceToCanvasCoordinate(
-      Math.max(candle.open, candle.close),
-      frame,
-    );
-    const bodyBottom = plotArea.y + priceToCanvasCoordinate(
-      Math.min(candle.open, candle.close),
-      frame,
-    );
-    const high = plotArea.y + priceToCanvasCoordinate(candle.high, frame);
-    const low = plotArea.y + priceToCanvasCoordinate(candle.low, frame);
+    const x = plotArea.x + logicalIndexToCoordinate(candle.logicalIndex, frame.timeScale);
+    const bodyTop =
+      plotArea.y + priceToCoordinate(Math.max(candle.open, candle.close), frame.priceScale);
+    const bodyBottom =
+      plotArea.y + priceToCoordinate(Math.min(candle.open, candle.close), frame.priceScale);
+    const high = plotArea.y + priceToCoordinate(candle.high, frame.priceScale);
+    const low = plotArea.y + priceToCoordinate(candle.low, frame.priceScale);
     const color = getCandleColor(candle, theme);
 
     if (x < plotArea.x - bodyWidth || x > plotArea.x + plotArea.width + bodyWidth) {
@@ -265,59 +261,6 @@ const drawCandles = (
   context.restore();
 };
 
-const logicalIndexToCanvasCoordinate = (
-  logicalIndex: number,
-  frame: ChartFrame,
-): number => {
-  const distanceFromRight = frame.timeScale.visibleLogicalRange.to - logicalIndex;
-
-  return frame.timeScale.inverted
-    ? distanceFromRight * frame.timeScale.barSpacing
-    : frame.timeScale.width - distanceFromRight * frame.timeScale.barSpacing;
-};
-
-const priceToCanvasCoordinate = (price: number, frame: ChartFrame): number => {
-  const range = frame.priceScale.range;
-  let normalizedValue: number;
-
-  if (frame.priceScale.mode === 'logarithmic') {
-    if (price <= 0) {
-      throw new RangeError('Logarithmic candles require positive OHLC values.');
-    }
-
-    const minimum = Math.log(range.min);
-    const maximum = Math.log(range.max);
-    normalizedValue = (Math.log(price) - minimum) / (maximum - minimum);
-  } else if (frame.priceScale.mode === 'percentage') {
-    const base = frame.priceScale.baseValue;
-
-    if (base === null) {
-      throw new RangeError('Percentage price scales require a base value.');
-    }
-
-    const minimum = ((range.min - base) / base) * 100;
-    const maximum = ((range.max - base) / base) * 100;
-    const value = ((price - base) / base) * 100;
-    normalizedValue = (value - minimum) / (maximum - minimum);
-  } else if (frame.priceScale.mode === 'indexed-to-100') {
-    const base = frame.priceScale.baseValue;
-
-    if (base === null) {
-      throw new RangeError('Indexed price scales require a base value.');
-    }
-
-    const minimum = (range.min / base) * 100;
-    const maximum = (range.max / base) * 100;
-    const value = (price / base) * 100;
-    normalizedValue = (value - minimum) / (maximum - minimum);
-  } else {
-    normalizedValue = (price - range.min) / (range.max - range.min);
-  }
-
-  return (frame.priceScale.inverted ? normalizedValue : 1 - normalizedValue) *
-    frame.priceScale.height;
-};
-
 const drawVolume = (
   context: CanvasRenderingContext2D,
   scene: ChartRenderScene,
@@ -325,32 +268,38 @@ const drawVolume = (
 ): void => {
   const { volumeArea, plotArea } = scene.frame.layout;
 
-  if (volumeArea.height <= 0 || scene.candles.length === 0) {
+  if (volumeArea.height <= 0) {
     return;
   }
-
-  const maximumVolume = Math.max(...scene.candles.map((candle) => candle.volume));
-
-  if (maximumVolume <= 0) {
-    return;
-  }
-
-  const barWidth = Math.max(1, Math.min(20, scene.frame.timeScale.barSpacing * 0.7));
 
   context.save();
   context.fillStyle = theme.volumeBackground;
   context.fillRect(volumeArea.x, volumeArea.y, volumeArea.width, volumeArea.height);
+
+  if (scene.candles.length === 0) {
+    context.restore();
+    return;
+  }
+
+  let maximumVolume = 0;
+
+  for (const candle of scene.candles) {
+    maximumVolume = Math.max(maximumVolume, candle.volume);
+  }
+
+  if (maximumVolume <= 0) {
+    context.restore();
+    return;
+  }
+
+  const barWidth = Math.max(1, Math.min(20, scene.frame.timeScale.barSpacing * 0.7));
   context.beginPath();
   context.rect(volumeArea.x, volumeArea.y, volumeArea.width, volumeArea.height);
   context.clip();
 
   for (const candle of scene.candles) {
-    const distanceFromRight = scene.frame.timeScale.visibleLogicalRange.to - candle.logicalIndex;
-    const x = plotArea.x + (
-      scene.frame.timeScale.inverted
-        ? distanceFromRight * scene.frame.timeScale.barSpacing
-        : scene.frame.timeScale.width - distanceFromRight * scene.frame.timeScale.barSpacing
-    );
+    const x =
+      plotArea.x + logicalIndexToCoordinate(candle.logicalIndex, scene.frame.timeScale);
     const barHeight = (candle.volume / maximumVolume) * Math.max(1, volumeArea.height - 2);
 
     if (x < volumeArea.x - barWidth || x > volumeArea.x + volumeArea.width + barWidth) {
