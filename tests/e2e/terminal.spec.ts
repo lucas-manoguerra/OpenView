@@ -256,6 +256,8 @@ test('loads older historical candles when panning to the left boundary', async (
   const canvas = page.locator('canvas[data-candles-count]');
   await expect.poll(async () => Number(await canvas.getAttribute('data-candles-count'))).toBe(500);
 
+  await canvas.scrollIntoViewIfNeeded();
+
   const bounds = await canvas.boundingBox();
 
   expect(bounds).not.toBeNull();
@@ -812,6 +814,8 @@ test('supports price axis drag, anchored zoom and double-click auto fit', async 
   await expect(canvas).toHaveAttribute('data-chart-ready', 'true');
   await expect(canvas).toHaveAttribute('data-candles-count', /[1-9]\d*/);
 
+  await canvas.scrollIntoViewIfNeeded();
+
   const bounds = await canvas.boundingBox();
 
   expect(bounds).not.toBeNull();
@@ -953,6 +957,8 @@ test('preserves the temporal offset when older history is prepended', async ({ p
   const canvas = page.locator('canvas[data-candles-count]');
   await expect.poll(async () => Number(await canvas.getAttribute('data-candles-count'))).toBe(500);
   await expect(canvas).toHaveAttribute('data-navigation-mode', 'realtime');
+
+  await canvas.scrollIntoViewIfNeeded();
 
   const bounds = await canvas.boundingBox();
   expect(bounds).not.toBeNull();
