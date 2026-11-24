@@ -49,7 +49,9 @@ export const attachCanvasResizeObserver = (
       height < 0 ||
       devicePixelRatio <= 0
     ) {
-      throw new RangeError('Canvas resize values must be finite and non-negative with a positive pixel ratio.');
+      throw new RangeError(
+        'Canvas resize values must be finite and non-negative with a positive pixel ratio.',
+      );
     }
 
     onResize(Object.freeze({ width, height, devicePixelRatio }));
