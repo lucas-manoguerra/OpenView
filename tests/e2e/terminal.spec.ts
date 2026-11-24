@@ -449,6 +449,52 @@ test('navigates historical time, zooms the time scale and returns to realtime', 
     .not.toBe(imageBeforeRealtime);
 });
 
+test('controls future chart margin and returns to the realtime edge', async ({ page }) => {
+  await page.goto('/');
+
+  const canvas = page.locator('canvas[data-candles-count]');
+  const rightOffset = page.getByTestId('chart-right-offset');
+
+  await expect(canvas).toHaveAttribute('data-chart-ready', 'true');
+  await rightOffset.evaluate((element) => {
+    const input = element as HTMLInputElement;
+    input.value = '12';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+
+  await expect(canvas).toHaveAttribute('data-right-offset', '12');
+  await expect(rightOffset).toHaveValue('12');
+
+  await page.getByTestId('chart-go-realtime').click();
+
+  await expect(canvas).toHaveAttribute('data-right-offset', '0');
+  await expect(rightOffset).toHaveValue('0');
+});
+
+test('preserves the temporal offset when older history is prepended', async ({ page }) => {
+  await page.goto('/');
+
+  const canvas = page.locator('canvas[data-candles-count]');
+  await expect.poll(async () => Number(await canvas.getAttribute('data-candles-count'))).toBe(500);
+
+  const bounds = await canvas.boundingBox();
+  expect(bounds).not.toBeNull();
+
+  if (bounds === null) {
+    throw new Error('The chart canvas must have a visible bounding box.');
+  }
+
+  await page.mouse.move(bounds.x + bounds.width * 0.5, bounds.y + bounds.height * 0.5);
+  await page.mouse.wheel(-2600, 0);
+
+  const offsetBeforeHistory = await canvas.getAttribute('data-right-offset');
+  expect(offsetBeforeHistory).not.toBeNull();
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(500);
+  await expect(canvas).toHaveAttribute('data-right-offset', offsetBeforeHistory ?? '');
+});
+
 test('exposes auto, lock and inverted price scale controls', async ({ page }) => {
   await page.goto('/');
 

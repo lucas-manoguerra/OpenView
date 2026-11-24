@@ -36,6 +36,7 @@ type ChartRuntime = Readonly<{
   fitContent(mode: PriceScaleMode): void;
   fitPriceScale(): void;
   scrollTimeByBars(bars: number): void;
+  setRightOffset(offset: number): void;
   scrollToRealtime(): void;
   zoomTime(factor: number): void;
   setPriceScaleLocked(locked: boolean): void;
@@ -220,6 +221,7 @@ export function ChartCanvas({
   onNeedMoreHistory,
 }: ChartCanvasProps) {
   const runtimeRef = useRef<ChartRuntime | null>(null);
+  const rightOffsetInputRef = useRef<HTMLInputElement | null>(null);
   const [priceScaleMode, setPriceScaleMode] = useState<PriceScaleMode>('linear');
   const [autoScale, setAutoScale] = useState(true);
   const [priceScaleLocked, setPriceScaleLocked] = useState(false);
@@ -264,6 +266,12 @@ export function ChartCanvas({
         crosshair: snapshot.crosshair,
       });
       renderer.setScene(scene);
+      canvas.dataset['rightOffset'] = String(snapshot.frame.timeScale.rightOffset);
+      if (rightOffsetInputRef.current !== null) {
+        rightOffsetInputRef.current.value = String(
+          Math.max(0, Math.min(50, Math.round(snapshot.frame.timeScale.rightOffset))),
+        );
+      }
 
       if (
         snapshot.frame.timeScale.visibleLogicalRange.from <= OLDER_HISTORY_TRIGGER_LOGICAL_INDEX &&
@@ -306,6 +314,7 @@ export function ChartCanvas({
         controller = interactionController;
         interactionController.setPriceScaleLocked(priceScaleLockedRef.current);
         renderer.setScene(scene);
+        canvas.dataset['rightOffset'] = String(frame.timeScale.rightOffset);
         pointerAdapter = attachCanvasPointerEvents(canvas, interactionController, {
           getAutoScalePriceRange: () => getVisiblePriceRange(interactionController, currentCandles),
         });
@@ -394,6 +403,9 @@ export function ChartCanvas({
       },
       scrollTimeByBars: (bars: number): void => {
         controller?.scrollTimeByBars(bars);
+      },
+      setRightOffset: (offset: number): void => {
+        controller?.setRightOffset(offset);
       },
       scrollToRealtime: (): void => {
         controller?.scrollToRealtime();
@@ -543,6 +555,24 @@ export function ChartCanvas({
         >
           +
         </button>
+        <label class="flex items-center gap-1 px-1 text-[10px] text-slate-400">
+          <span>Margen</span>
+          <input
+            ref={rightOffsetInputRef}
+            type="range"
+            min="0"
+            max="50"
+            step="1"
+            defaultValue="0"
+            aria-label="Margen derecho en velas futuras"
+            data-testid="chart-right-offset"
+            disabled={renderCandles.length === 0}
+            onInput={(event) =>
+              runtimeRef.current?.setRightOffset(Number(event.currentTarget.value))
+            }
+            class="h-1 w-16 cursor-pointer accent-blue-400 disabled:opacity-40"
+          />
+        </label>
         <button
           type="button"
           disabled={renderCandles.length === 0}
