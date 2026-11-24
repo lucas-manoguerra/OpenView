@@ -76,7 +76,10 @@ type WebSocketRoutes = Readonly<{
   bybit: WebSocketRoute | null;
 }>;
 
-const webSocketRoutes = new WeakMap<Page, { binance: WebSocketRoute | null; bybit: WebSocketRoute | null }>();
+const webSocketRoutes = new WeakMap<
+  Page,
+  { binance: WebSocketRoute | null; bybit: WebSocketRoute | null }
+>();
 
 const installWebSocketMock = async (page: Page): Promise<void> => {
   const routes = { binance: null, bybit: null } as {
@@ -234,7 +237,9 @@ test('streams Binance live candles and updates the current bar without duplicate
   await expect(streamStatus).toHaveText('En vivo');
 });
 
-test('switches providers, streams Bybit candles and recovers history after reconnect', async ({ page }) => {
+test('switches providers, streams Bybit candles and recovers history after reconnect', async ({
+  page,
+}) => {
   let bybitHistoryRequestCount = 0;
 
   await page.route('https://api.bybit.com/v5/market/kline**', async (route) => {
