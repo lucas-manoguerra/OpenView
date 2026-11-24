@@ -1,7 +1,12 @@
 import { createCandle, type Candle } from '@openview/market-domain';
 import { generatePriceTicks, priceToCoordinate } from './price-scale';
 import { logicalIndexToCoordinate } from './time-scale';
-import { generateTimeAxisTicks, selectNonOverlappingTimeAxisTicks } from './time-axis';
+import {
+  createTimeAxisData,
+  generateTimeAxisTicks,
+  selectNonOverlappingTimeAxisTicks,
+  type TimeAxisData,
+} from './time-axis';
 import type { ChartCoordinate, ChartFrame } from './chart-frame';
 
 export type ChartRenderCandle = Candle &
@@ -12,6 +17,7 @@ export type ChartRenderCandle = Candle &
 export type ChartRenderScene = Readonly<{
   frame: ChartFrame;
   candles: readonly ChartRenderCandle[];
+  timeAxisData: TimeAxisData;
   crosshair: ChartCoordinate | null;
 }>;
 
@@ -50,7 +56,6 @@ export const createChartRenderScene = (
   crosshair: ChartCoordinate | null = null,
 ): ChartRenderScene => {
   let previousLogicalIndex = Number.NEGATIVE_INFINITY;
-  let previousTimestamp = Number.NEGATIVE_INFINITY;
   const normalizedCandles: ChartRenderCandle[] = [];
 
   for (const candle of candles) {
@@ -64,12 +69,7 @@ export const createChartRenderScene = (
       throw new RangeError('Render candles must satisfy market domain validation.');
     }
 
-    if (candle.timestamp <= previousTimestamp) {
-      throw new RangeError('Render candle timestamps must be strictly ascending.');
-    }
-
     previousLogicalIndex = candle.logicalIndex;
-    previousTimestamp = candle.timestamp;
     normalizedCandles.push(
       Object.freeze({ ...validation.value, logicalIndex: candle.logicalIndex }),
     );
@@ -79,9 +79,12 @@ export const createChartRenderScene = (
     throw new RangeError('Crosshair coordinates must be finite numbers.');
   }
 
+  const frozenCandles = Object.freeze(normalizedCandles);
+
   return Object.freeze({
     frame,
-    candles: Object.freeze(normalizedCandles),
+    candles: frozenCandles,
+    timeAxisData: createTimeAxisData(frozenCandles),
     crosshair: crosshair === null ? null : Object.freeze({ ...crosshair }),
   });
 };
@@ -113,6 +116,7 @@ export const updateChartRenderScene = (
   return Object.freeze({
     frame,
     candles: scene.candles,
+    timeAxisData: scene.timeAxisData,
     crosshair: crosshair === null ? null : Object.freeze({ ...crosshair }),
   });
 };
@@ -151,7 +155,7 @@ const drawGrid = (
     }
   }
 
-  for (const tick of generateTimeAxisTicks(frame.timeScale, scene.candles, { targetTickCount: getTargetTimeTickCount(plotArea.width) })) {
+  for (const tick of generateTimeAxisTicks(frame.timeScale, scene.timeAxisData, { targetTickCount: getTargetTimeTickCount(plotArea.width) })) {
     const x = plotArea.x + tick.coordinate;
     context.moveTo(x, plotArea.y);
     context.lineTo(x, plotArea.y + plotArea.height + volumeArea.height);
@@ -215,7 +219,7 @@ const drawAxes = (
   if (timeScaleArea.height > 0) {
     context.textAlign = 'center';
 
-    const timeTicks = generateTimeAxisTicks(timeScale, scene.candles, {
+    const timeTicks = generateTimeAxisTicks(timeScale, scene.timeAxisData, {
       targetTickCount: getTargetTimeTickCount(plotArea.width),
       locale: 'es-AR',
     });
