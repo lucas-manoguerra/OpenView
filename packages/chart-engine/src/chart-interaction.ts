@@ -273,7 +273,8 @@ export class ChartInteractionController {
       return false;
     }
 
-    const deltaX = (this.frame.timeScale.inverted ? 1 : -1) * bars * this.frame.timeScale.barSpacing;
+    const deltaX =
+      (this.frame.timeScale.inverted ? 1 : -1) * bars * this.frame.timeScale.barSpacing;
     const timeScale = panTimeScale(this.frame.timeScale, deltaX);
 
     if (timeScale.rightOffset === this.frame.timeScale.rightOffset) {
@@ -293,17 +294,13 @@ export class ChartInteractionController {
       return false;
     }
 
-    const timeScale = createTimeScale(
-      currentScale.width,
-      currentScale.rightmostLogicalIndex,
-      {
-        barSpacing: currentScale.barSpacing,
-        rightOffset: 0,
-        minBarSpacing: currentScale.minBarSpacing,
-        maxBarSpacing: currentScale.maxBarSpacing,
-        inverted: currentScale.inverted,
-      },
-    );
+    const timeScale = createTimeScale(currentScale.width, currentScale.rightmostLogicalIndex, {
+      barSpacing: currentScale.barSpacing,
+      rightOffset: 0,
+      minBarSpacing: currentScale.minBarSpacing,
+      maxBarSpacing: currentScale.maxBarSpacing,
+      inverted: currentScale.inverted,
+    });
 
     this.frame = withTimeScale(this.frame, timeScale);
     this.crosshair = null;
