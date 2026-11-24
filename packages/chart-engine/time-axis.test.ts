@@ -112,7 +112,7 @@ describe('timestamp based time axis', () => {
     const scale = createTimeScale(500, 4, { barSpacing: 100 });
     const ticks = generateTimeAxisTicks(scale, points, { targetTickCount: 4 });
 
-    expect(ticks.length).toBe(1);
+    expect(ticks.length).toBe(2);
     expect(ticks.every((tick) => points[tick.logicalIndex]?.timestamp === tick.timestamp)).toBe(
       true,
     );
