@@ -53,9 +53,7 @@ describe('logical time scale', () => {
     const nextScale = panTimeScale(scale, 80);
 
     expect(nextScale.rightOffset).toBe(10);
-    expect(logicalIndexToCoordinate(50, nextScale)).toBe(
-      logicalIndexToCoordinate(50, scale) + 80,
-    );
+    expect(logicalIndexToCoordinate(50, nextScale)).toBe(logicalIndexToCoordinate(50, scale) + 80);
   });
 
   it('keeps the logical index under the pointer fixed while zooming', () => {
