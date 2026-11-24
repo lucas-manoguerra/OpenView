@@ -14,7 +14,7 @@ export type CanvasDrawingTool =
   | 'rectangle';
 
 export type CanvasDrawingGesture = Readonly<{
-  type: Exclude<CanvasDrawingTool, 'cursor'>;
+  type: Exclude<CanvasDrawingTool, 'cursor' | 'select'>;
   start: ChartDataPoint;
   end: ChartDataPoint | null;
 }>;
@@ -112,7 +112,7 @@ export const attachCanvasPointerEvents = (
       }
     }
 
-    if (drawingTool !== 'cursor') {
+    if (drawingTool !== 'cursor' && drawingTool !== 'select') {
       const { plotArea } = controller.snapshot.frame.layout;
       const insidePlot =
         position.x >= plotArea.x &&
