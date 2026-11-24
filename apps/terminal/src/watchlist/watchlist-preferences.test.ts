@@ -8,6 +8,16 @@ import {
   type WatchlistPreferences,
 } from './watchlist-preferences';
 
+const getCatalogInstrument = (id: string) => {
+  const instrument = WATCHLIST_CATALOG.find((item) => item.id === id);
+
+  if (instrument === undefined) {
+    throw new Error('The catalogue must contain ' + id + '.');
+  }
+
+  return instrument;
+};
+
 class MemoryStorage {
   readonly values = new Map<string, string>();
 
@@ -91,7 +101,7 @@ describe('watchlist preferences', () => {
   it('persists and reloads watchlist order and selection', () => {
     const storage = new MemoryStorage();
     const preferences: WatchlistPreferences = {
-      instruments: [WATCHLIST_CATALOG[2], WATCHLIST_CATALOG[1]],
+      instruments: [getCatalogInstrument('SOL-USDT'), getCatalogInstrument('ETH-USDT')],
       selectedInstrumentId: 'ETH-USDT',
     };
 
