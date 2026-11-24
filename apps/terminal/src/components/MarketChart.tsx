@@ -48,6 +48,19 @@ const getFallbackInterval = (
   supportedIntervals: readonly CandleInterval[],
 ): CandleInterval | undefined => (supportedIntervals.includes('1m') ? '1m' : supportedIntervals[0]);
 
+const getHistoryStartTime = (endTime: number, interval: CandleInterval): number => {
+  if (interval !== '1M') {
+    return endTime - INTERVAL_DURATION_MS[interval] * HISTORY_CANDLE_COUNT;
+  }
+
+  const start = new Date(endTime);
+  start.setUTCDate(1);
+  start.setUTCHours(0, 0, 0, 0);
+  start.setUTCMonth(start.getUTCMonth() - HISTORY_CANDLE_COUNT + 1);
+
+  return start.getTime();
+};
+
 export function MarketChart() {
   const [providerId, setProviderId] = useState(DEFAULT_PROVIDER_ID);
   const [interval, setInterval] = useState<CandleInterval>(DEFAULT_INTERVAL);
