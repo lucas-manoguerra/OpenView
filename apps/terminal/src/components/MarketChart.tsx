@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'preact/hooks';
-import { createInstrumentId, type Candle } from '@openview/market-domain';
+import { createInstrumentId, type Candle, type InstrumentId } from '@openview/market-domain';
 import {
   BinanceSpotMarketDataProvider,
   BybitSpotMarketDataProvider,
@@ -13,11 +13,33 @@ import {
   type MarketDataSubscription,
   type QuoteUpdate,
 } from '@openview/market-data';
+import { MarketWatchlist, type WatchlistInstrument } from './MarketWatchlist';
 import { ChartCanvas } from './ChartCanvas';
 
 const DEFAULT_PROVIDER_ID = 'binance-spot';
 const DEFAULT_INTERVAL: CandleInterval = '1m';
-const INSTRUMENT_ID = createInstrumentId('BTC-USDT');
+const WATCHLIST_INSTRUMENTS: readonly WatchlistInstrument[] = Object.freeze([
+  Object.freeze({
+    id: createInstrumentId('BTC-USDT'),
+    symbol: 'BTC / USDT',
+    name: 'Bitcoin',
+    chartSymbol: 'BTC / USDT',
+  }),
+  Object.freeze({
+    id: createInstrumentId('ETH-USDT'),
+    symbol: 'ETH / USDT',
+    name: 'Ethereum',
+    chartSymbol: 'ETH / USDT',
+  }),
+  Object.freeze({
+    id: createInstrumentId('SOL-USDT'),
+    symbol: 'SOL / USDT',
+    name: 'Solana',
+    chartSymbol: 'SOL / USDT',
+  }),
+]);
+const WATCHLIST_INSTRUMENT_IDS = WATCHLIST_INSTRUMENTS.map((instrument) => instrument.id);
+const DEFAULT_INSTRUMENT_ID = WATCHLIST_INSTRUMENTS[0].id;
 const HISTORY_CANDLE_COUNT = 500;
 
 const INTERVAL_DURATION_MS: Readonly<Record<CandleInterval, number>> = Object.freeze({
@@ -99,6 +121,7 @@ const getHistoryStartTime = (endTime: number, interval: CandleInterval): number 
 export function MarketChart() {
   const [providerId, setProviderId] = useState(DEFAULT_PROVIDER_ID);
   const [interval, setInterval] = useState<CandleInterval>(DEFAULT_INTERVAL);
+  const [selectedInstrumentId, setSelectedInstrumentId] = useState<InstrumentId>(DEFAULT_INSTRUMENT_ID);
   const [candles, setCandles] = useState<
     Awaited<ReturnType<typeof historicalService.getHistoricalCandles>>
   >([]);
@@ -109,13 +132,14 @@ export function MarketChart() {
   const [streamStatus, setStreamStatus] = useState<MarketDataStreamState>('disconnected');
   const [streamError, setStreamError] = useState<string | null>(null);
   const [streamCandleCount, setStreamCandleCount] = useState(0);
-  const [quote, setQuote] = useState<QuoteUpdate | null>(null);
+  const [quotes, setQuotes] = useState<Readonly<Record<string, QuoteUpdate>>>({});
   const [quoteStatus, setQuoteStatus] = useState<MarketDataStreamState>('disconnected');
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [recoveringHistory, setRecoveringHistory] = useState(false);
   const [historyRecoveryCount, setHistoryRecoveryCount] = useState(0);
   const initializedRef = useRef(false);
   const requestIdRef = useRef(0);
+  const quoteRequestIdRef = useRef(0);
   const abortControllerRef = useRef<AbortController | null>(null);
   const olderAbortControllerRef = useRef<AbortController | null>(null);
   const recoveryAbortControllerRef = useRef<AbortController | null>(null);
@@ -131,6 +155,7 @@ export function MarketChart() {
   const recoverHistoricalRange = async (
     requestId: number,
     sourceId: string,
+    instrumentId: InstrumentId,
     nextInterval: CandleInterval,
     startTime: number,
     endTime: number,
@@ -152,7 +177,7 @@ export function MarketChart() {
 
     try {
       const recoveredCandles = await historicalService.getHistoricalCandles(sourceId, {
-        instrumentId: INSTRUMENT_ID,
+        instrumentId,
         interval: nextInterval,
         startTime,
         endTime,
@@ -187,8 +212,65 @@ export function MarketChart() {
     }
   };
 
+  const loadQuotes = useCallback((nextProviderId: string): void => {
+    const requestId = quoteRequestIdRef.current + 1;
+    quoteRequestIdRef.current = requestId;
+    quoteSubscriptionRef.current?.unsubscribe();
+    quoteSubscriptionRef.current = null;
+    setQuotes({});
+    setQuoteStatus('disconnected');
+    setQuoteError(null);
+
+    const selectedSource = historicalService.getSource(nextProviderId);
+
+    if (!selectedSource.streamingQuotes) {
+      return;
+    }
+
+    try {
+      quoteSubscriptionRef.current = streamService.subscribeToQuotes(
+        nextProviderId,
+        WATCHLIST_INSTRUMENT_IDS,
+        {
+          onQuote: (nextQuote) => {
+            if (requestId !== quoteRequestIdRef.current) {
+              return;
+            }
+
+            setQuotes((current) => ({
+              ...current,
+              [nextQuote.instrumentId]: nextQuote,
+            }));
+            setQuoteError(null);
+          },
+          onStatus: (status) => {
+            if (requestId === quoteRequestIdRef.current) {
+              setQuoteStatus(status);
+            }
+          },
+          onError: (quoteCause) => {
+            if (requestId === quoteRequestIdRef.current) {
+              setQuoteError(quoteCause.message);
+            }
+          },
+        },
+      );
+    } catch (quoteCause) {
+      setQuoteStatus('disconnected');
+      setQuoteError(
+        quoteCause instanceof Error
+          ? quoteCause.message
+          : 'No se pudo iniciar el flujo de cotizaciones en vivo.',
+      );
+    }
+  }, []);
+
   const loadCandles = useCallback(
-    async (nextProviderId: string, nextInterval: CandleInterval): Promise<void> => {
+    async (
+      nextProviderId: string,
+      nextInterval: CandleInterval,
+      nextInstrumentId: InstrumentId,
+    ): Promise<void> => {
       const requestId = requestIdRef.current + 1;
       requestIdRef.current = requestId;
       abortControllerRef.current?.abort();
@@ -201,11 +283,6 @@ export function MarketChart() {
       setHistoryRecoveryCount(0);
       streamSubscriptionRef.current?.unsubscribe();
       streamSubscriptionRef.current = null;
-      quoteSubscriptionRef.current?.unsubscribe();
-      quoteSubscriptionRef.current = null;
-      setQuote(null);
-      setQuoteStatus('disconnected');
-      setQuoteError(null);
       setStreamStatus('disconnected');
       setStreamError(null);
       setStreamCandleCount(0);
@@ -226,7 +303,7 @@ export function MarketChart() {
 
       try {
         const result = await historicalService.getHistoricalCandles(nextProviderId, {
-          instrumentId: INSTRUMENT_ID,
+          instrumentId: nextInstrumentId,
           interval: nextInterval,
           startTime,
           endTime,
@@ -242,50 +319,11 @@ export function MarketChart() {
 
         const selectedSource = historicalService.getSource(nextProviderId);
 
-        if (selectedSource.streamingQuotes) {
-          try {
-            quoteSubscriptionRef.current = streamService.subscribeToQuotes(
-              nextProviderId,
-              [INSTRUMENT_ID],
-              {
-                onQuote: (nextQuote) => {
-                  if (
-                    requestId !== requestIdRef.current ||
-                    nextQuote.instrumentId !== INSTRUMENT_ID
-                  ) {
-                    return;
-                  }
-
-                  setQuote(nextQuote);
-                  setQuoteError(null);
-                },
-                onStatus: (status) => {
-                  if (requestId === requestIdRef.current) {
-                    setQuoteStatus(status);
-                  }
-                },
-                onError: (quoteCause) => {
-                  if (requestId === requestIdRef.current) {
-                    setQuoteError(quoteCause.message);
-                  }
-                },
-              },
-            );
-          } catch (quoteCause) {
-            setQuoteStatus('disconnected');
-            setQuoteError(
-              quoteCause instanceof Error
-                ? quoteCause.message
-                : 'No se pudo iniciar el flujo de cotizaciones en vivo.',
-            );
-          }
-        }
-
         if (selectedSource.streamingCandles) {
           try {
             streamSubscriptionRef.current = streamService.subscribeToCandles(
               nextProviderId,
-              { instrumentId: INSTRUMENT_ID, interval: nextInterval },
+              { instrumentId: nextInstrumentId, interval: nextInterval },
               {
                 onCandle: (update) => {
                   if (requestId !== requestIdRef.current) {
@@ -307,6 +345,7 @@ export function MarketChart() {
                       void recoverHistoricalRange(
                         requestId,
                         nextProviderId,
+                        nextInstrumentId,
                         nextInterval,
                         nextExpectedTimestamp,
                         update.candle.timestamp,
@@ -334,6 +373,7 @@ export function MarketChart() {
                         void recoverHistoricalRange(
                           requestId,
                           nextProviderId,
+                          nextInstrumentId,
                           nextInterval,
                           latestCandle.timestamp,
                           Date.now() + 1,
@@ -401,7 +441,7 @@ export function MarketChart() {
 
     try {
       const result = await historicalService.getHistoricalCandles(providerId, {
-        instrumentId: INSTRUMENT_ID,
+        instrumentId: selectedInstrumentId,
         interval,
         startTime: getOlderHistoryStartTime(oldestCandle.timestamp, interval),
         endTime: oldestCandle.timestamp,
@@ -443,7 +483,7 @@ export function MarketChart() {
         setOlderLoading(false);
       }
     }
-  }, [interval, loading, providerId]);
+  }, [interval, loading, providerId, selectedInstrumentId]);
 
   const bindInitializer = useCallback(
     (element: HTMLSpanElement | null): void => {
@@ -455,6 +495,7 @@ export function MarketChart() {
         recoveryRequestRef.current = false;
         streamSubscriptionRef.current?.unsubscribe();
         streamSubscriptionRef.current = null;
+        quoteRequestIdRef.current += 1;
         quoteSubscriptionRef.current?.unsubscribe();
         quoteSubscriptionRef.current = null;
         return;
@@ -465,13 +506,18 @@ export function MarketChart() {
       }
 
       initializedRef.current = true;
-      void loadCandles(DEFAULT_PROVIDER_ID, DEFAULT_INTERVAL);
+      loadQuotes(DEFAULT_PROVIDER_ID);
+      void loadCandles(DEFAULT_PROVIDER_ID, DEFAULT_INTERVAL, DEFAULT_INSTRUMENT_ID);
     },
-    [loadCandles],
+    [loadCandles, loadQuotes],
   );
 
   const selectedSource = historicalService.getSource(providerId);
   const displayedStreamStatus = selectedSource.streamingCandles ? streamStatus : 'unsupported';
+  const quote = quotes[selectedInstrumentId] ?? null;
+  const selectedInstrument = WATCHLIST_INSTRUMENTS.find(
+    (instrument) => instrument.id === selectedInstrumentId,
+  ) ?? WATCHLIST_INSTRUMENTS[0];
   const quoteStatusLabel = !selectedSource.streamingQuotes
     ? 'No disponible'
     : quoteStatus === 'connected'
@@ -522,7 +568,8 @@ export function MarketChart() {
 
     setProviderId(nextProviderId);
     setInterval(nextInterval);
-    void loadCandles(nextProviderId, nextInterval);
+    loadQuotes(nextProviderId);
+    void loadCandles(nextProviderId, nextInterval, selectedInstrumentId);
   };
 
   const handleIntervalChange = (value: string): void => {
@@ -533,7 +580,20 @@ export function MarketChart() {
     }
 
     setInterval(nextInterval);
-    void loadCandles(providerId, nextInterval);
+    void loadCandles(providerId, nextInterval, selectedInstrumentId);
+  };
+
+  const handleInstrumentSelect = (nextInstrumentId: string): void => {
+    const nextInstrument = WATCHLIST_INSTRUMENTS.find(
+      (instrument) => instrument.id === nextInstrumentId,
+    );
+
+    if (nextInstrument === undefined || nextInstrument.id === selectedInstrumentId) {
+      return;
+    }
+
+    setSelectedInstrumentId(nextInstrument.id);
+    void loadCandles(providerId, interval, nextInstrument.id);
   };
 
   return (
@@ -581,7 +641,7 @@ export function MarketChart() {
           />
           <span>{selectedSource.displayName}</span>
           <span aria-hidden="true">·</span>
-          <span>{INSTRUMENT_ID}</span>
+          <span>{selectedInstrument.id}</span>
           <span aria-hidden="true">·</span>
           <span
             data-testid="market-stream-status"
@@ -607,6 +667,12 @@ export function MarketChart() {
           )}
         </div>
       </div>
+      <MarketWatchlist
+        instruments={WATCHLIST_INSTRUMENTS}
+        selectedInstrumentId={selectedInstrumentId}
+        quotes={quotes}
+        onSelect={handleInstrumentSelect}
+      />
       <section
         class="grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-[#0a101a] p-3 sm:grid-cols-5"
         aria-label="Cotización de mercado"
@@ -696,11 +762,11 @@ export function MarketChart() {
       </section>
       <ChartCanvas
         candles={candles}
-        symbol="BTC / USDT"
+        symbol={selectedInstrument.chartSymbol}
         interval={interval}
         loading={loading}
         error={error}
-        onRetry={() => void loadCandles(providerId, interval)}
+        onRetry={() => void loadCandles(providerId, interval, selectedInstrumentId)}
         onNeedMoreHistory={() => void loadOlderCandles()}
       />
       {(olderLoading || olderError !== null) && (
