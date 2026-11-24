@@ -35,7 +35,7 @@ La terminal utiliza `HistoricalCandleService` desde el componente `MarketChart` 
 - Los cambios de datos actualizan la escena Canvas sin reconstruir el renderer ni el controlador de interacción. Se mantienen el espaciado de velas, el desplazamiento temporal, el modo de escala, el zoom vertical y el desplazamiento vertical relativo.
 - Las pruebas de navegador interceptan los endpoints públicos con respuestas sintéticas deterministas. No realizan consultas a Internet ni necesitan API keys durante CI.
 
-Streaming, cotizaciones en vivo y Replay permanecen fuera de este flujo. Tampoco se cambia automáticamente de proveedor ante un error.
+El histórico inicial se complementa con el stream de velas cuando el proveedor declara `streamingCandles`. La conexión se cancela al cambiar proveedor o temporalidad y al desmontar la terminal. Las actualizaciones parciales reemplazan la vela con el mismo timestamp de apertura; una vela nueva se inserta ordenada y no duplica la anterior. La interfaz distingue conexión, reconexión y proveedores que solo ofrecen histórico. Replay permanece fuera de este flujo. Tampoco se cambia automáticamente de proveedor ante un error.
 
 ## Adaptador implementado
 
@@ -48,7 +48,13 @@ Streaming, cotizaciones en vivo y Replay permanecen fuera de este flujo. Tampoco
 - Cada petición solicita hasta 1.000 velas; el rango se pagina secuencialmente y el máximo predeterminado es 100 páginas por llamada.
 - Los timestamps de apertura se conservan en milisegundos; el volumen normalizado es el volumen del activo base.
 - El adaptador no reintenta automáticamente ante HTTP 429/418. Expone el status y el valor `Retry-After` mediante `MarketDataProviderError` para que una política superior pueda aplicar backoff.
-- Streaming todavía no está implementado.
+- Stream de velas: `wss://stream.binance.com:9443/ws/<symbol>@kline_<interval>`, sin API key para datos públicos.
+- El evento `kline` normaliza `t/o/h/l/c/v` a OHLCV; `x` indica si la vela quedó cerrada. Los timestamps se interpretan en milisegundos UTC.
+- La terminal recibe actualizaciones parciales y cierres de la misma vela; deduplica por timestamp de apertura y no reconstruye el renderer.
+- La reconexión utiliza espera exponencial desde 1 segundo hasta 30 segundos. El stream se vuelve a suscribir tras los cierres de conexión, incluidos los cortes periódicos del servicio.
+- Binance documenta actualizaciones de klines cada 1 segundo para `1s` y cada 2 segundos para los demás intervalos. Los intervalos disponibles siguen limitados a los declarados por el adaptador.
+- La conexión WebSocket Spot tiene una duración máxima esperada de 24 horas; el cliente debe tolerar la desconexión y volver a suscribirse.
+- Las cotizaciones bid/ask no están implementadas en este adaptador; `streamingQuotes` continúa en `false`.
 
 ### Bybit Spot
 
