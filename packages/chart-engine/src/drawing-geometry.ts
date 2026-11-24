@@ -437,10 +437,6 @@ export const updateChartDrawing = (
       startLogicalIndex + logicalDelta,
       drawing.start.price + priceDelta,
     ),
-    end: updateAnchor(
-      drawing.end,
-      endLogicalIndex + logicalDelta,
-      drawing.end.price + priceDelta,
-    ),
+    end: updateAnchor(drawing.end, endLogicalIndex + logicalDelta, drawing.end.price + priceDelta),
   });
 };
