@@ -87,7 +87,7 @@ describe('Binance Spot market data provider', () => {
     expect(provider.id).toBe('binance-spot');
     expect(provider.displayName).toBe('Binance Spot');
     expect(provider.capabilities.historicalCandles).toBe(true);
-    expect(provider.capabilities.streamingQuotes).toBe(false);
+    expect(provider.capabilities.streamingQuotes).toBe(true);
     expect(provider.capabilities.streamingCandles).toBe(true);
     expect(provider.capabilities.supportedIntervals).toContain('1M');
     expect(provider.capabilities.redistribution).toBe('unknown');
