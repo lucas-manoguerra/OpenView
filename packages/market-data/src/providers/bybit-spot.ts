@@ -524,6 +524,15 @@ export class BybitSpotMarketDataProvider implements MarketDataProvider {
           throw new Error('Bybit Spot WebSocket connection cannot send subscription messages.');
         }
 
+        for (const state of quoteStates.values()) {
+          state.timestamp = 0;
+          state.bid = null;
+          state.ask = null;
+          state.last = null;
+          state.volume24h = null;
+          state.changePercent24h = null;
+        }
+
         for (let index = 0; index < topics.length; index += 10) {
           connection.send(
             JSON.stringify({ op: 'subscribe', args: topics.slice(index, index + 10) }),
