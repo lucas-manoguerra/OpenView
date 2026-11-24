@@ -184,6 +184,77 @@ describe('canvas pointer event adapter', () => {
     expect(controller.snapshot.dragging).toBe(false);
   });
 
+  it('creates a ray gesture with two anchored points', () => {
+    const { canvas, dispatch } = createCanvasTarget();
+    const frame = createChartFrame(900, 500, { min: 90, max: 120 }, 99);
+    const controller = createChartInteractionController(frame);
+    const gestures: CanvasDrawingGesture[] = [];
+    attachCanvasPointerEvents(canvas, controller, {
+      getDrawingTool: () => 'ray',
+      onDrawingComplete: (drawing) => gestures.push(drawing),
+    });
+    const start = { x: frame.layout.plotArea.x + 30, y: frame.layout.plotArea.y + 40 };
+    const end = { x: frame.layout.plotArea.x + 130, y: frame.layout.plotArea.y + 90 };
+
+    dispatch('pointerdown', createPointerEvent({ clientX: 100 + start.x, clientY: 50 + start.y }));
+    dispatch('pointerup', createPointerEvent({ clientX: 100 + end.x, clientY: 50 + end.y }));
+
+    expect(gestures).toEqual([
+      {
+        type: 'ray',
+        start: chartCoordinateToDataPoint(start, frame),
+        end: chartCoordinateToDataPoint(end, frame),
+      },
+    ]);
+  });
+
+  it('creates vertical lines on a single click', () => {
+    const { canvas, dispatch } = createCanvasTarget();
+    const frame = createChartFrame(900, 500, { min: 90, max: 120 }, 99);
+    const controller = createChartInteractionController(frame);
+    const gestures: CanvasDrawingGesture[] = [];
+    attachCanvasPointerEvents(canvas, controller, {
+      getDrawingTool: () => 'vertical-line',
+      onDrawingComplete: (drawing) => gestures.push(drawing),
+    });
+    const point = { x: frame.layout.plotArea.x + 130, y: frame.layout.plotArea.y + 75 };
+
+    dispatch('pointerdown', createPointerEvent({ clientX: 100 + point.x, clientY: 50 + point.y }));
+    dispatch('pointerup', createPointerEvent({ clientX: 100 + point.x, clientY: 50 + point.y }));
+
+    expect(gestures).toEqual([
+      {
+        type: 'vertical-line',
+        start: chartCoordinateToDataPoint(point, frame),
+        end: null,
+      },
+    ]);
+  });
+
+  it('creates rectangle gestures with opposite corners', () => {
+    const { canvas, dispatch } = createCanvasTarget();
+    const frame = createChartFrame(900, 500, { min: 90, max: 120 }, 99);
+    const controller = createChartInteractionController(frame);
+    const gestures: CanvasDrawingGesture[] = [];
+    attachCanvasPointerEvents(canvas, controller, {
+      getDrawingTool: () => 'rectangle',
+      onDrawingComplete: (drawing) => gestures.push(drawing),
+    });
+    const start = { x: frame.layout.plotArea.x + 70, y: frame.layout.plotArea.y + 55 };
+    const end = { x: frame.layout.plotArea.x + 190, y: frame.layout.plotArea.y + 155 };
+
+    dispatch('pointerdown', createPointerEvent({ clientX: 100 + start.x, clientY: 50 + start.y }));
+    dispatch('pointerup', createPointerEvent({ clientX: 100 + end.x, clientY: 50 + end.y }));
+
+    expect(gestures).toEqual([
+      {
+        type: 'rectangle',
+        start: chartCoordinateToDataPoint(start, frame),
+        end: chartCoordinateToDataPoint(end, frame),
+      },
+    ]);
+  });
+
   it('does not create a drawing when its pointer gesture is cancelled', () => {
     const { canvas, dispatch, capturedPointers } = createCanvasTarget();
     const controller = createChartInteractionController(
