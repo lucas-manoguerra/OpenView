@@ -1,9 +1,10 @@
 import type { MarketDataStreamState, MarketDataSubscription } from './contracts';
 
-export type MarketDataWebSocketConnection = EventTarget & Readonly<{
-  close: (code?: number, reason?: string) => void;
-  send?: (payload: string) => void;
-}>;
+export type MarketDataWebSocketConnection = EventTarget &
+  Readonly<{
+    close: (code?: number, reason?: string) => void;
+    send?: (payload: string) => void;
+  }>;
 
 export type MarketDataWebSocketFactory = (url: string) => MarketDataWebSocketConnection;
 
