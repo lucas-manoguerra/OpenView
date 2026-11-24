@@ -198,7 +198,9 @@ const parseStreamCandles = (
       });
 
       if (!result.ok) {
-        throw new RangeError('Bybit returned an invalid streamed OHLCV candle: ' + result.error + '.');
+        throw new RangeError(
+          'Bybit returned an invalid streamed OHLCV candle: ' + result.error + '.',
+        );
       }
 
       const isFinal = readProperty(item, 'confirm');
@@ -322,7 +324,9 @@ export class BybitSpotMarketDataProvider implements MarketDataProvider {
     }
 
     if (!Number.isInteger(maxReconnectDelayMs) || maxReconnectDelayMs < reconnectDelayMs) {
-      throw new RangeError('Bybit Spot maximum reconnect delay must be at least the initial delay.');
+      throw new RangeError(
+        'Bybit Spot maximum reconnect delay must be at least the initial delay.',
+      );
     }
 
     if (!Number.isInteger(heartbeatIntervalMs) || heartbeatIntervalMs < 1) {
