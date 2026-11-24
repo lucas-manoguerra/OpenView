@@ -1,0 +1,44 @@
+name: one-time repository scaffold
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .bootstrap/openview.zip.b64
+
+permissions:
+  contents: write
+
+jobs:
+  scaffold:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out OpenView
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Expand project foundation
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 --decode .bootstrap/openview.zip.b64 > /tmp/openview.zip
+          mkdir -p /tmp/openview
+          unzip -q /tmp/openview.zip -d /tmp/openview
+          cp -a /tmp/openview/. .
+          rm -rf .bootstrap
+          rm -f .github/workflows/repository-bootstrap.yml
+
+      - name: Commit complete project
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --all
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "chore: scaffold OpenView foundation"
+          git push origin HEAD:main
