@@ -53,7 +53,7 @@ const createProvider = (
   capabilities: Object.freeze({
     historicalCandles: true,
     streamingQuotes: false,
-    supportedIntervals: Object.freeze(['1m', '1h']),
+    supportedIntervals: Object.freeze(['1m', '1h'] as const),
     redistribution: 'unknown',
     attributionRequired: false,
     ...overrides,
