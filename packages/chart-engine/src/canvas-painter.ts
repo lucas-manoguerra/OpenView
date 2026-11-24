@@ -273,7 +273,9 @@ const getVisibleCandles = (scene: ChartRenderScene): readonly ChartRenderCandle[
   while (start < end) {
     const middle = Math.floor((start + end) / 2);
 
-    if (candles[middle]!.logicalIndex < minimumIndex) {
+    const candle = candles[middle];
+
+    if (candle !== undefined && candle.logicalIndex < minimumIndex) {
       start = middle + 1;
     } else {
       end = middle;
@@ -286,7 +288,9 @@ const getVisibleCandles = (scene: ChartRenderScene): readonly ChartRenderCandle[
   while (start < end) {
     const middle = Math.floor((start + end) / 2);
 
-    if (candles[middle]!.logicalIndex <= maximumIndex) {
+    const candle = candles[middle];
+
+    if (candle !== undefined && candle.logicalIndex <= maximumIndex) {
       start = middle + 1;
     } else {
       end = middle;

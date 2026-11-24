@@ -236,18 +236,24 @@ describe('canvas chart painter', () => {
     const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 10);
     const candles = createCandles();
     const scene = createChartRenderScene(frame, candles);
+    const firstCandle = candles[0];
+    const secondCandle = candles[1];
+
+    if (firstCandle === undefined || secondCandle === undefined) {
+      throw new Error('The candle fixture must contain at least two candles.');
+    }
 
     expect(Object.isFrozen(scene)).toBe(true);
     expect(Object.isFrozen(scene.candles)).toBe(true);
     expect(Object.isFrozen(scene.candles[0])).toBe(true);
-    expect(() => createChartRenderScene(frame, [candles[1]!, candles[0]!])).toThrow(RangeError);
+    expect(() => createChartRenderScene(frame, [secondCandle, firstCandle])).toThrow(RangeError);
     expect(() =>
       createChartRenderScene(frame, [
-        candles[0]!,
-        { ...candles[1]!, timestamp: candles[0]!.timestamp },
+        firstCandle,
+        { ...secondCandle, timestamp: firstCandle.timestamp },
       ]),
     ).toThrow(RangeError);
-    expect(() => createChartRenderScene(frame, [{ ...candles[0]!, volume: -1 }])).toThrow(
+    expect(() => createChartRenderScene(frame, [{ ...firstCandle, volume: -1 }])).toThrow(
       RangeError,
     );
     expect(() => createChartRenderScene(frame, candles, { x: Number.NaN, y: 10 })).toThrow(
