@@ -94,7 +94,13 @@ export const formatTimeAxisLabel = (
   visibleSpan: number,
   options: Pick<TimeAxisOptions, 'locale' | 'timeZone'> = {},
 ): string => {
-  if (!Number.isFinite(timestamp) || !Number.isFinite(interval) || interval <= 0) {
+  if (
+    !Number.isFinite(timestamp) ||
+    !Number.isFinite(interval) ||
+    interval <= 0 ||
+    !Number.isFinite(visibleSpan) ||
+    visibleSpan < 0
+  ) {
     throw new RangeError('Time axis labels require a finite timestamp and positive interval.');
   }
 
@@ -105,7 +111,7 @@ export const formatTimeAxisLabel = (
   }
 
   const locale = options.locale ?? 'en-US';
-  const timeZone = options.timeZone ?? 'UTC';
+  const timeZone = options.timeZone;
   const formatOptions: Intl.DateTimeFormatOptions =
     interval < DAY
       ? visibleSpan >= DAY
@@ -123,7 +129,10 @@ export const formatTimeAxisLabel = (
           ? { month: 'short', year: 'numeric' }
           : { year: 'numeric' };
 
-  return new Intl.DateTimeFormat(locale, { ...formatOptions, timeZone }).format(date);
+  return new Intl.DateTimeFormat(locale, {
+    ...formatOptions,
+    ...(timeZone === undefined ? {} : { timeZone }),
+  }).format(date);
 };
 
 const findClosestPoint = (
