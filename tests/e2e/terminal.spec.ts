@@ -194,7 +194,9 @@ test('loads older historical candles when panning to the left boundary', async (
   expect(historyRequestCount).toBeGreaterThan(1);
 });
 
-test('streams Binance live candles and updates the current bar without duplicates', async ({ page }) => {
+test('streams Binance live candles and updates the current bar without duplicates', async ({
+  page,
+}) => {
   await page.goto('/');
 
   const canvas = page.locator('canvas[data-candles-count]');
