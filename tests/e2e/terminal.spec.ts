@@ -176,8 +176,7 @@ test('renders timestamp based time labels instead of logical bar indices', async
     .toBeGreaterThan(0);
 
   const labels = await page.evaluate(
-    () =>
-      (window as Window & { __openViewCanvasLabels?: string[] }).__openViewCanvasLabels ?? [],
+    () => (window as Window & { __openViewCanvasLabels?: string[] }).__openViewCanvasLabels ?? [],
   );
 
   expect(labels.some((label) => /\d{2}:\d{2}/.test(label))).toBe(true);
