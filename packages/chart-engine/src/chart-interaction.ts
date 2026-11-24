@@ -293,11 +293,10 @@ export class ChartInteractionController {
 
   private createFittedPriceScale(range: NumericRange): ChartFrame['priceScale'] {
     const currentScale = this.frame.priceScale;
-    const priceScale = currentScale;
     const options = {
-      mode: priceScale.mode,
-      ...(priceScale.baseValue === null ? {} : { baseValue: priceScale.baseValue }),
-      inverted: priceScale.inverted,
+      mode: currentScale.mode,
+      ...(currentScale.baseValue === null ? {} : { baseValue: currentScale.baseValue }),
+      inverted: currentScale.inverted,
     };
 
     return createPriceScale(range, currentScale.height, options);
