@@ -41,7 +41,11 @@ const formatQuoteValue = (value: number | null, maximumFractionDigits = 8): stri
   value === null ? '—' : new Intl.NumberFormat('es-AR', { maximumFractionDigits }).format(value);
 
 const compactSearchValue = (value: string): string =>
-  value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleUpperCase().replace(/[^A-Z0-9]/g, '');
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleUpperCase()
+    .replace(/[^A-Z0-9]/g, '');
 
 const getProviderAbbreviation = (providerId: string): string => {
   if (providerId.startsWith('binance')) {
@@ -104,6 +108,9 @@ function SymbolSearchModal({
   const [query, setQuery] = useState('');
   const [providerFilter, setProviderFilter] = useState('all');
   const [activeIndex, setActiveIndex] = useState(0);
+  const focusSearchInput = useCallback((element: HTMLInputElement | null): void => {
+    element?.focus();
+  }, []);
   const normalizedQuery = compactSearchValue(query);
   const providers = useMemo(
     () => [
@@ -182,18 +189,20 @@ function SymbolSearchModal({
   };
 
   return (
-    <div
-      class="fixed inset-0 z-[100] flex items-center justify-center bg-[#10141e]/75 p-3 backdrop-blur-[2px] sm:p-6"
-      data-testid="symbol-search-backdrop"
-      onClick={closeModal}
-    >
+    <div class="fixed inset-0 z-[100] flex items-center justify-center bg-[#10141e]/75 p-3 backdrop-blur-[2px] sm:p-6">
+      <button
+        type="button"
+        aria-label="Cerrar buscador"
+        data-testid="symbol-search-backdrop"
+        class="absolute inset-0 size-full cursor-default"
+        onClick={closeModal}
+      />
       <section
         role="dialog"
         aria-modal="true"
         aria-labelledby="symbol-search-title"
-        class="flex max-h-[min(780px,calc(100vh-24px))] w-full max-w-[760px] flex-col overflow-hidden rounded-xl border border-[#d9dde5] bg-[#f8f9fb] text-[#131722] shadow-[0_24px_80px_rgba(0,0,0,0.45)] sm:max-h-[min(780px,calc(100vh-48px))]"
+        class="relative z-10 flex max-h-[min(780px,calc(100vh-24px))] w-full max-w-[760px] flex-col overflow-hidden rounded-xl border border-[#d9dde5] bg-[#f8f9fb] text-[#131722] shadow-[0_24px_80px_rgba(0,0,0,0.45)] sm:max-h-[min(780px,calc(100vh-48px))]"
         data-testid="symbol-search-modal"
-        onClick={(event) => event.stopPropagation()}
       >
         <h2 id="symbol-search-title" class="sr-only">
           Buscar instrumentos y mercados
@@ -213,7 +222,7 @@ function SymbolSearchModal({
           <input
             type="search"
             value={query}
-            autoFocus
+            ref={focusSearchInput}
             onInput={(event) => {
               setQuery(event.currentTarget.value);
               setActiveIndex(0);
@@ -343,7 +352,7 @@ function SymbolSearchModal({
                     }
                   >
                     <span class="grid size-9 shrink-0 place-items-center rounded-full bg-[#e7efff] text-[10px] font-bold text-[#2962ff]">
-                      {instrument.id.split('-')[0].slice(0, 4)}
+                      {(instrument.id.split('-')[0] ?? instrument.id).slice(0, 4)}
                     </span>
                     <span class="min-w-0 flex-1">
                       <span class="block truncate text-[13px] font-medium text-[#2962ff]">
@@ -512,7 +521,11 @@ export function MarketWatchlist({
                 ? 'Actualizando catálogos de proveedores…'
                 : 'Buscar en todos los proveedores Spot'}
             </span>
-            <span>{searchResults.length > 0 ? searchResults.length + ' mercados' : 'Binance · Bybit · OKX'}</span>
+            <span>
+              {searchResults.length > 0
+                ? searchResults.length + ' mercados'
+                : 'Binance · Bybit · OKX'}
+            </span>
           </div>
           {catalogStatus === 'unavailable' && (
             <div
