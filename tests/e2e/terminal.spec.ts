@@ -165,6 +165,16 @@ test('renders timestamp based time labels instead of logical bar indices', async
 
   await expect(canvas).toHaveAttribute('data-chart-ready', 'true');
 
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as Window & { __openViewCanvasLabels?: string[] }).__openViewCanvasLabels
+            ?.length ?? 0,
+      ),
+    )
+    .toBeGreaterThan(0);
+
   const labels = await page.evaluate(
     () =>
       (window as Window & { __openViewCanvasLabels?: string[] }).__openViewCanvasLabels ?? [],
