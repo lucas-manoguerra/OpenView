@@ -1,7 +1,7 @@
 import type { ChartCoordinate, ChartFrame } from './chart-frame';
 import { createPriceScale, panPriceScale, zoomPriceScale } from './price-scale';
 import type { NumericRange } from './viewport';
-import { panTimeScale, zoomTimeScale } from './time-scale';
+import { createTimeScale, panTimeScale, zoomTimeScale } from './time-scale';
 
 export type PointerPosition = Readonly<{
   x: number;
@@ -262,6 +262,66 @@ export class ChartInteractionController {
     }
 
     return timeScaleChanged || crosshairChanged;
+  }
+
+  scrollTimeByBars(bars: number): boolean {
+    if (!Number.isFinite(bars)) {
+      throw new RangeError('Time navigation distance must be a finite number.');
+    }
+
+    if (bars === 0) {
+      return false;
+    }
+
+    const deltaX = (this.frame.timeScale.inverted ? 1 : -1) * bars * this.frame.timeScale.barSpacing;
+    const timeScale = panTimeScale(this.frame.timeScale, deltaX);
+
+    if (timeScale.rightOffset === this.frame.timeScale.rightOffset) {
+      return false;
+    }
+
+    this.frame = withTimeScale(this.frame, timeScale);
+    this.crosshair = null;
+    this.emit();
+    return true;
+  }
+
+  scrollToRealtime(): boolean {
+    const currentScale = this.frame.timeScale;
+
+    if (currentScale.rightOffset === 0) {
+      return false;
+    }
+
+    const timeScale = createTimeScale(
+      currentScale.width,
+      currentScale.rightmostLogicalIndex,
+      {
+        barSpacing: currentScale.barSpacing,
+        rightOffset: 0,
+        minBarSpacing: currentScale.minBarSpacing,
+        maxBarSpacing: currentScale.maxBarSpacing,
+        inverted: currentScale.inverted,
+      },
+    );
+
+    this.frame = withTimeScale(this.frame, timeScale);
+    this.crosshair = null;
+    this.emit();
+    return true;
+  }
+
+  zoomTime(zoomFactor: number, anchorCoordinate = this.frame.timeScale.width / 2): boolean {
+    const timeScale = zoomTimeScale(this.frame.timeScale, zoomFactor, anchorCoordinate);
+
+    if (timeScale === this.frame.timeScale) {
+      return false;
+    }
+
+    this.frame = withTimeScale(this.frame, timeScale);
+    this.crosshair = null;
+    this.emit();
+    return true;
   }
 
   fitPriceScale(range: NumericRange): boolean {
