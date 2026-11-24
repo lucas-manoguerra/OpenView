@@ -80,7 +80,7 @@ El cálculo del próximo timestamp utiliza duraciones fijas para intervalos intr
 - El payload `data` se normaliza desde `start/open/high/low/close/volume`; `confirm` indica si la vela quedó cerrada.
 - El cliente envía `{"op":"ping"}` cada 20 segundos, contesta los mensajes de ping de aplicación y vuelve a suscribirse al reconectar.
 - La reconexión usa el ciclo de vida WebSocket compartido, con backoff de 1 a 30 segundos y cancelación de heartbeat al cerrar la suscripción.
-- Cotizaciones públicas Spot: una conexión puede suscribirse a los temas `tickers.<symbol>` y `orderbook.1.<symbol>` para varios instrumentos. El ticker aporta `lastPrice`, `volume24h` y `price24hPcnt`; este último llega como fracción y se multiplica por 100 para normalizarlo a porcentaje. El canal `orderbook.1` aporta los mejores niveles bid/ask; el precio se considera ausente cuando el tamaño del nivel es cero. `receivedAt` registra la hora local de recepción. `streamingQuotes` está habilitado.
+- Cotizaciones públicas Spot: una conexión puede suscribirse a los temas `tickers.<symbol>` y `orderbook.1.<symbol>` para varios instrumentos. El ticker aporta `lastPrice`, `volume24h` y `price24hPcnt`; este último llega como fracción y se multiplica por 100 para normalizarlo a porcentaje. El canal `orderbook.1` aporta los mejores niveles bid/ask. Bybit Spot limita cada mensaje de suscripción a diez temas, por lo que el adaptador divide listas más grandes en mensajes de hasta diez elementos sobre la misma conexión; el precio se considera ausente cuando el tamaño del nivel es cero. `receivedAt` registra la hora local de recepción. `streamingQuotes` está habilitado.
 
 ### OKX Spot
 
