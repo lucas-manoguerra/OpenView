@@ -148,6 +148,9 @@ describe('canvas chart painter', () => {
     const gridLineIndex = calls.findIndex(
       (call) =>
         call.name === 'lineTo' &&
+        typeof call.args[0] === 'number' &&
+        call.args[0] > frame.layout.plotArea.x &&
+        call.args[0] < frame.layout.plotArea.x + frame.layout.plotArea.width &&
         call.args[1] === frame.layout.plotArea.y +
           frame.layout.plotArea.height +
           frame.layout.volumeArea.height,
