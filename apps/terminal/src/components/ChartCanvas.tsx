@@ -421,10 +421,8 @@ export function ChartCanvas({
           {renderCandles.length} velas
         </span>
       </div>
-      <div class="absolute right-3 top-3 z-10 flex flex-wrap items-center justify-end gap-1 rounded-lg border border-white/10 bg-[#101723]/95 p-1 shadow-lg"
-        role="group"
-        aria-label="Controles del gráfico"
-      >
+      <fieldset class="absolute right-3 top-3 z-10 flex flex-wrap items-center justify-end gap-1 rounded-lg border border-white/10 bg-[#101723]/95 p-1 shadow-lg">
+        <legend class="sr-only">Controles del gráfico</legend>
         {(
           [
             ['linear', 'Lin'],
