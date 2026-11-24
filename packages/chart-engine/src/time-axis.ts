@@ -85,7 +85,9 @@ const validateTimeAxisPoints = (points: readonly TimeAxisPoint[]): void => {
       point.timestamp <= previousTimestamp ||
       !Number.isFinite(new Date(point.timestamp).getTime())
     ) {
-      throw new RangeError('Time axis points must have ascending logical indices and Unix millisecond timestamps.');
+      throw new RangeError(
+        'Time axis points must have ascending logical indices and Unix millisecond timestamps.',
+      );
     }
 
     previousLogicalIndex = point.logicalIndex;
@@ -143,9 +145,9 @@ export const formatTimeAxisLabel = (
             hourCycle: 'h23',
           }
         : { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }
-      : interval < YEAR
+      : interval < 30 * DAY
         ? { day: '2-digit', month: 'short' }
-        : interval < 2 * YEAR
+        : interval < YEAR
           ? { month: 'short', year: 'numeric' }
           : { year: 'numeric' };
 
