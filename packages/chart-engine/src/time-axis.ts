@@ -18,6 +18,11 @@ export type TimeAxisTick = Readonly<{
   label: string;
 }>;
 
+export type TimeAxisData = Readonly<{
+  points: readonly TimeAxisPoint[];
+  validated: true;
+}>;
+
 const SECOND = 1_000;
 const MINUTE = 60 * SECOND;
 const HOUR = 60 * MINUTE;
@@ -86,6 +91,21 @@ const validateTimeAxisPoints = (points: readonly TimeAxisPoint[]): void => {
     previousLogicalIndex = point.logicalIndex;
     previousTimestamp = point.timestamp;
   }
+};
+
+export const createTimeAxisData = (points: readonly TimeAxisPoint[]): TimeAxisData => {
+  validateTimeAxisPoints(points);
+
+  const stablePoints =
+    Object.isFrozen(points) && points.every((point) => Object.isFrozen(point))
+      ? points
+      : Object.freeze(
+          points.map((point) =>
+            Object.freeze({ logicalIndex: point.logicalIndex, timestamp: point.timestamp }),
+          ),
+        );
+
+  return Object.freeze({ points: stablePoints, validated: true as const });
 };
 
 export const formatTimeAxisLabel = (
@@ -170,7 +190,7 @@ const findClosestPoint = (
 
 export const generateTimeAxisTicks = (
   scale: TimeScale,
-  points: readonly TimeAxisPoint[],
+  data: readonly TimeAxisPoint[] | TimeAxisData,
   options: TimeAxisOptions = {},
 ): readonly TimeAxisTick[] => {
   const targetTickCount = options.targetTickCount ?? 8;
@@ -179,7 +199,12 @@ export const generateTimeAxisTicks = (
     throw new RangeError('Target time axis tick count must be an integer between 2 and 50.');
   }
 
-  validateTimeAxisPoints(points);
+  const isValidatedData = !Array.isArray(data);
+  const points = isValidatedData ? (data as TimeAxisData).points : (data as readonly TimeAxisPoint[]);
+
+  if (!isValidatedData) {
+    validateTimeAxisPoints(points);
+  }
 
   if (points.length === 0) {
     return Object.freeze([]);
