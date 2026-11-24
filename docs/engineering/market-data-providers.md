@@ -32,18 +32,16 @@ La documentación oficial de Binance mantiene un endpoint específico de solo da
 
 Estos proveedores se mantienen como adaptadores independientes. Que el endpoint sea público no implica que todos los intervalos, mercados, profundidades históricas ni derechos de redistribución sean equivalentes.
 
-| Proveedor | Primer alcance sugerido | Estado |
-| --- | --- | --- |
-| Bybit | Spot y Linear OHLCV | Pendiente |
-| OKX | Spot y Swap OHLCV | Pendiente |
-| BingX | Spot y Perpetual OHLCV | Pendiente |
-| Bitunix | Spot y Futures OHLCV | Pendiente |
-| Kraken | Spot OHLCV | Pendiente |
-| Coinbase Exchange | Spot OHLCV | Pendiente |
-| CoinGecko | Datos agregados y metadatos | Pendiente; plan Demo limitado |
-| Twelve Data / Alpha Vantage | Acciones, FX y otros mercados | Pendiente; cuotas y licencias por mercado |
-| Yahoo Finance | Acciones e índices | No usar endpoints no oficiales como dependencia por defecto |
-| Google Finance | — | No disponible como API soportada |
+- **Bybit:** Spot y Linear OHLCV. Pendiente.
+- **OKX:** Spot y Swap OHLCV. Pendiente.
+- **BingX:** Spot y Perpetual OHLCV. Pendiente.
+- **Bitunix:** Spot y Futures OHLCV. Pendiente.
+- **Kraken:** Spot OHLCV. Pendiente.
+- **Coinbase Exchange:** Spot OHLCV. Pendiente.
+- **CoinGecko:** datos agregados y metadatos; plan Demo limitado. Pendiente.
+- **Twelve Data / Alpha Vantage:** acciones, FX y otros mercados; cuotas y licencias por mercado. Pendiente.
+- **Yahoo Finance:** acciones e índices; no usar endpoints no oficiales como dependencia por defecto.
+- **Google Finance:** no disponible como API soportada.
 
 ### Criterios de incorporación
 
