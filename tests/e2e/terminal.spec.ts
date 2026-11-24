@@ -94,6 +94,22 @@ const installBinanceMock = async (page: Page): Promise<void> => {
       body: JSON.stringify(candles),
     });
   });
+
+  await page.route('https://data-api.binance.vision/api/v3/exchangeInfo**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        symbols: [
+          { status: 'TRADING', isSpotTradingAllowed: true, baseAsset: 'BTC', quoteAsset: 'USDT' },
+          { status: 'TRADING', isSpotTradingAllowed: true, baseAsset: 'ETH', quoteAsset: 'USDT' },
+          { status: 'TRADING', isSpotTradingAllowed: true, baseAsset: 'SOL', quoteAsset: 'USDT' },
+          { status: 'TRADING', isSpotTradingAllowed: true, baseAsset: 'XRP', quoteAsset: 'USDT' },
+          { status: 'TRADING', isSpotTradingAllowed: true, baseAsset: 'ETH', quoteAsset: 'BTC' },
+        ],
+      }),
+    });
+  });
 };
 
 type WebSocketRoutes = Readonly<{
@@ -175,6 +191,43 @@ const installWebSocketMock = async (page: Page): Promise<void> => {
 
   await page.routeWebSocket('wss://ws.okx.com/ws/v5/public', (route) => {
     routes.okxQuotes = route;
+  });
+
+  await page.route('https://api.bybit.com/v5/market/instruments-info**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        retCode: 0,
+        retMsg: 'OK',
+        result: {
+          category: 'spot',
+          list: [
+            { status: 'Trading', baseCoin: 'BTC', quoteCoin: 'USDT' },
+            { status: 'Trading', baseCoin: 'ETH', quoteCoin: 'USDT' },
+            { status: 'Trading', baseCoin: 'SOL', quoteCoin: 'USDT' },
+            { status: 'Trading', baseCoin: 'ETH', quoteCoin: 'BTC' },
+          ],
+        },
+      }),
+    });
+  });
+
+  await page.route('https://www.okx.com/api/v5/public/instruments**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        code: '0',
+        msg: '',
+        data: [
+          { state: 'live', baseCcy: 'BTC', quoteCcy: 'USDT' },
+          { state: 'live', baseCcy: 'ETH', quoteCcy: 'USDT' },
+          { state: 'live', baseCcy: 'SOL', quoteCcy: 'USDT' },
+          { state: 'live', baseCcy: 'ETH', quoteCcy: 'BTC' },
+        ],
+      }),
+    });
   });
 };
 
