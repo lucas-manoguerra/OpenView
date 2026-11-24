@@ -78,7 +78,9 @@ const createRequest = (
   endTime: overrides.endTime ?? START_TIME + 2 * MINUTE,
 });
 
-const createProvider = (options: ConstructorParameters<typeof BybitSpotMarketDataProvider>[0] = {}) =>
+const createProvider = (
+  options: ConstructorParameters<typeof BybitSpotMarketDataProvider>[0] = {},
+) =>
   new BybitSpotMarketDataProvider({
     minimumRequestIntervalMs: 0,
     ...options,
@@ -109,10 +111,7 @@ describe('Bybit Spot market data provider', () => {
     const provider = createProvider({ fetcher });
     const candles = await provider.getHistoricalCandles(createRequest());
 
-    expect(candles.map((candle) => candle.timestamp)).toEqual([
-      START_TIME,
-      START_TIME + MINUTE,
-    ]);
+    expect(candles.map((candle) => candle.timestamp)).toEqual([START_TIME, START_TIME + MINUTE]);
     expect(getItem(candles, 0).close).toBe(102);
     expect(getItem(candles, 1).close).toBe(103);
     expect(Object.isFrozen(candles)).toBe(true);
@@ -123,7 +122,9 @@ describe('Bybit Spot market data provider', () => {
     expect(getItem(requests, 0).url.searchParams.get('symbol')).toBe('BTCUSDT');
     expect(getItem(requests, 0).url.searchParams.get('interval')).toBe('1');
     expect(getItem(requests, 0).url.searchParams.get('start')).toBe(String(START_TIME));
-    expect(getItem(requests, 0).url.searchParams.get('end')).toBe(String(START_TIME + 2 * MINUTE - 1));
+    expect(getItem(requests, 0).url.searchParams.get('end')).toBe(
+      String(START_TIME + 2 * MINUTE - 1),
+    );
     expect(getItem(requests, 0).url.searchParams.get('limit')).toBe('1000');
     expect(new Headers(getItem(requests, 0).init.headers).get('authorization')).toBeNull();
   });
@@ -162,9 +163,10 @@ describe('Bybit Spot market data provider', () => {
     await provider.getHistoricalCandles(createRequest({ instrumentId: 'BTC-USDT' }));
     await provider.getHistoricalCandles(createRequest({ instrumentId: 'BTCUSDT' }));
 
-    expect(
-      requests.map((request) => request.url.searchParams.get('symbol')),
-    ).toEqual(['BTCUSDT', 'BTCUSDT']);
+    expect(requests.map((request) => request.url.searchParams.get('symbol'))).toEqual([
+      'BTCUSDT',
+      'BTCUSDT',
+    ]);
   });
 
   it('deduplicates duplicate candle open times returned by the API', async () => {
@@ -247,23 +249,27 @@ describe('Bybit Spot market data provider', () => {
     const fetcher = vi.fn<typeof fetch>();
     const provider = createProvider({ fetcher });
 
-    await expect(
-      provider.getHistoricalCandles(createRequest({ interval: '1s' })),
-    ).rejects.toThrow('does not support the 1s');
-    await expect(
-      provider.getHistoricalCandles(createRequest({ interval: '8h' })),
-    ).rejects.toThrow('does not support the 8h');
+    await expect(provider.getHistoricalCandles(createRequest({ interval: '1s' }))).rejects.toThrow(
+      'does not support the 1s',
+    );
+    await expect(provider.getHistoricalCandles(createRequest({ interval: '8h' }))).rejects.toThrow(
+      'does not support the 8h',
+    );
     await expect(
       provider.getHistoricalCandles(createRequest({ instrumentId: 'OKX:BTC-USDT' })),
     ).rejects.toThrow('only accepts unqualified');
     await expect(
-      provider.getHistoricalCandles(createRequest({ startTime: START_TIME + MINUTE, endTime: START_TIME })),
+      provider.getHistoricalCandles(
+        createRequest({ startTime: START_TIME + MINUTE, endTime: START_TIME }),
+      ),
     ).rejects.toThrow(RangeError);
     expect(fetcher).not.toHaveBeenCalled();
   });
 
   it('enforces secure hosts and bounded paging configuration', () => {
-    expect(() => new BybitSpotMarketDataProvider({ baseUrl: 'http://api.test' })).toThrow(RangeError);
+    expect(() => new BybitSpotMarketDataProvider({ baseUrl: 'http://api.test' })).toThrow(
+      RangeError,
+    );
     expect(() => new BybitSpotMarketDataProvider({ pageSize: 1_001 })).toThrow(RangeError);
     expect(() => new BybitSpotMarketDataProvider({ maxPages: 0 })).toThrow(RangeError);
   });
