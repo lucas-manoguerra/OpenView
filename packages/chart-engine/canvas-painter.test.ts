@@ -250,6 +250,45 @@ describe('canvas chart painter', () => {
     expect(calls.filter((call) => call.name === 'lineTo').length).toBeGreaterThan(5);
   });
 
+  it('renders ray, vertical line and rectangle geometry', () => {
+    const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 10);
+    const drawings: readonly ChartRenderDrawing[] = [
+      {
+        id: 'ray-1',
+        type: 'ray',
+        start: { timestamp: 1_700_000_000_000, price: 102 },
+        end: { timestamp: 1_700_000_060_000, price: 108 },
+        color: '#60a5fa',
+      },
+      {
+        id: 'vertical-1',
+        type: 'vertical-line',
+        start: { timestamp: 1_700_000_060_000, price: 105 },
+        end: null,
+        color: '#f4c542',
+      },
+      {
+        id: 'rectangle-1',
+        type: 'rectangle',
+        start: { timestamp: 1_700_000_000_000, price: 110 },
+        end: { timestamp: 1_700_000_120_000, price: 100 },
+        color: '#ab47bc',
+      },
+    ];
+    const scene = createChartRenderScene(frame, createCandles(), null, 'candles', [], drawings);
+    const { context, calls } = createMockContext();
+
+    drawChartScene(context, scene);
+
+    expect(scene.drawings.map((drawing) => drawing.type)).toEqual([
+      'ray',
+      'vertical-line',
+      'rectangle',
+    ]);
+    expect(calls.filter((call) => call.name === 'stroke')).toHaveLength(3);
+    expect(calls.filter((call) => call.name === 'lineTo').length).toBeGreaterThanOrEqual(8);
+  });
+
   it('preserves drawings through scene updates and rejects invalid annotations', () => {
     const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 10);
     const drawings: readonly ChartRenderDrawing[] = [
