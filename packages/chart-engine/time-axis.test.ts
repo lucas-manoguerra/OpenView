@@ -112,6 +112,7 @@ describe('timestamp based time axis', () => {
     const scale = createTimeScale(500, 4, { barSpacing: 100 });
     const ticks = generateTimeAxisTicks(scale, points, { targetTickCount: 4 });
 
+    expect(ticks.length).toBe(1);
     expect(ticks.every((tick) => points[tick.logicalIndex]?.timestamp === tick.timestamp)).toBe(
       true,
     );
@@ -123,7 +124,7 @@ describe('timestamp based time axis', () => {
       { logicalIndex: 0, timestamp: 0, coordinate: 10, label: 'first' },
       { logicalIndex: 1, timestamp: 1, coordinate: 70, label: 'middle' },
       { logicalIndex: 2, timestamp: 2, coordinate: 110, label: 'overlap' },
-      { logicalIndex: 3, timestamp: 3, coordinate: 190, label: 'last' },
+      { logicalIndex: 3, timestamp: 3, coordinate: 170, label: 'last' },
     ];
     const selected = selectNonOverlappingTimeAxisTicks(
       ticks,
