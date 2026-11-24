@@ -89,7 +89,9 @@ export function MarketWatchlist({
                 }
                 data-testid={'watchlist-change-' + instrument.id}
               >
-                {change === null ? '—' : (change > 0 ? '+' : '') + formatQuoteValue(change, 2) + '%'}
+                {change === null
+                  ? '—'
+                  : (change > 0 ? '+' : '') + formatQuoteValue(change, 2) + '%'}
               </span>
             </button>
           );
