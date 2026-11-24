@@ -24,6 +24,8 @@ La selección del proveedor es siempre explícita. El servicio no cambia automá
 
 La terminal utiliza `HistoricalCandleService` desde el componente `MarketChart` y entrega las velas normalizadas a `ChartCanvas`. El componente visual no conoce endpoints ni formatos de exchanges.
 
+El panel superior de cotizaciones de `MarketChart` consume `MarketDataStreamService.subscribeToQuotes` y presenta último precio, variación porcentual de 24 horas, bid, ask y volumen base de 24 horas. También muestra estado de conexión, hora local de recepción y latencia aproximada entre el timestamp del exchange y la recepción. Las cotizaciones no se inyectan en el motor de velas ni modifican su escala; se mantienen como datos independientes del panel. Al cambiar de proveedor o desmontar el componente, se cancela la suscripción anterior antes de iniciar la siguiente.
+
 - La fuente inicial es `binance-spot`, con el instrumento `BTC-USDT` y temporalidad `1m`.
 - El selector de fuente ofrece Binance Spot, Bybit Spot y OKX Spot. Los tres proveedores ofrecen streaming de velas; el selector de temporalidad se construye a partir de `supportedIntervals` de la fuente elegida.
 - Cada consulta solicita hasta 500 períodos recientes y utiliza timestamps Unix en milisegundos con rango final exclusivo.

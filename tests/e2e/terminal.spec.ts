@@ -98,20 +98,32 @@ const installBinanceMock = async (page: Page): Promise<void> => {
 
 type WebSocketRoutes = Readonly<{
   binance: WebSocketRoute | null;
+  binanceQuotes: WebSocketRoute | null;
   bybit: WebSocketRoute | null;
+  bybitQuotes: WebSocketRoute | null;
   okx: WebSocketRoute | null;
+  okxQuotes: WebSocketRoute | null;
 }>;
 
-const webSocketRoutes = new WeakMap<
-  Page,
-  { binance: WebSocketRoute | null; bybit: WebSocketRoute | null; okx: WebSocketRoute | null }
->();
+type MutableWebSocketRoutes = {
+  binance: WebSocketRoute | null;
+  binanceQuotes: WebSocketRoute | null;
+  bybit: WebSocketRoute | null;
+  bybitQuotes: WebSocketRoute | null;
+  okx: WebSocketRoute | null;
+  okxQuotes: WebSocketRoute | null;
+};
+
+const webSocketRoutes = new WeakMap<Page, MutableWebSocketRoutes>();
 
 const installWebSocketMock = async (page: Page): Promise<void> => {
-  const routes = { binance: null, bybit: null, okx: null } as {
-    binance: WebSocketRoute | null;
-    bybit: WebSocketRoute | null;
-    okx: WebSocketRoute | null;
+  const routes: MutableWebSocketRoutes = {
+    binance: null,
+    binanceQuotes: null,
+    bybit: null,
+    bybitQuotes: null,
+    okx: null,
+    okxQuotes: null,
   };
   webSocketRoutes.set(page, routes);
 
@@ -119,12 +131,50 @@ const installWebSocketMock = async (page: Page): Promise<void> => {
     routes.binance = route;
   });
 
+  await page.routeWebSocket(/^wss:\/\/stream\.binance\.com:9443\/stream\?/, (route) => {
+    routes.binanceQuotes = route;
+  });
+
   await page.routeWebSocket('wss://stream.bybit.com/v5/public/spot', (route) => {
-    routes.bybit = route;
+    route.onMessage((message) => {
+      if (typeof message !== 'string') {
+        return;
+      }
+
+      const payload: unknown = JSON.parse(message);
+
+      if (typeof payload !== 'object' || payload === null) {
+        return;
+      }
+
+      const args = Reflect.get(payload, 'args');
+
+      if (!Array.isArray(args)) {
+        return;
+      }
+
+      if (args.some((argument) => typeof argument === 'string' && argument.startsWith('kline.'))) {
+        routes.bybit = route;
+      }
+
+      if (
+        args.some(
+          (argument) =>
+            typeof argument === 'string' &&
+            (argument.startsWith('tickers.') || argument.startsWith('orderbook.1.')),
+        )
+      ) {
+        routes.bybitQuotes = route;
+      }
+    });
   });
 
   await page.routeWebSocket('wss://ws.okx.com/ws/v5/business', (route) => {
     routes.okx = route;
+  });
+
+  await page.routeWebSocket('wss://ws.okx.com/ws/v5/public', (route) => {
+    routes.okxQuotes = route;
   });
 };
 
@@ -266,6 +316,153 @@ test('streams Binance live candles and updates the current bar without duplicate
   await expect(streamStatus).toHaveAttribute('data-stream-candle-count', '2');
   await expect(canvas).toHaveAttribute('data-candles-count', '501');
   await expect(streamStatus).toHaveText('En vivo');
+});
+
+test('displays normalized live quotes and refreshes them across Spot providers', async ({
+  page,
+}) => {
+  await page.route('https://api.bybit.com/v5/market/kline**', async (route) => {
+    const url = new URL(route.request().url());
+    const interval = url.searchParams.get('interval') === '5' ? '5m' : '1m';
+    const startTime = Number(url.searchParams.get('start') ?? 0);
+    const endTime = Number(url.searchParams.get('end') ?? Date.now());
+    const candles = createBybitRows(interval, startTime, endTime);
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        retCode: 0,
+        retMsg: 'OK',
+        result: {
+          category: 'spot',
+          symbol: 'BTCUSDT',
+          list: candles,
+        },
+      }),
+    });
+  });
+
+  await page.route('https://www.okx.com/api/v5/market/history-candles**', async (route) => {
+    const url = new URL(route.request().url());
+    const interval = url.searchParams.get('bar') ?? '1m';
+    const after = Number(url.searchParams.get('after') ?? Date.now());
+    const limit = Number(url.searchParams.get('limit') ?? 100);
+    const duration = getIntervalDuration(interval);
+    const startTime = after - duration * 501;
+    const rows = createOkxRows(interval, startTime, after)
+      .filter((row) => Number(row[0]) < after)
+      .sort((left, right) => Number(right[0]) - Number(left[0]))
+      .slice(0, limit);
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ code: '0', msg: '', data: rows }),
+    });
+  });
+
+  await page.goto('/');
+
+  const providerSelect = page.getByTestId('provider-select');
+  const quotePanel = page.getByTestId('market-quote-panel');
+  const quoteStatus = page.getByTestId('quote-stream-status');
+  const lastPrice = page.getByTestId('quote-last');
+  const change = page.getByTestId('quote-change-24h');
+  const bid = page.getByTestId('quote-bid');
+  const ask = page.getByTestId('quote-ask');
+  const volume = page.getByTestId('quote-volume-24h');
+
+  await expect(quotePanel).toHaveAttribute('data-quote-status', 'connected');
+
+  getWebSocketRoute(page, 'binanceQuotes').send(
+    JSON.stringify({
+      stream: 'btcusdt@ticker',
+      data: {
+        e: '24hrTicker',
+        E: Date.now(),
+        s: 'BTCUSDT',
+        c: '65000',
+        b: '64999',
+        a: '65001',
+        v: '125.5',
+        P: '1.5',
+      },
+    }),
+  );
+
+  await expect(lastPrice).toHaveText('65.000');
+  await expect(change).toHaveText('+1,5%');
+  await expect(bid).toHaveText('64.999');
+  await expect(ask).toHaveText('65.001');
+  await expect(volume).toHaveText('125,5');
+  await expect(quoteStatus).toHaveText('En vivo');
+  await expect(page.getByTestId('quote-received-at')).toBeVisible();
+  await expect(page.getByTestId('quote-latency')).toBeVisible();
+
+  await providerSelect.selectOption('bybit-spot');
+  await expect(providerSelect).toHaveValue('bybit-spot');
+  await expect(quotePanel).toHaveAttribute('data-quote-status', 'connected');
+
+  const bybitQuotes = getWebSocketRoute(page, 'bybitQuotes');
+  const bybitTimestamp = Date.now();
+  bybitQuotes.send(
+    JSON.stringify({
+      topic: 'tickers.BTCUSDT',
+      ts: bybitTimestamp,
+      data: {
+        symbol: 'BTCUSDT',
+        lastPrice: '65100',
+        volume24h: '130',
+        price24hPcnt: '0.025',
+      },
+    }),
+  );
+  await expect(lastPrice).toHaveText('65.100');
+  await expect(change).toHaveText('+2,5%');
+  await expect(volume).toHaveText('130');
+
+  bybitQuotes.send(
+    JSON.stringify({
+      topic: 'orderbook.1.BTCUSDT',
+      ts: bybitTimestamp + 1,
+      data: {
+        s: 'BTCUSDT',
+        b: [['65099', '2']],
+        a: [['65101', '3']],
+      },
+    }),
+  );
+  await expect(bid).toHaveText('65.099');
+  await expect(ask).toHaveText('65.101');
+
+  await providerSelect.selectOption('okx-spot');
+  await expect(providerSelect).toHaveValue('okx-spot');
+  await expect(quotePanel).toHaveAttribute('data-quote-status', 'connected');
+
+  getWebSocketRoute(page, 'okxQuotes').send(
+    JSON.stringify({
+      arg: { channel: 'tickers', instId: 'BTC-USDT' },
+      data: [
+        {
+          instId: 'BTC-USDT',
+          last: '65200',
+          bidPx: '65199',
+          askPx: '65201',
+          open24h: '64000',
+          vol24h: '140',
+          ts: String(Date.now()),
+        },
+      ],
+    }),
+  );
+
+  await expect(lastPrice).toHaveText('65.200');
+  await expect(change).toHaveText('+1,88%');
+  await expect(bid).toHaveText('65.199');
+  await expect(ask).toHaveText('65.201');
+  await expect(volume).toHaveText('140');
+  await expect(quoteStatus).toHaveText('En vivo');
 });
 
 test('switches providers, streams Bybit and OKX candles and recovers history after reconnect', async ({
@@ -486,6 +683,7 @@ test('renders an interactive canvas chart and responds to pointer and wheel inpu
   await expect(canvas).toBeVisible();
   await expect(canvas).toHaveAttribute('data-chart-ready', 'true');
   await expect(canvas).toHaveAttribute('data-candles-count', /[1-9]\d*/);
+  await canvas.scrollIntoViewIfNeeded();
 
   const bounds = await canvas.boundingBox();
 

@@ -11,6 +11,7 @@ import {
   type CandleInterval,
   type MarketDataStreamState,
   type MarketDataSubscription,
+  type QuoteUpdate,
 } from '@openview/market-data';
 import { ChartCanvas } from './ChartCanvas';
 
@@ -108,6 +109,9 @@ export function MarketChart() {
   const [streamStatus, setStreamStatus] = useState<MarketDataStreamState>('disconnected');
   const [streamError, setStreamError] = useState<string | null>(null);
   const [streamCandleCount, setStreamCandleCount] = useState(0);
+  const [quote, setQuote] = useState<QuoteUpdate | null>(null);
+  const [quoteStatus, setQuoteStatus] = useState<MarketDataStreamState>('disconnected');
+  const [quoteError, setQuoteError] = useState<string | null>(null);
   const [recoveringHistory, setRecoveringHistory] = useState(false);
   const [historyRecoveryCount, setHistoryRecoveryCount] = useState(0);
   const initializedRef = useRef(false);
@@ -118,6 +122,7 @@ export function MarketChart() {
   const recoveryRequestRef = useRef(false);
   const streamHasConnectedRef = useRef(false);
   const streamSubscriptionRef = useRef<MarketDataSubscription | null>(null);
+  const quoteSubscriptionRef = useRef<MarketDataSubscription | null>(null);
   const olderRequestRef = useRef(false);
   const hasMoreHistoryRef = useRef(true);
   const candlesRef = useRef(candles);
@@ -196,6 +201,11 @@ export function MarketChart() {
       setHistoryRecoveryCount(0);
       streamSubscriptionRef.current?.unsubscribe();
       streamSubscriptionRef.current = null;
+      quoteSubscriptionRef.current?.unsubscribe();
+      quoteSubscriptionRef.current = null;
+      setQuote(null);
+      setQuoteStatus('disconnected');
+      setQuoteError(null);
       setStreamStatus('disconnected');
       setStreamError(null);
       setStreamCandleCount(0);
@@ -230,7 +240,48 @@ export function MarketChart() {
         candlesRef.current = result;
         setCandles(result);
 
-        if (historicalService.getSource(nextProviderId).streamingCandles) {
+        const selectedSource = historicalService.getSource(nextProviderId);
+
+        if (selectedSource.streamingQuotes) {
+          try {
+            quoteSubscriptionRef.current = streamService.subscribeToQuotes(
+              nextProviderId,
+              [INSTRUMENT_ID],
+              {
+                onQuote: (nextQuote) => {
+                  if (
+                    requestId !== requestIdRef.current ||
+                    nextQuote.instrumentId !== INSTRUMENT_ID
+                  ) {
+                    return;
+                  }
+
+                  setQuote(nextQuote);
+                  setQuoteError(null);
+                },
+                onStatus: (status) => {
+                  if (requestId === requestIdRef.current) {
+                    setQuoteStatus(status);
+                  }
+                },
+                onError: (quoteCause) => {
+                  if (requestId === requestIdRef.current) {
+                    setQuoteError(quoteCause.message);
+                  }
+                },
+              },
+            );
+          } catch (quoteCause) {
+            setQuoteStatus('disconnected');
+            setQuoteError(
+              quoteCause instanceof Error
+                ? quoteCause.message
+                : 'No se pudo iniciar el flujo de cotizaciones en vivo.',
+            );
+          }
+        }
+
+        if (selectedSource.streamingCandles) {
           try {
             streamSubscriptionRef.current = streamService.subscribeToCandles(
               nextProviderId,
@@ -404,6 +455,8 @@ export function MarketChart() {
         recoveryRequestRef.current = false;
         streamSubscriptionRef.current?.unsubscribe();
         streamSubscriptionRef.current = null;
+        quoteSubscriptionRef.current?.unsubscribe();
+        quoteSubscriptionRef.current = null;
         return;
       }
 
@@ -419,6 +472,28 @@ export function MarketChart() {
 
   const selectedSource = historicalService.getSource(providerId);
   const displayedStreamStatus = selectedSource.streamingCandles ? streamStatus : 'unsupported';
+  const quoteStatusLabel = !selectedSource.streamingQuotes
+    ? 'No disponible'
+    : quoteStatus === 'connected'
+      ? quote === null
+        ? 'Esperando cotización'
+        : 'En vivo'
+      : quoteStatus === 'reconnecting'
+        ? 'Reconectando'
+        : quoteStatus === 'connecting'
+          ? 'Conectando'
+          : 'Desconectado';
+  const quoteReceivedTime =
+    quote === null
+      ? null
+      : new Date(quote.receivedAt).toLocaleTimeString('es-AR', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        });
+  const quoteLatency = quote === null ? null : Math.max(0, quote.receivedAt - quote.timestamp);
+  const formatQuoteValue = (value: number | null, maximumFractionDigits = 8): string =>
+    value === null ? '—' : new Intl.NumberFormat('es-AR', { maximumFractionDigits }).format(value);
   const streamStatusLabel = !selectedSource.streamingCandles
     ? 'Solo histórico'
     : streamStatus === 'connected'
@@ -532,6 +607,93 @@ export function MarketChart() {
           )}
         </div>
       </div>
+      <section
+        class="grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-[#0a101a] p-3 sm:grid-cols-5"
+        aria-label="Cotización de mercado"
+        data-testid="market-quote-panel"
+        data-quote-status={quoteStatus}
+      >
+        <div class="col-span-2 min-w-0 sm:col-span-1">
+          <div class="text-[10px] font-medium uppercase tracking-wider text-slate-500">
+            Último precio
+          </div>
+          <div
+            class="mt-1 truncate text-xl font-semibold tabular-nums text-white"
+            data-testid="quote-last"
+          >
+            {formatQuoteValue(quote?.last ?? null)}
+          </div>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[10px] font-medium uppercase tracking-wider text-slate-500">
+            Variación 24h
+          </div>
+          <div
+            class={
+              'mt-1 truncate text-sm font-semibold tabular-nums ' +
+              (quote === null || quote.changePercent24h === null
+                ? 'text-slate-400'
+                : quote.changePercent24h >= 0
+                  ? 'text-emerald-300'
+                  : 'text-rose-300')
+            }
+            data-testid="quote-change-24h"
+          >
+            {quote?.changePercent24h === null || quote === null
+              ? '—'
+              : (quote.changePercent24h > 0 ? '+' : '') +
+                formatQuoteValue(quote.changePercent24h, 2) +
+                '%'}
+          </div>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[10px] font-medium uppercase tracking-wider text-slate-500">Bid</div>
+          <div
+            class="mt-1 truncate text-sm font-medium tabular-nums text-emerald-300"
+            data-testid="quote-bid"
+          >
+            {formatQuoteValue(quote?.bid ?? null)}
+          </div>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[10px] font-medium uppercase tracking-wider text-slate-500">Ask</div>
+          <div
+            class="mt-1 truncate text-sm font-medium tabular-nums text-rose-300"
+            data-testid="quote-ask"
+          >
+            {formatQuoteValue(quote?.ask ?? null)}
+          </div>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[10px] font-medium uppercase tracking-wider text-slate-500">
+            Volumen 24h
+          </div>
+          <div
+            class="mt-1 truncate text-sm font-medium tabular-nums text-slate-200"
+            data-testid="quote-volume-24h"
+          >
+            {formatQuoteValue(quote?.volume24h ?? null, 2)}
+          </div>
+        </div>
+        <div class="col-span-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-white/10 pt-2 text-[10px] text-slate-500 sm:col-span-5">
+          <span data-testid="quote-stream-status" data-quote-stream-status={quoteStatus}>
+            {quoteStatusLabel}
+          </span>
+          {quoteReceivedTime !== null && (
+            <span data-testid="quote-received-at">Actualizado {quoteReceivedTime}</span>
+          )}
+          {quoteLatency !== null && <span data-testid="quote-latency">{quoteLatency} ms</span>}
+          {quoteError !== null && (
+            <span
+              class="truncate text-rose-300"
+              data-testid="quote-stream-error"
+              title={quoteError}
+            >
+              {quoteError}
+            </span>
+          )}
+        </div>
+      </section>
       <ChartCanvas
         candles={candles}
         symbol="BTC / USDT"
