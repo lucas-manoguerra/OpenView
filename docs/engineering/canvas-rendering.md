@@ -10,7 +10,7 @@ El renderer no depende de Astro, Preact, proveedores de datos ni componentes de 
 
 El renderer recibe geometría en píxeles lógicos. El método `resize(width, height, devicePixelRatio)` establece el backing store en dimensiones redondeadas a píxeles físicos y aplica la transformación del device pixel ratio antes de dibujar.
 
-El renderer no cambia el tamaño CSS. `attachCanvasResizeObserver` observa el tamaño lógico del Canvas, comunica el `devicePixelRatio` actual y vuelve a medir ante cambios de ventana. El host crea un nuevo `ChartFrame` con esas dimensiones y proporciona una escena compatible. El adapter y el renderer pueden probarse con observadores y superficies inyectables.
+El renderer no cambia el tamaño CSS. `attachCanvasResizeObserver` observa el tamaño lógico del Canvas, comunica el `devicePixelRatio` actual y vuelve a medir ante cambios de ventana. El host crea un nuevo `ChartFrame` con esas dimensiones y proporciona una escena compatible. Los timestamps de las velas siguen la convención Unix en milisegundos. El adapter y el renderer pueden probarse con observadores y superficies inyectables.
 
 ## Propiedad y ciclo de vida
 
@@ -27,7 +27,7 @@ Un cambio de dimensiones o DPR reinicia el backing store y descarta la escena an
 
 Cada frame dibuja el fondo y los ejes, el fondo del panel de volumen, la rejilla compartida, las velas OHLC visibles, las barras de volumen visibles y el crosshair.
 
-Las conversiones de precio e índice lógico reutilizan las escalas del motor. Las velas se validan con el contrato de market-domain y deben llegar en orden estrictamente ascendente por índice lógico. Una búsqueda binaria selecciona el segmento visible antes del dibujo, evitando recorrer toda la serie en cada frame.
+Las conversiones de precio e índice lógico reutilizan las escalas del motor. El eje temporal mapea intervalos de calendario a timestamps de velas reales, adapta el intervalo al zoom y filtra etiquetas que se solaparían. Las etiquetas se formatean según el intervalo (hora/minuto, día, mes o año). Las velas se validan con el contrato de market-domain y deben llegar en orden estrictamente ascendente por índice lógico. Una búsqueda binaria selecciona el segmento visible antes del dibujo, evitando recorrer toda la serie en cada frame.
 
 Las barras de volumen se normalizan con el volumen máximo del segmento visible. El clipping de velas y volumen se limita a sus respectivas áreas.
 
@@ -59,9 +59,9 @@ El host debe configurar `touch-action: none` en el Canvas cuando quiera que los 
 
 ## Limitaciones actuales
 
-- Las etiquetas del eje temporal muestran índices lógicos, no timestamps formateados del mercado.
+- El eje temporal utiliza timestamps Unix en milisegundos y selecciona intervalos legibles según el rango visible y el ancho del plot. Las etiquetas siguen la zona horaria local por defecto; se puede especificar una zona horaria y locale al generar ticks.
 - El renderer no observa directamente el DOM; el host conecta `attachCanvasResizeObserver` con `CanvasRenderer.resize` y reconstruye el frame.
-- No hay todavía navegación por teclado, overlays configurables ni paneles sincronizados.
+- No hay todavía navegación por teclado, overlays configurables ni paneles sincronizados. La zona horaria del eje aún no tiene un selector visual en la terminal.
 - No se fija un presupuesto de tiempo por frame ni de memoria hasta medir un baseline repetible.
 
 ## Integración de terminal
