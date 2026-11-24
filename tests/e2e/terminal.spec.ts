@@ -261,6 +261,11 @@ test('switches providers, streams Bybit candles and recovers history after recon
 
   await page.route('https://api.bybit.com/v5/market/kline**', async (route) => {
     bybitHistoryRequestCount += 1;
+
+    if (bybitHistoryRequestCount > 1) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
     const url = new URL(route.request().url());
     const interval = url.searchParams.get('interval') === '5' ? '5m' : '1m';
     const startTime = Number(url.searchParams.get('start') ?? 0);
@@ -332,6 +337,10 @@ test('switches providers, streams Bybit candles and recovers history after recon
   await expect(streamStatus).toHaveText('Reconectando');
   await expect.poll(() => bybitHistoryRequestCount).toBeGreaterThan(1);
   await expect(streamStatus).toHaveText('En vivo');
+  const recoveryStatus = page.getByTestId('market-stream-recovery');
+  await expect(recoveryStatus).toBeVisible();
+  await expect(recoveryStatus).toHaveCount(0);
+  const baselineCandleCount = Number(await canvas.getAttribute('data-candles-count'));
 
   const timestamp = getLatestHistoricalCandleTimestamp(page) + 60_000;
   const sendBybitCandle = (close: string, candleTimestamp = timestamp): void => {
@@ -357,13 +366,15 @@ test('switches providers, streams Bybit candles and recovers history after recon
   };
 
   sendBybitCandle('65050');
-  await expect(canvas).toHaveAttribute('data-candles-count', '501');
+  await expect(canvas).toHaveAttribute('data-candles-count', String(baselineCandleCount + 1));
   sendBybitCandle('65075');
-  await expect(canvas).toHaveAttribute('data-candles-count', '501');
+  await expect(canvas).toHaveAttribute('data-candles-count', String(baselineCandleCount + 1));
 
   sendBybitCandle('65100', timestamp + 3 * 60_000);
   await expect.poll(() => bybitHistoryRequestCount).toBeGreaterThan(2);
-  await expect(canvas).toHaveAttribute('data-candles-count', '503');
+  await expect(recoveryStatus).toBeVisible();
+  await expect(recoveryStatus).toHaveCount(0);
+  await expect(canvas).toHaveAttribute('data-candles-count', String(baselineCandleCount + 3));
 
   await providerSelect.selectOption('okx-spot');
   await expect(providerSelect).toHaveValue('okx-spot');
