@@ -35,12 +35,13 @@ describe('market data provider registry', () => {
   });
 
   it('rejects empty and duplicate provider identifiers', () => {
-    expect(() => new MarketDataProviderRegistry([createProvider(' ')] )).toThrow(RangeError);
-    expect(() =>
-      new MarketDataProviderRegistry([
-        createProvider('binance-spot'),
-        createProvider('binance-spot'),
-      ]),
+    expect(() => new MarketDataProviderRegistry([createProvider(' ')])).toThrow(RangeError);
+    expect(
+      () =>
+        new MarketDataProviderRegistry([
+          createProvider('binance-spot'),
+          createProvider('binance-spot'),
+        ]),
     ).toThrow('registered more than once');
   });
 });
