@@ -7,3 +7,10 @@ export type {
   MarketDataSubscription,
   QuoteUpdate,
 } from './contracts';
+
+export { MarketDataProviderError } from './errors';
+export { MarketDataProviderRegistry } from './registry';
+export {
+  BinanceSpotMarketDataProvider,
+  type BinanceSpotProviderOptions,
+} from './providers/binance-spot';
