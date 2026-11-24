@@ -11,6 +11,10 @@ export type {
 export { MarketDataProviderError } from './errors';
 export { MarketDataProviderRegistry } from './registry';
 export {
+  HistoricalCandleService,
+  type HistoricalDataSource,
+} from './history-service';
+export {
   BinanceSpotMarketDataProvider,
   type BinanceSpotProviderOptions,
 } from './providers/binance-spot';
