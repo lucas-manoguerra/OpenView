@@ -38,6 +38,8 @@ type ChartRuntime = Readonly<{
   scrollTimeByBars(bars: number): void;
   scrollToRealtime(): void;
   zoomTime(factor: number): void;
+  setPriceScaleLocked(locked: boolean): void;
+  invertPriceScale(): void;
   destroy(): void;
 }>;
 
@@ -219,8 +221,14 @@ export function ChartCanvas({
 }: ChartCanvasProps) {
   const runtimeRef = useRef<ChartRuntime | null>(null);
   const [priceScaleMode, setPriceScaleMode] = useState<PriceScaleMode>('linear');
+  const [autoScale, setAutoScale] = useState(true);
+  const [priceScaleLocked, setPriceScaleLocked] = useState(false);
+  const [priceScaleInverted, setPriceScaleInverted] = useState(false);
+  const priceScaleModeRef = useRef<PriceScaleMode>(priceScaleMode);
+  const autoScaleRef = useRef(autoScale);
   const priceScaleModeRef = useRef<PriceScaleMode>(priceScaleMode);
   priceScaleModeRef.current = priceScaleMode;
+  autoScaleRef.current = autoScale;
   const renderCandles = useMemo(() => createRenderCandles(candles), [candles]);
   const onNeedMoreHistoryRef = useRef(onNeedMoreHistory);
   onNeedMoreHistoryRef.current = onNeedMoreHistory;
@@ -289,6 +297,10 @@ export function ChartCanvas({
         scene = createChartRenderScene(frame, currentCandles);
         const interactionController = createChartInteractionController(frame, {
           onChange: handleControllerChange,
+          onPriceScaleInteraction: () => {
+            autoScaleRef.current = false;
+            setAutoScale(false);
+          },
         });
         controller = interactionController;
         renderer.setScene(scene);
@@ -330,6 +342,9 @@ export function ChartCanvas({
         );
         scene = createChartRenderScene(frame, currentCandles, controller.snapshot.crosshair);
         controller.setFrame(frame);
+        if (autoScaleRef.current) {
+          controller.fitPriceScale(getVisiblePriceRange(controller, currentCandles));
+        }
         renderer.setScene(scene);
       },
       setPriceScaleMode: (nextMode: PriceScaleMode): void => {
@@ -383,6 +398,12 @@ export function ChartCanvas({
           controller.zoomTime(factor);
         }
       },
+      setPriceScaleLocked: (locked: boolean): void => {
+        controller?.setPriceScaleLocked(locked);
+      },
+      invertPriceScale: (): void => {
+        controller?.invertPriceScale();
+      },
       destroy: (): void => {
         pointerAdapter?.destroy();
         resizeAdapter.destroy();
@@ -400,6 +421,26 @@ export function ChartCanvas({
     },
     [renderCandles, priceScaleMode],
   );
+
+  const handleAutoScaleChange = (): void => {
+    const nextAutoScale = !autoScaleRef.current;
+    autoScaleRef.current = nextAutoScale;
+    setAutoScale(nextAutoScale);
+    if (nextAutoScale) {
+      runtimeRef.current?.fitPriceScale();
+    }
+  };
+
+  const handlePriceScaleLockChange = (): void => {
+    const nextLocked = !priceScaleLocked;
+    setPriceScaleLocked(nextLocked);
+    runtimeRef.current?.setPriceScaleLocked(nextLocked);
+  };
+
+  const handlePriceScaleInvert = (): void => {
+    setPriceScaleInverted((current) => !current);
+    runtimeRef.current?.invertPriceScale();
+  };
 
   const handlePriceScaleModeChange = (mode: PriceScaleMode): void => {
     priceScaleModeRef.current = mode;
@@ -505,6 +546,37 @@ export function ChartCanvas({
           class="rounded px-2 py-1 text-[10px] text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200 disabled:opacity-40"
         >
           Ahora
+        </button>
+        <button
+          type="button"
+          disabled={renderCandles.length === 0}
+          aria-pressed={autoScale}
+          data-testid="chart-auto-scale"
+          onClick={handleAutoScaleChange}
+          class={`rounded px-2 py-1 text-[10px] transition-colors ${autoScale ? 'bg-blue-500/20 text-blue-200' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}
+        >
+          Auto
+        </button>
+        <button
+          type="button"
+          disabled={renderCandles.length === 0}
+          aria-pressed={priceScaleLocked}
+          aria-label={priceScaleLocked ? 'Desbloquear escala de precios' : 'Bloquear escala de precios'}
+          data-testid="chart-lock-price-scale"
+          onClick={handlePriceScaleLockChange}
+          class={`rounded px-2 py-1 text-[10px] transition-colors ${priceScaleLocked ? 'bg-amber-500/20 text-amber-200' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}
+        >
+          {priceScaleLocked ? 'Bloqueada' : 'Bloquear'}
+        </button>
+        <button
+          type="button"
+          disabled={renderCandles.length === 0}
+          aria-pressed={priceScaleInverted}
+          data-testid="chart-invert-price-scale"
+          onClick={handlePriceScaleInvert}
+          class={`rounded px-2 py-1 text-[10px] transition-colors ${priceScaleInverted ? 'bg-blue-500/20 text-blue-200' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}
+        >
+          Invertir
         </button>
         <span class="mx-0.5 h-4 w-px bg-white/10" />
         <button
