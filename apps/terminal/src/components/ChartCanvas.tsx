@@ -408,6 +408,7 @@ export function ChartCanvas({
           getAutoScalePriceRange: () => getVisiblePriceRange(interactionController, currentCandles),
           getDrawingTool: () => drawingToolRef.current,
           getDrawings: () => drawingsRef.current,
+          selectedDrawingIdRef.current,
           getCandles: () => currentCandles,
           getSelectedDrawingId: () => selectedDrawingIdRef.current,
           onDrawingSelect: (drawingId: string | null): void => {
@@ -546,6 +547,7 @@ export function ChartCanvas({
           chartTypeRef.current,
           indicatorsRef.current,
           drawingsRef.current,
+          selectedDrawingIdRef.current,
         );
         controller.setFrame(frame);
         if (autoScaleRef.current) {
@@ -573,6 +575,7 @@ export function ChartCanvas({
           chartTypeRef.current,
           indicatorsRef.current,
           drawingsRef.current,
+          selectedDrawingIdRef.current,
         );
         controller.setFrame(frame);
         renderer.setScene(scene);
@@ -630,6 +633,7 @@ export function ChartCanvas({
           chartTypeRef.current,
           indicatorsRef.current,
           drawingsRef.current,
+          selectedDrawingIdRef.current,
         );
         controller.setFrame(frame);
         renderer.setScene(scene);
