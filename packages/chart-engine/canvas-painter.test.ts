@@ -139,7 +139,6 @@ describe('canvas chart painter', () => {
     expect(calls.some((call) => call.name === 'stroke')).toBe(true);
   });
 
-
   it('draws OHLC bars with high-low stems and open-close ticks', () => {
     const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 10);
     const scene = createChartRenderScene(frame, createCandles(), null, 'bars');
