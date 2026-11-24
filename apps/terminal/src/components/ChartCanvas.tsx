@@ -62,7 +62,7 @@ const createFrame = (size: CanvasResize, controller: ChartInteractionController 
     previousPriceScale?.range ?? DEMO_PRICE_RANGE,
     DEMO_CANDLES.length - 1,
     {
-    layout: {
+      layout: {
       rightPriceScaleWidth: 78,
       timeScaleHeight: 32,
       volumeHeight: 84,
