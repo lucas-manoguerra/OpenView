@@ -46,19 +46,23 @@ export const createChartRenderScene = (
   crosshair: ChartCoordinate | null = null,
 ): ChartRenderScene => {
   let previousLogicalIndex = Number.NEGATIVE_INFINITY;
+  const normalizedCandles: ChartRenderCandle[] = [];
 
   for (const candle of candles) {
-    const validation = createCandle(candle);
-
     if (!Number.isFinite(candle.logicalIndex) || candle.logicalIndex <= previousLogicalIndex) {
       throw new RangeError('Render candles must have unique, ascending logical indices.');
     }
+
+    const validation = createCandle(candle);
 
     if (!validation.ok) {
       throw new RangeError('Render candles must satisfy market domain validation.');
     }
 
     previousLogicalIndex = candle.logicalIndex;
+    normalizedCandles.push(
+      Object.freeze({ ...validation.value, logicalIndex: candle.logicalIndex }),
+    );
   }
 
   if (crosshair !== null && (!Number.isFinite(crosshair.x) || !Number.isFinite(crosshair.y))) {
@@ -67,17 +71,7 @@ export const createChartRenderScene = (
 
   return Object.freeze({
     frame,
-    candles: Object.freeze(
-      candles.map((candle) => {
-        const validation = createCandle(candle);
-
-        if (!validation.ok) {
-          throw new RangeError('Render candles must satisfy market domain validation.');
-        }
-
-        return Object.freeze({ ...validation.value, logicalIndex: candle.logicalIndex });
-      }),
-    ),
+    candles: Object.freeze(normalizedCandles),
     crosshair: crosshair === null ? null : Object.freeze({ ...crosshair }),
   });
 };
@@ -287,7 +281,24 @@ const drawCandles = (
   context.restore();
 };
 
-const drawVolume = (
+const drawVolumeBackground = (
+  context: CanvasRenderingContext2D,
+  scene: ChartRenderScene,
+  theme: ChartRenderTheme,
+): void => {
+  const { volumeArea } = scene.frame.layout;
+
+  if (volumeArea.height <= 0) {
+    return;
+  }
+
+  context.save();
+  context.fillStyle = theme.volumeBackground;
+  context.fillRect(volumeArea.x, volumeArea.y, volumeArea.width, volumeArea.height);
+  context.restore();
+};
+
+const drawVolumeBars = (
   context: CanvasRenderingContext2D,
   scene: ChartRenderScene,
   theme: ChartRenderTheme,
@@ -298,14 +309,9 @@ const drawVolume = (
     return;
   }
 
-  context.save();
-  context.fillStyle = theme.volumeBackground;
-  context.fillRect(volumeArea.x, volumeArea.y, volumeArea.width, volumeArea.height);
-
   const candles = getVisibleCandles(scene);
 
   if (candles.length === 0) {
-    context.restore();
     return;
   }
 
@@ -316,11 +322,12 @@ const drawVolume = (
   }
 
   if (maximumVolume <= 0) {
-    context.restore();
     return;
   }
 
   const barWidth = Math.max(1, Math.min(20, scene.frame.timeScale.barSpacing * 0.7));
+
+  context.save();
   context.beginPath();
   context.rect(volumeArea.x, volumeArea.y, volumeArea.width, volumeArea.height);
   context.clip();
@@ -397,9 +404,10 @@ export const drawChartScene = (
   context.fillStyle = theme.plotBackground;
   context.fillRect(plotArea.x, plotArea.y, plotArea.width, plotArea.height);
   drawAxes(context, scene, theme);
+  drawVolumeBackground(context, scene, theme);
   drawGrid(context, scene, theme);
   drawCandles(context, scene, theme);
-  drawVolume(context, scene, theme);
+  drawVolumeBars(context, scene, theme);
   drawCrosshair(context, scene, theme);
   context.restore();
 };
