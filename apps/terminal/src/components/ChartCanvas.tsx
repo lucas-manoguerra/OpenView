@@ -11,6 +11,7 @@ import {
   type CanvasResize,
   type CanvasResizeAdapter,
   type ChartInteractionController,
+  type ChartInteractionSnapshot,
   type ChartRenderCandle,
   type ChartRenderScene,
 } from '@openview/chart-engine';
@@ -106,7 +107,7 @@ export function ChartCanvas() {
     let pointerAdapter: CanvasPointerAdapter | null = null;
     let lastSize: CanvasResize | null = null;
 
-    const handleControllerChange = (snapshot: Parameters<NonNullable<ConstructorParameters<typeof ChartInteractionController>[1]['onChange']>>[0]): void => {
+    const handleControllerChange = (snapshot: ChartInteractionSnapshot): void => {
       if (scene === null) {
         return;
       }
