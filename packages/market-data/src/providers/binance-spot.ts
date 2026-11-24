@@ -99,7 +99,9 @@ const normalizeSymbol = (instrumentId: string): string => {
   const pair = separatorIndex < 0 ? value : value.slice(separatorIndex + 1);
 
   if (exchange !== null && exchange !== 'BINANCE') {
-    throw new RangeError('Binance Spot only accepts unqualified symbols or BINANCE-qualified symbols.');
+    throw new RangeError(
+      'Binance Spot only accepts unqualified symbols or BINANCE-qualified symbols.',
+    );
   }
 
   const symbol = pair.replace(/[-/_]/g, '');
@@ -118,7 +120,9 @@ const validateRequest = (request: HistoricalCandleRequest): void => {
     request.startTime < 0 ||
     request.endTime <= request.startTime
   ) {
-    throw new RangeError('Historical candle ranges must be safe Unix millisecond values with end after start.');
+    throw new RangeError(
+      'Historical candle ranges must be safe Unix millisecond values with end after start.',
+    );
   }
 };
 
@@ -136,7 +140,9 @@ const getRetryAfterMs = (response: Response): number | null => {
 
 const getApiErrorMessage = (payload: unknown, status: number): string => {
   if (isRecord(payload) && typeof payload['msg'] === 'string') {
-    return `Binance API request failed with HTTP ${status}: ${payload['msg']}`;
+    const message = payload['msg'];
+
+    return `Binance API request failed with HTTP ${status}: ${message}`;
   }
 
   return `Binance API request failed with HTTP ${status}.`;
