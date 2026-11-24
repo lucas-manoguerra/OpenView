@@ -31,10 +31,14 @@ test('renders an interactive canvas chart and responds to pointer and wheel inpu
 
   expect(bounds).not.toBeNull();
 
+  if (bounds === null) {
+    throw new Error('The chart canvas must have a visible bounding box.');
+  }
+
   const initialImage = await canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL());
   await page.mouse.move(
-    bounds!.x + bounds!.width * 0.5,
-    bounds!.y + bounds!.height * 0.5,
+    bounds.x + bounds.width * 0.5,
+    bounds.y + bounds.height * 0.5,
   );
 
   await expect
