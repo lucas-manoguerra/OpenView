@@ -28,6 +28,7 @@ const createMockContext = (): Readonly<{
     font: '10px sans-serif',
     textAlign: 'left' as CanvasTextAlign,
     textBaseline: 'alphabetic' as CanvasTextBaseline,
+    measureText: (text: string) => ({ width: text.length * 6 }) as TextMetrics,
     save: () => record('save'),
     restore: () => record('restore'),
     clearRect: (...args: number[]) => record('clearRect', ...args),
