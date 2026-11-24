@@ -1,4 +1,4 @@
-import type { ChartCoordinate, ChartFrame } from './chart-frame';
+import type { ChartCoordinate, ChartDataPoint, ChartFrame } from './chart-frame';
 import type { ChartRenderCandle, ChartRenderDrawing } from './canvas-painter';
 import { priceToCoordinate } from './price-scale';
 import { logicalIndexToCoordinate } from './time-scale';
@@ -8,7 +8,7 @@ export type ChartDrawingHit = Readonly<{
   target: 'start' | 'end' | 'body';
 }>;
 
-const getLogicalIndexAtTimestamp = (
+export const getLogicalIndexAtTimestamp = (
   timestamp: number,
   candles: readonly ChartRenderCandle[],
 ): number | null => {
@@ -356,4 +356,116 @@ export const hitTestChartDrawing = (
   }
 
   return null;
+};
+
+export const updateChartDrawing = (
+  drawing: ChartRenderDrawing,
+  target: ChartDrawingHit['target'],
+  origin: ChartDataPoint,
+  current: ChartDataPoint,
+  candles: readonly ChartRenderCandle[],
+): ChartRenderDrawing => {
+  const logicalDelta = current.logicalIndex - origin.logicalIndex;
+  const priceDelta = current.price - origin.price;
+
+  const updateAnchor = (
+    anchor: ChartRenderDrawing['start'],
+    nextLogicalIndex: number,
+    nextPrice: number,
+  ): ChartRenderDrawing['start'] => {
+    const timestamp = getTimestampAtLogicalIndex(nextLogicalIndex, candles);
+
+    if (timestamp === null || !Number.isFinite(nextPrice)) {
+      throw new RangeError('Edited drawing anchors must resolve to finite market coordinates.');
+    }
+
+    return Object.freeze({ timestamp, price: nextPrice });
+  };
+
+  if (target === 'start') {
+    if (drawing.type === 'horizontal-line') {
+      return Object.freeze({
+        ...drawing,
+        start: Object.freeze({ ...drawing.start, price: current.price }),
+      });
+    }
+
+    if (drawing.type === 'vertical-line') {
+      return Object.freeze({
+        ...drawing,
+        start: updateAnchor(
+          drawing.start,
+          current.logicalIndex,
+          drawing.start.price,
+        ),
+      });
+    }
+
+    return Object.freeze({
+      ...drawing,
+      start: updateAnchor(drawing.start, current.logicalIndex, current.price),
+    });
+  }
+
+  if (target === 'end') {
+    if (drawing.end === null) {
+      throw new RangeError('A drawing without an end anchor cannot edit its end point.');
+    }
+
+    return Object.freeze({
+      ...drawing,
+      end: updateAnchor(drawing.end, current.logicalIndex, current.price),
+    });
+  }
+
+  if (drawing.type === 'horizontal-line') {
+    return Object.freeze({
+      ...drawing,
+      start: Object.freeze({
+        ...drawing.start,
+        price: drawing.start.price + priceDelta,
+      }),
+    });
+  }
+
+  const startLogicalIndex = getLogicalIndexAtTimestamp(drawing.start.timestamp, candles);
+
+  if (startLogicalIndex === null) {
+    throw new RangeError('Drawing start anchor is outside the available market data.');
+  }
+
+  if (drawing.type === 'vertical-line') {
+    return Object.freeze({
+      ...drawing,
+      start: updateAnchor(
+        drawing.start,
+        startLogicalIndex + logicalDelta,
+        drawing.start.price,
+      ),
+    });
+  }
+
+  if (drawing.end === null) {
+    throw new RangeError('A two-point drawing must contain an end anchor.');
+  }
+
+  const endLogicalIndex = getLogicalIndexAtTimestamp(drawing.end.timestamp, candles);
+
+  if (endLogicalIndex === null) {
+    throw new RangeError('Drawing end anchor is outside the available market data.');
+  }
+
+  return Object.freeze({
+    ...drawing,
+    start: updateAnchor(
+      drawing.start,
+      startLogicalIndex + logicalDelta,
+      drawing.start.price + priceDelta,
+    ),
+    end: updateAnchor(
+      drawing.end,
+      endLogicalIndex + logicalDelta,
+      drawing.end.price + priceDelta,
+    ),
+  });
 };
