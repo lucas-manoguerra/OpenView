@@ -321,6 +321,47 @@ test('streams Binance live candles and updates the current bar without duplicate
 test('displays normalized live quotes and refreshes them across Spot providers', async ({
   page,
 }) => {
+  await page.route('https://api.bybit.com/v5/market/kline**', async (route) => {
+    const url = new URL(route.request().url());
+    const interval = url.searchParams.get('interval') === '5' ? '5m' : '1m';
+    const startTime = Number(url.searchParams.get('start') ?? 0);
+    const endTime = Number(url.searchParams.get('end') ?? Date.now());
+    const candles = createBybitRows(interval, startTime, endTime);
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        retCode: 0,
+        retMsg: 'OK',
+        result: {
+          category: 'spot',
+          symbol: 'BTCUSDT',
+          list: candles,
+        },
+      }),
+    });
+  });
+
+  await page.route('https://www.okx.com/api/v5/market/history-candles**', async (route) => {
+    const url = new URL(route.request().url());
+    const interval = url.searchParams.get('bar') ?? '1m';
+    const after = Number(url.searchParams.get('after') ?? Date.now());
+    const limit = Number(url.searchParams.get('limit') ?? 100);
+    const duration = getIntervalDuration(interval);
+    const startTime = after - duration * 501;
+    const rows = createOkxRows(interval, startTime, after)
+      .filter((row) => Number(row[0]) < after)
+      .sort((left, right) => Number(right[0]) - Number(left[0]))
+      .slice(0, limit);
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ code: '0', msg: '', data: rows }),
+    });
+  });
+
   await page.goto('/');
 
   const providerSelect = page.getByTestId('provider-select');
@@ -642,6 +683,7 @@ test('renders an interactive canvas chart and responds to pointer and wheel inpu
   await expect(canvas).toBeVisible();
   await expect(canvas).toHaveAttribute('data-chart-ready', 'true');
   await expect(canvas).toHaveAttribute('data-candles-count', /[1-9]\d*/);
+  await canvas.scrollIntoViewIfNeeded();
 
   const bounds = await canvas.boundingBox();
 
