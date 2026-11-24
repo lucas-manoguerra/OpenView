@@ -191,11 +191,8 @@ describe('watchlist preferences', () => {
     expect(JSON.parse(serialized ?? '{}')).toMatchObject({
       version: 2,
       instruments: [
-
         { id: 'PEPE-USDC', name: 'PEPE' },
-
         { id: 'ETH-USDT', name: 'Ethereum' },
-
       ],
       selectedInstrumentId: 'ETH-USDT',
     });
