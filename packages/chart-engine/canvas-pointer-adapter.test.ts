@@ -143,18 +143,9 @@ describe('canvas pointer event adapter', () => {
       y: frame.layout.plotArea.y + 120,
     };
 
-    dispatch(
-      'pointerdown',
-      createPointerEvent({ clientX: 100 + start.x, clientY: 50 + start.y }),
-    );
-    dispatch(
-      'pointermove',
-      createPointerEvent({ clientX: 100 + end.x, clientY: 50 + end.y }),
-    );
-    dispatch(
-      'pointerup',
-      createPointerEvent({ clientX: 100 + end.x, clientY: 50 + end.y }),
-    );
+    dispatch('pointerdown', createPointerEvent({ clientX: 100 + start.x, clientY: 50 + start.y }));
+    dispatch('pointermove', createPointerEvent({ clientX: 100 + end.x, clientY: 50 + end.y }));
+    dispatch('pointerup', createPointerEvent({ clientX: 100 + end.x, clientY: 50 + end.y }));
 
     expect(gestures).toHaveLength(1);
     expect(gestures[0]).toEqual({
@@ -180,14 +171,8 @@ describe('canvas pointer event adapter', () => {
       y: frame.layout.plotArea.y + 80,
     };
 
-    dispatch(
-      'pointerdown',
-      createPointerEvent({ clientX: 100 + point.x, clientY: 50 + point.y }),
-    );
-    dispatch(
-      'pointerup',
-      createPointerEvent({ clientX: 100 + point.x, clientY: 50 + point.y }),
-    );
+    dispatch('pointerdown', createPointerEvent({ clientX: 100 + point.x, clientY: 50 + point.y }));
+    dispatch('pointerup', createPointerEvent({ clientX: 100 + point.x, clientY: 50 + point.y }));
 
     expect(gestures).toEqual([
       {
