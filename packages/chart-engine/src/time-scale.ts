@@ -165,6 +165,39 @@ export const resizeTimeScale = (scale: TimeScale, width: number): TimeScale =>
     inverted: scale.inverted,
   });
 
+export const countAppendedBars = (
+  previousLastTimestamp: number | null,
+  nextTimestamps: readonly number[],
+): number => {
+  if (previousLastTimestamp === null) {
+    return 0;
+  }
+
+  if (!Number.isFinite(previousLastTimestamp) || !nextTimestamps.every(Number.isFinite)) {
+    throw new RangeError('Candle timestamps must be finite numbers.');
+  }
+
+  return nextTimestamps.reduce(
+    (count, timestamp) => count + Number(timestamp > previousLastTimestamp),
+    0,
+  );
+};
+
+export const getRightOffsetAfterDataUpdate = (
+  currentRightOffset: number,
+  appendedBars: number,
+): number => {
+  if (!Number.isFinite(currentRightOffset)) {
+    throw new RangeError('Current right offset must be a finite number.');
+  }
+
+  if (!Number.isInteger(appendedBars) || appendedBars < 0) {
+    throw new RangeError('Appended bar count must be a non-negative integer.');
+  }
+
+  return currentRightOffset < 0 ? currentRightOffset - appendedBars : currentRightOffset;
+};
+
 export type TimeScaleTick = Readonly<{
   logicalIndex: number;
   coordinate: number;

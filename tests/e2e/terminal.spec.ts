@@ -476,6 +476,7 @@ test('preserves the temporal offset when older history is prepended', async ({ p
 
   const canvas = page.locator('canvas[data-candles-count]');
   await expect.poll(async () => Number(await canvas.getAttribute('data-candles-count'))).toBe(500);
+  await expect(canvas).toHaveAttribute('data-navigation-mode', 'realtime');
 
   const bounds = await canvas.boundingBox();
   expect(bounds).not.toBeNull();
@@ -486,6 +487,7 @@ test('preserves the temporal offset when older history is prepended', async ({ p
 
   await page.mouse.move(bounds.x + bounds.width * 0.5, bounds.y + bounds.height * 0.5);
   await page.mouse.wheel(-2600, 0);
+  await expect(canvas).toHaveAttribute('data-navigation-mode', 'historical');
 
   const offsetBeforeHistory = await canvas.getAttribute('data-right-offset');
   expect(offsetBeforeHistory).not.toBeNull();
@@ -493,6 +495,10 @@ test('preserves the temporal offset when older history is prepended', async ({ p
     .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
     .toBeGreaterThan(500);
   await expect(canvas).toHaveAttribute('data-right-offset', offsetBeforeHistory ?? '');
+
+  await page.getByTestId('chart-go-realtime').click();
+  await expect(canvas).toHaveAttribute('data-navigation-mode', 'realtime');
+  await expect(canvas).toHaveAttribute('data-follow-latest', 'true');
 });
 
 test('exposes auto, lock and inverted price scale controls', async ({ page }) => {

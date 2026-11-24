@@ -8,6 +8,8 @@ import {
   createChartInteractionController,
   createChartRenderScene,
   createCanvasRenderer,
+  countAppendedBars,
+  getRightOffsetAfterDataUpdate,
   updateChartRenderScene,
   type CanvasPointerAdapter,
   type CanvasResize,
@@ -129,6 +131,7 @@ const createFrame = (
   preservePriceZoom: boolean,
   priceScaleMode: PriceScaleMode,
   fitContent = false,
+  rightOffsetOverride?: number,
 ) => {
   const previousScale = controller?.snapshot.frame.timeScale;
   const previousPriceScale = controller?.snapshot.frame.priceScale;
@@ -165,7 +168,7 @@ const createFrame = (
                   ),
                 )
               : previousScale.barSpacing,
-            rightOffset: fitContent ? 0 : previousScale.rightOffset,
+            rightOffset: fitContent ? 0 : (rightOffsetOverride ?? previousScale.rightOffset),
             minBarSpacing: previousScale.minBarSpacing,
             maxBarSpacing: previousScale.maxBarSpacing,
             inverted: previousScale.inverted,
@@ -267,6 +270,9 @@ export function ChartCanvas({
       });
       renderer.setScene(scene);
       canvas.dataset['rightOffset'] = String(snapshot.frame.timeScale.rightOffset);
+      canvas.dataset['followLatest'] = String(snapshot.frame.timeScale.rightOffset >= 0);
+      canvas.dataset['navigationMode'] =
+        snapshot.frame.timeScale.rightOffset >= 0 ? 'realtime' : 'historical';
       if (rightOffsetInputRef.current !== null) {
         rightOffsetInputRef.current.value = String(
           Math.max(0, Math.min(50, Math.round(snapshot.frame.timeScale.rightOffset))),
@@ -315,6 +321,9 @@ export function ChartCanvas({
         interactionController.setPriceScaleLocked(priceScaleLockedRef.current);
         renderer.setScene(scene);
         canvas.dataset['rightOffset'] = String(frame.timeScale.rightOffset);
+        canvas.dataset['followLatest'] = String(frame.timeScale.rightOffset >= 0);
+        canvas.dataset['navigationMode'] =
+          frame.timeScale.rightOffset >= 0 ? 'realtime' : 'historical';
         pointerAdapter = attachCanvasPointerEvents(canvas, interactionController, {
           getAutoScalePriceRange: () => getVisiblePriceRange(interactionController, currentCandles),
         });
@@ -346,6 +355,16 @@ export function ChartCanvas({
           return;
         }
 
+        const currentTimeScale = controller.snapshot.frame.timeScale;
+        const previousLastCandle = previousCandles[previousCandles.length - 1];
+        const appendedBars = countAppendedBars(
+          previousLastCandle?.timestamp ?? null,
+          currentCandles.map((candle) => candle.timestamp),
+        );
+        const nextRightOffset = getRightOffsetAfterDataUpdate(
+          currentTimeScale.rightOffset,
+          appendedBars,
+        );
         const frame = createFrame(
           lastSize,
           controller,
@@ -353,6 +372,8 @@ export function ChartCanvas({
           previousCandles,
           true,
           nextMode,
+          false,
+          nextRightOffset,
         );
         scene = createChartRenderScene(frame, currentCandles, controller.snapshot.crosshair);
         controller.setFrame(frame);
