@@ -14,6 +14,7 @@ import {
   type ChartInteractionSnapshot,
   type ChartRenderCandle,
   type ChartRenderScene,
+  type NumericRange,
 } from '@openview/chart-engine';
 
 type ChartRuntime = Readonly<{
@@ -53,8 +54,14 @@ const DEMO_PRICE_RANGE = Object.freeze({
 
 const createFrame = (size: CanvasResize, controller: ChartInteractionController | null) => {
   const previousScale = controller?.snapshot.frame.timeScale;
+  const previousPriceScale = controller?.snapshot.frame.priceScale;
 
-  return createChartFrame(size.width, size.height, DEMO_PRICE_RANGE, DEMO_CANDLES.length - 1, {
+  return createChartFrame(
+    size.width,
+    size.height,
+    previousPriceScale?.range ?? DEMO_PRICE_RANGE,
+    DEMO_CANDLES.length - 1,
+    {
     layout: {
       rightPriceScaleWidth: 78,
       timeScaleHeight: 32,
@@ -62,17 +69,52 @@ const createFrame = (size: CanvasResize, controller: ChartInteractionController 
       topInset: 12,
       bottomInset: 8,
     },
-    timeScale:
-      previousScale === undefined
-        ? { barSpacing: 7.5, minBarSpacing: 2, maxBarSpacing: 32 }
-        : {
-            barSpacing: previousScale.barSpacing,
-            rightOffset: previousScale.rightOffset,
-            minBarSpacing: previousScale.minBarSpacing,
-            maxBarSpacing: previousScale.maxBarSpacing,
-            inverted: previousScale.inverted,
-          },
-  });
+      timeScale:
+        previousScale === undefined
+          ? { barSpacing: 7.5, minBarSpacing: 2, maxBarSpacing: 32 }
+          : {
+              barSpacing: previousScale.barSpacing,
+              rightOffset: previousScale.rightOffset,
+              minBarSpacing: previousScale.minBarSpacing,
+              maxBarSpacing: previousScale.maxBarSpacing,
+              inverted: previousScale.inverted,
+            },
+      priceScale:
+        previousPriceScale === undefined
+          ? undefined
+          : {
+              mode: previousPriceScale.mode,
+              ...(previousPriceScale.baseValue === null
+                ? {}
+                : { baseValue: previousPriceScale.baseValue }),
+              inverted: previousPriceScale.inverted,
+            },
+    },
+  );
+};
+
+const getVisiblePriceRange = (controller: ChartInteractionController): NumericRange => {
+  const { from, to } = controller.snapshot.frame.timeScale.visibleLogicalRange;
+  let minimum = Number.POSITIVE_INFINITY;
+  let maximum = Number.NEGATIVE_INFINITY;
+
+  for (const candle of DEMO_CANDLES) {
+    if (candle.logicalIndex < from - 1 || candle.logicalIndex > to + 1) {
+      continue;
+    }
+
+    minimum = Math.min(minimum, candle.low);
+    maximum = Math.max(maximum, candle.high);
+  }
+
+  if (!Number.isFinite(minimum) || !Number.isFinite(maximum)) {
+    return DEMO_PRICE_RANGE;
+  }
+
+  const span = maximum - minimum;
+  const padding = span > 0 ? span * 0.08 : Math.max(Math.abs(maximum) * 0.01, 0.01);
+
+  return Object.freeze({ min: minimum - padding, max: maximum + padding });
 };
 
 const hasSameSize = (first: CanvasResize | null, second: CanvasResize): boolean =>
@@ -129,11 +171,14 @@ export function ChartCanvas() {
 
       if (controller === null) {
         scene = createChartRenderScene(frame, DEMO_CANDLES);
-        controller = createChartInteractionController(frame, {
+        const interactionController = createChartInteractionController(frame, {
           onChange: handleControllerChange,
         });
+        controller = interactionController;
         renderer.setScene(scene);
-        pointerAdapter = attachCanvasPointerEvents(canvas, controller);
+        pointerAdapter = attachCanvasPointerEvents(canvas, interactionController, {
+          getAutoScalePriceRange: () => getVisiblePriceRange(interactionController),
+        });
       } else {
         controller.setFrame(frame);
       }
@@ -168,7 +213,7 @@ export function ChartCanvas() {
         </span>
       </div>
       <div class="pointer-events-none absolute bottom-3 right-4 rounded border border-white/10 bg-[#101723]/90 px-2 py-1 text-[10px] text-slate-500">
-        Drag to pan · Scroll to zoom
+        Drag to pan · Scroll to zoom · Double-click price axis to fit
       </div>
     </div>
   );
