@@ -98,6 +98,7 @@ export function MarketChart() {
   const [olderError, setOlderError] = useState<string | null>(null);
   const [streamStatus, setStreamStatus] = useState<MarketDataStreamState>('disconnected');
   const [streamError, setStreamError] = useState<string | null>(null);
+  const [streamCandleCount, setStreamCandleCount] = useState(0);
   const initializedRef = useRef(false);
   const requestIdRef = useRef(0);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -118,6 +119,7 @@ export function MarketChart() {
       streamSubscriptionRef.current = null;
       setStreamStatus('disconnected');
       setStreamError(null);
+      setStreamCandleCount(0);
       olderRequestRef.current = false;
       hasMoreHistoryRef.current = true;
       setOlderLoading(false);
@@ -162,6 +164,7 @@ export function MarketChart() {
 
                   const nextCandles = mergeLiveCandle(candlesRef.current, update.candle);
                   candlesRef.current = nextCandles;
+                  setStreamCandleCount((count) => count + 1);
                   setCandles(nextCandles);
                 },
                 onStatus: (status) => {
@@ -381,7 +384,11 @@ export function MarketChart() {
           <span aria-hidden="true">·</span>
           <span>{INSTRUMENT_ID}</span>
           <span aria-hidden="true">·</span>
-          <span data-testid="market-stream-status" data-stream-status={displayedStreamStatus}>
+          <span
+            data-testid="market-stream-status"
+            data-stream-status={displayedStreamStatus}
+            data-stream-candle-count={streamCandleCount}
+          >
             {streamStatusLabel}
           </span>
           {streamError !== null && (
