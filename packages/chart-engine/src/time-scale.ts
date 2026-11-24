@@ -35,7 +35,11 @@ export const createTimeScale = (
   const minBarSpacing = options.minBarSpacing ?? 2;
   const maxBarSpacing = options.maxBarSpacing ?? 50;
 
-  if (![width, rightmostLogicalIndex, barSpacing, rightOffset, minBarSpacing, maxBarSpacing].every(Number.isFinite)) {
+  if (
+    ![width, rightmostLogicalIndex, barSpacing, rightOffset, minBarSpacing, maxBarSpacing].every(
+      Number.isFinite,
+    )
+  ) {
     throw new RangeError('Time scale dimensions and logical offsets must be finite numbers.');
   }
 
@@ -132,20 +136,14 @@ export const zoomTimeScale = (
     throw new RangeError('Zoom factor and anchor coordinate must be finite, with positive zoom.');
   }
 
-  const barSpacing = clamp(
-    scale.barSpacing * zoomFactor,
-    scale.minBarSpacing,
-    scale.maxBarSpacing,
-  );
+  const barSpacing = clamp(scale.barSpacing * zoomFactor, scale.minBarSpacing, scale.maxBarSpacing);
 
   if (barSpacing === scale.barSpacing) {
     return scale;
   }
 
   const anchorLogicalIndex = coordinateToLogicalIndex(anchorCoordinate, scale);
-  const distanceFromRight = scale.inverted
-    ? anchorCoordinate
-    : scale.width - anchorCoordinate;
+  const distanceFromRight = scale.inverted ? anchorCoordinate : scale.width - anchorCoordinate;
   const rightOffset =
     anchorLogicalIndex - scale.rightmostLogicalIndex - 0.5 + distanceFromRight / barSpacing;
 
