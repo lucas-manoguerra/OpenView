@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createTimeScale } from './src/time-scale';
 import {
+  createTimeAxisData,
   formatTimeAxisLabel,
   generateTimeAxisTicks,
   selectNonOverlappingTimeAxisTicks,
@@ -20,6 +21,19 @@ const createPoints = (count: number, startTimestamp = Date.UTC(2024, 0, 1)): rea
   );
 
 describe('timestamp based time axis', () => {
+  it('creates a frozen validated time axis snapshot without cloning frozen candle data', () => {
+    const points = Object.freeze(createPoints(10));
+
+    expect(createTimeAxisData(points).points).toBe(points);
+    const mutablePoints = createPoints(2).map((point) => ({ ...point }));
+    const snapshot = createTimeAxisData(mutablePoints);
+
+    expect(snapshot.points).not.toBe(mutablePoints);
+    expect(Object.isFrozen(snapshot.points)).toBe(true);
+    expect(Object.isFrozen(snapshot.points[0])).toBe(true);
+    expect(Object.isFrozen(createTimeAxisData(points))).toBe(true);
+  });
+
   it('formats intraday labels as hours and minutes in the configured timezone', () => {
     const timestamp = Date.UTC(2024, 0, 1, 0, 0);
 
