@@ -304,9 +304,7 @@ test('switches providers, streams Bybit candles and recovers history after recon
 
   await getWebSocketRoute(page, 'bybit').close();
   await expect(streamStatus).toHaveText('Reconectando');
-  await expect
-    .poll(() => bybitHistoryRequestCount)
-    .toBeGreaterThan(1);
+  await expect.poll(() => bybitHistoryRequestCount).toBeGreaterThan(1);
   await expect(streamStatus).toHaveText('En vivo');
 
   const timestamp = Date.UTC(2099, 0, 1);
