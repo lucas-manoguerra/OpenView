@@ -12,7 +12,7 @@
     "build": "pnpm --filter @openview/terminal build",
     "format": "biome format --write .",
     "format:check": "biome format .",
-    "lint": "biome lint .",
+    "lint": "biome lint . --max-diagnostics=200",
     "architecture:check": "node scripts/verify-architecture.mjs",
     "typecheck": "pnpm --filter @openview/market-domain typecheck && pnpm --filter @openview/chart-engine typecheck && pnpm --filter @openview/market-data typecheck && pnpm --filter @openview/terminal typecheck",
     "test": "vitest run",
