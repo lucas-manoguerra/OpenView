@@ -18,7 +18,7 @@ import { ChartCanvas } from './ChartCanvas';
 
 const DEFAULT_PROVIDER_ID = 'binance-spot';
 const DEFAULT_INTERVAL: CandleInterval = '1m';
-const WATCHLIST_INSTRUMENTS: readonly WatchlistInstrument[] = Object.freeze([
+const WATCHLIST_INSTRUMENTS = Object.freeze([
   Object.freeze({
     id: createInstrumentId('BTC-USDT'),
     symbol: 'BTC / USDT',
@@ -37,7 +37,7 @@ const WATCHLIST_INSTRUMENTS: readonly WatchlistInstrument[] = Object.freeze([
     name: 'Solana',
     chartSymbol: 'SOL / USDT',
   }),
-]);
+] as const satisfies readonly WatchlistInstrument[]);
 const WATCHLIST_INSTRUMENT_IDS = WATCHLIST_INSTRUMENTS.map((instrument) => instrument.id);
 const DEFAULT_INSTRUMENT_ID = WATCHLIST_INSTRUMENTS[0].id;
 const HISTORY_CANDLE_COUNT = 500;
