@@ -215,6 +215,8 @@ export function ChartCanvas({
 }: ChartCanvasProps) {
   const runtimeRef = useRef<ChartRuntime | null>(null);
   const [priceScaleMode, setPriceScaleMode] = useState<PriceScaleMode>('linear');
+  const priceScaleModeRef = useRef<PriceScaleMode>(priceScaleMode);
+  priceScaleModeRef.current = priceScaleMode;
   const renderCandles = useMemo(() => createRenderCandles(candles), [candles]);
   const onNeedMoreHistoryRef = useRef(onNeedMoreHistory);
   onNeedMoreHistoryRef.current = onNeedMoreHistory;
@@ -276,7 +278,7 @@ export function ChartCanvas({
         currentCandles,
         currentCandles,
         false,
-        'linear',
+        priceScaleModeRef.current,
       );
 
       if (controller === null) {
@@ -327,7 +329,7 @@ export function ChartCanvas({
         renderer.setScene(scene);
       },
       setPriceScaleMode: (nextMode: PriceScaleMode): void => {
-        if (controller === null || lastSize === null) {
+        if (controller === null || lastSize === null || currentCandles.length === 0) {
           return;
         }
 
@@ -385,6 +387,7 @@ export function ChartCanvas({
   );
 
   const handlePriceScaleModeChange = (mode: PriceScaleMode): void => {
+    priceScaleModeRef.current = mode;
     setPriceScaleMode(mode);
     runtimeRef.current?.setPriceScaleMode(mode);
   };
@@ -426,6 +429,7 @@ export function ChartCanvas({
         ] as const).map(([mode, label]) => (
           <button
             type="button"
+            disabled={renderCandles.length === 0}
             aria-label={`Escala ${mode}`}
             aria-pressed={priceScaleMode === mode}
             data-testid={`price-scale-${mode}`}
@@ -438,6 +442,7 @@ export function ChartCanvas({
         <span class="mx-0.5 h-4 w-px bg-white/10" />
         <button
           type="button"
+          disabled={renderCandles.length === 0}
           data-testid="chart-fit-prices"
           onClick={() => runtimeRef.current?.fitPriceScale()}
           class="rounded px-2 py-1 text-[10px] text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200"
@@ -446,6 +451,7 @@ export function ChartCanvas({
         </button>
         <button
           type="button"
+          disabled={renderCandles.length === 0}
           data-testid="chart-fit-content"
           onClick={() => runtimeRef.current?.fitContent(priceScaleMode)}
           class="rounded px-2 py-1 text-[10px] text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200"
