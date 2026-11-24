@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   coordinateToLogicalIndex,
+  generateTimeTicks,
   createTimeScale,
   logicalIndexToCoordinate,
   panTimeScale,
@@ -101,6 +102,29 @@ describe('logical time scale', () => {
     expect(nextScale.barSpacing).toBe(scale.barSpacing);
     expect(nextScale.visibleLogicalRange.to).toBe(scale.visibleLogicalRange.to);
     expect(nextScale.visibleLogicalRange.from).toBeLessThan(scale.visibleLogicalRange.from);
+  });
+
+  it('generates evenly spaced logical time ticks inside the viewport', () => {
+    const scale = createTimeScale(800, 99);
+    const ticks = generateTimeTicks(scale, 5);
+
+    expect(ticks.map((tick) => tick.logicalIndex)).toEqual([0, 25, 50, 75]);
+    expect(ticks.map((tick) => tick.coordinate)).toEqual([4, 204, 404, 604]);
+  });
+
+  it('mirrors time tick coordinates on inverted scales', () => {
+    const scale = createTimeScale(800, 99, { inverted: true });
+    const ticks = generateTimeTicks(scale, 5);
+
+    expect(ticks.map((tick) => tick.logicalIndex)).toEqual([0, 25, 50, 75]);
+    expect(ticks.map((tick) => tick.coordinate)).toEqual([796, 596, 396, 196]);
+  });
+
+  it('rejects invalid time tick density', () => {
+    const scale = createTimeScale(800, 99);
+
+    expect(() => generateTimeTicks(scale, 1)).toThrow(RangeError);
+    expect(() => generateTimeTicks(scale, 51)).toThrow(RangeError);
   });
 
   it('rejects invalid scale dimensions and spacing limits', () => {
