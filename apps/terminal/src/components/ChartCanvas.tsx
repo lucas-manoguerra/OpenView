@@ -91,14 +91,17 @@ const getPreservedPriceRange = (
     return nextRange;
   }
 
+  const nextDataSpan = nextRange.max - nextRange.min;
   const zoomRatio = previousVisibleSpan / previousDataSpan;
-  const nextSpan = (nextRange.max - nextRange.min) * zoomRatio;
+  const nextSpan = nextDataSpan * zoomRatio;
+  const previousDataCenter = (previousRange.min + previousRange.max) / 2;
+  const previousVisibleCenter = (previousScale.range.min + previousScale.range.max) / 2;
+  const centerOffsetRatio = (previousVisibleCenter - previousDataCenter) / previousDataSpan;
+  const center = (nextRange.min + nextRange.max) / 2 + centerOffsetRatio * nextDataSpan;
 
-  if (!Number.isFinite(nextSpan) || nextSpan <= 0) {
+  if (!Number.isFinite(nextSpan) || nextSpan <= 0 || !Number.isFinite(center)) {
     return nextRange;
   }
-
-  const center = (nextRange.min + nextRange.max) / 2;
 
   return Object.freeze({
     min: center - nextSpan / 2,
