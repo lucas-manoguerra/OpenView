@@ -118,10 +118,12 @@ export function MarketChart() {
   const [providerId, setProviderId] = useState(DEFAULT_PROVIDER_ID);
   const [interval, setInterval] = useState<CandleInterval>(DEFAULT_INTERVAL);
   const [watchlist, setWatchlist] = useState<readonly WatchlistInstrument[]>(DEFAULT_WATCHLIST);
-  const [availableInstruments, setAvailableInstruments] = useState<
-    readonly WatchlistInstrument[]
-  >([]);
-  const [catalogStatus, setCatalogStatus] = useState<'loading' | 'ready' | 'unavailable'>('loading');
+  const [availableInstruments, setAvailableInstruments] = useState<readonly WatchlistInstrument[]>(
+    [],
+  );
+  const [catalogStatus, setCatalogStatus] = useState<'loading' | 'ready' | 'unavailable'>(
+    'loading',
+  );
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [selectedInstrumentId, setSelectedInstrumentId] =
     useState<InstrumentId>(DEFAULT_INSTRUMENT_ID);
@@ -614,7 +616,9 @@ export function MarketChart() {
         if (selectedInstrument === undefined) {
           setCandles([]);
           setLoading(false);
-          setError('Ningún instrumento guardado está disponible en este proveedor. Agrega uno del catálogo.');
+          setError(
+            'Ningún instrumento guardado está disponible en este proveedor. Agrega uno del catálogo.',
+          );
           return;
         }
 
@@ -730,7 +734,9 @@ export function MarketChart() {
       candlesRef.current = [];
       setCandles([]);
       setLoading(false);
-      setError('Ningún instrumento guardado está disponible en este proveedor. Agrega uno del catálogo.');
+      setError(
+        'Ningún instrumento guardado está disponible en este proveedor. Agrega uno del catálogo.',
+      );
       return;
     }
 
