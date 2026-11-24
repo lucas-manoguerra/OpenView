@@ -156,8 +156,9 @@ describe('canvas chart painter', () => {
       (call, index) =>
         index > gridLineIndex &&
         call.name === 'fillRect' &&
-        call.args[1] !== frame.layout.volumeArea.y &&
-        call.args[3] !== frame.layout.volumeArea.height,
+        typeof call.args[1] === 'number' &&
+        call.args[1] >= frame.layout.volumeArea.y &&
+        call.args[1] < frame.layout.volumeArea.y + frame.layout.volumeArea.height,
     );
 
     expect(volumeBackgroundIndex).toBeGreaterThanOrEqual(0);
