@@ -51,6 +51,7 @@ export {
   type PriceScale,
   type PriceScaleMode,
   type PriceScaleOptions,
+  type PriceTickFormatOptions,
   type PriceScaleTick,
   priceToCoordinate,
   zoomPriceScale,
