@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { createInstrumentId } from '@openview/market-domain';
 import {
   DEFAULT_WATCHLIST,
   WATCHLIST_CATALOG,
+  createWatchlistInstrument,
   loadWatchlistPreferences,
   restoreWatchlistPreferences,
   saveWatchlistPreferences,
@@ -38,7 +40,7 @@ describe('watchlist preferences', () => {
     expect(preferences.selectedInstrumentId).toBe('BTC-USDT');
   });
 
-  it('restores a valid ordered instrument list and selected instrument', () => {
+  it('restores legacy version one preferences from the original curated catalogue', () => {
     const preferences = restoreWatchlistPreferences(
       JSON.stringify({
         version: 1,
@@ -51,14 +53,50 @@ describe('watchlist preferences', () => {
       'SOL-USDT',
       'ETH-USDT',
     ]);
+    expect(preferences.instruments[0]?.name).toBe('Solana');
     expect(preferences.selectedInstrumentId).toBe('ETH-USDT');
   });
 
-  it('removes unknown and duplicate instrument ids and repairs an invalid selection', () => {
+  it('restores dynamic instruments that are not part of the default catalogue', () => {
     const preferences = restoreWatchlistPreferences(
       JSON.stringify({
-        version: 1,
-        instrumentIds: ['ETH-USDT', 'UNKNOWN-USDT', 'ETH-USDT', 'SOL-USDT'],
+        version: 2,
+        instruments: [
+          { id: 'PEPE-USDC', name: 'PEPE' },
+          { id: 'LINK-BTC', name: 'Chainlink' },
+        ],
+        selectedInstrumentId: 'LINK-BTC',
+      }),
+    );
+
+    expect(preferences.instruments).toEqual([
+      {
+        id: 'PEPE-USDC',
+        symbol: 'PEPE / USDC',
+        name: 'PEPE',
+        chartSymbol: 'PEPE / USDC',
+      },
+      {
+        id: 'LINK-BTC',
+        symbol: 'LINK / BTC',
+        name: 'Chainlink',
+        chartSymbol: 'LINK / BTC',
+      },
+    ]);
+    expect(preferences.selectedInstrumentId).toBe('LINK-BTC');
+  });
+
+  it('removes malformed, duplicate and excess dynamic identifiers and repairs selection', () => {
+    const preferences = restoreWatchlistPreferences(
+      JSON.stringify({
+        version: 2,
+        instruments: [
+          { id: 'ETH-USDT', name: 'Ethereum' },
+          { id: 'INVALID/PAIR', name: 'Invalid' },
+          { id: 'ETH-USDT', name: 'Duplicate' },
+          { id: 'SOL-USDT', name: 'Solana' },
+          { id: 'BTC USDT', name: 'Invalid spacing' },
+        ],
         selectedInstrumentId: 'UNKNOWN-USDT',
       }),
     );
@@ -67,6 +105,7 @@ describe('watchlist preferences', () => {
       'ETH-USDT',
       'SOL-USDT',
     ]);
+    expect(preferences.instruments[0]?.name).toBe('Ethereum');
     expect(preferences.selectedInstrumentId).toBe('ETH-USDT');
   });
 
@@ -74,8 +113,8 @@ describe('watchlist preferences', () => {
     const invalidValues = [
       '{',
       JSON.stringify([]),
-      JSON.stringify({ version: 2, instrumentIds: ['ETH-USDT'] }),
-      JSON.stringify({ version: 1, instrumentIds: [] }),
+      JSON.stringify({ version: 3, instruments: [{ id: 'ETH-USDT' }] }),
+      JSON.stringify({ version: 2, instruments: [] }),
       JSON.stringify({ version: 1, instrumentIds: ['UNKNOWN-USDT'] }),
     ];
 
@@ -86,29 +125,75 @@ describe('watchlist preferences', () => {
     }
   });
 
-  it('restores all supported instruments from the catalogue', () => {
+  it('enforces the maximum watchlist size for dynamic instruments', () => {
+    const instruments = Array.from({ length: 30 }, (_, index) => ({
+      id: 'ASSET' + String(index).padStart(2, '0') + '-USDT',
+      name: 'ASSET' + String(index).padStart(2, '0'),
+    }));
     const preferences = restoreWatchlistPreferences(
       JSON.stringify({
-        version: 1,
-        instrumentIds: [...WATCHLIST_CATALOG.map((instrument) => instrument.id), 'BTC-USDT'],
-        selectedInstrumentId: 'DOT-USDT',
+        version: 2,
+        instruments,
+        selectedInstrumentId: 'ASSET29-USDT',
       }),
     );
 
-    expect(preferences.instruments).toHaveLength(WATCHLIST_CATALOG.length);
+    expect(preferences.instruments).toHaveLength(25);
+    expect(preferences.selectedInstrumentId).toBe('ASSET00-USDT');
   });
 
-  it('persists and reloads watchlist order and selection', () => {
+  it('converts normalized provider instruments into watchlist instruments', () => {
+    expect(
+      createWatchlistInstrument({
+        id: createInstrumentId('PEPE-USDC'),
+        symbol: 'PEPE/USDC',
+        baseAsset: 'PEPE',
+        quoteAsset: 'USDC',
+      }),
+    ).toEqual({
+      id: 'PEPE-USDC',
+      symbol: 'PEPE / USDC',
+      name: 'PEPE',
+      chartSymbol: 'PEPE / USDC',
+    });
+  });
+
+  it('rejects inconsistent provider instrument identifiers', () => {
+    expect(() =>
+      createWatchlistInstrument({
+        id: createInstrumentId('BTC-USDT'),
+        symbol: 'BTC/USDT',
+        baseAsset: 'ETH',
+        quoteAsset: 'USDT',
+      }),
+    ).toThrow(RangeError);
+  });
+
+  it('persists and reloads dynamic watchlist order and selection', () => {
     const storage = new MemoryStorage();
     const preferences: WatchlistPreferences = {
-      instruments: [getCatalogInstrument('SOL-USDT'), getCatalogInstrument('ETH-USDT')],
+      instruments: [
+        {
+          id: 'PEPE-USDC',
+          symbol: 'PEPE / USDC',
+          name: 'PEPE',
+          chartSymbol: 'PEPE / USDC',
+        },
+        getCatalogInstrument('ETH-USDT'),
+      ],
       selectedInstrumentId: 'ETH-USDT',
     };
 
     saveWatchlistPreferences(storage, preferences);
-    const restored = loadWatchlistPreferences(storage);
+    const serialized = storage.getItem('openview.watchlist.preferences');
 
-    expect(restored).toEqual(preferences);
+    expect(serialized).not.toBeNull();
+    expect(JSON.parse(serialized ?? '{}')).toMatchObject({
+      version: 2,
+      instruments: [{ id: 'PEPE-USDC', name: 'PEPE' }, { id: 'ETH-USDT', name: 'Ethereum' }],
+      selectedInstrumentId: 'ETH-USDT',
+    });
+    expect(loadWatchlistPreferences(storage)).toEqual(preferences);
   });
 
   it('uses defaults when browser storage is unavailable', () => {
