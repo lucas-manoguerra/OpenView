@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createInstrumentId } from '@openview/market-domain';
 import type { MarketDataProvider, MarketInstrument } from './src/contracts';
 import { MarketDataProviderError } from './src/errors';
@@ -222,7 +222,7 @@ describe('market instrument discovery service', () => {
   });
 
   it('does not invoke the provider when the discovery request is already aborted', async () => {
-    const listInstruments = async () => createInstruments();
+    const listInstruments = vi.fn(async () => createInstruments());
     const provider = createProvider({ listInstruments });
     const service = new MarketInstrumentDiscoveryService(
       new MarketDataProviderRegistry([provider]),
