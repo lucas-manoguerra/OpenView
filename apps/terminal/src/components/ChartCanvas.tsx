@@ -11,7 +11,6 @@ import {
   createChartInteractionController,
   createChartRenderScene,
   createCanvasRenderer,
-  getLogicalIndexAtTimestamp,
   getTimestampAtLogicalIndex,
   updateChartDrawing,
   calculateExponentialMovingAverage,
@@ -408,7 +407,6 @@ export function ChartCanvas({
           getAutoScalePriceRange: () => getVisiblePriceRange(interactionController, currentCandles),
           getDrawingTool: () => drawingToolRef.current,
           getDrawings: () => drawingsRef.current,
-          selectedDrawingIdRef.current,
           getCandles: () => currentCandles,
           getSelectedDrawingId: () => selectedDrawingIdRef.current,
           onDrawingSelect: (drawingId: string | null): void => {
