@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   coordinateToLogicalIndex,
   generateTimeTicks,
+  getRightOffsetAfterDataUpdate,
   createTimeScale,
   logicalIndexToCoordinate,
   panTimeScale,
@@ -102,6 +103,55 @@ describe('logical time scale', () => {
     expect(nextScale.barSpacing).toBe(scale.barSpacing);
     expect(nextScale.visibleLogicalRange.to).toBe(scale.visibleLogicalRange.to);
     expect(nextScale.visibleLogicalRange.from).toBeLessThan(scale.visibleLogicalRange.from);
+  });
+
+  it('keeps the newest candles pinned to the right margin while following updates', () => {
+    const scale = createTimeScale(800, 99, { rightOffset: 0 });
+    const nextRightmostLogicalIndex = 109;
+    const nextOffset = getRightOffsetAfterDataUpdate(scale.rightOffset, 10);
+    const nextScale = createTimeScale(800, nextRightmostLogicalIndex, {
+      barSpacing: scale.barSpacing,
+      rightOffset: nextOffset,
+    });
+
+    expect(nextOffset).toBe(0);
+    expect(logicalIndexToCoordinate(109, nextScale)).toBe(796);
+  });
+
+  it('preserves the configured future margin while following new candles', () => {
+    const scale = createTimeScale(800, 99, { rightOffset: 12 });
+    const nextOffset = getRightOffsetAfterDataUpdate(scale.rightOffset, 10);
+    const nextScale = createTimeScale(800, 109, {
+      barSpacing: scale.barSpacing,
+      rightOffset: nextOffset,
+    });
+
+    expect(nextOffset).toBe(12);
+    expect(logicalIndexToCoordinate(109, nextScale)).toBe(700);
+  });
+
+  it('keeps the visible historical timestamps fixed when newer candles arrive', () => {
+    const scale = createTimeScale(800, 99, { rightOffset: -20 });
+    const nextOffset = getRightOffsetAfterDataUpdate(scale.rightOffset, 10);
+    const nextScale = createTimeScale(800, 109, {
+      barSpacing: scale.barSpacing,
+      rightOffset: nextOffset,
+    });
+
+    expect(nextOffset).toBe(-30);
+    expect(nextScale.visibleLogicalRange).toEqual(scale.visibleLogicalRange);
+    expect(logicalIndexToCoordinate(60, nextScale)).toBe(logicalIndexToCoordinate(60, scale));
+  });
+
+  it('does not change the temporal offset when an existing candle is updated', () => {
+    expect(getRightOffsetAfterDataUpdate(-20, 0)).toBe(-20);
+    expect(getRightOffsetAfterDataUpdate(0, 0)).toBe(0);
+  });
+
+  it('rejects invalid appended candle counts and offsets', () => {
+    expect(() => getRightOffsetAfterDataUpdate(Number.NaN, 1)).toThrow(RangeError);
+    expect(() => getRightOffsetAfterDataUpdate(0, -1)).toThrow(RangeError);
+    expect(() => getRightOffsetAfterDataUpdate(0, 1.5)).toThrow(RangeError);
   });
 
   it('generates evenly spaced logical time ticks inside the viewport', () => {
