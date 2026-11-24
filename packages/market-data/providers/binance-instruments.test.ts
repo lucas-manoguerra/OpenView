@@ -69,6 +69,32 @@ describe('Binance Spot instrument discovery', () => {
     ]);
   });
 
+  it('keeps valid markets when the response contains unsupported asset codes', async () => {
+    const provider = new BinanceSpotMarketDataProvider({
+      fetcher: async () =>
+        createResponse({
+          symbols: [
+            {
+              status: 'TRADING',
+              isSpotTradingAllowed: true,
+              baseAsset: 'OLD/TOKEN',
+              quoteAsset: 'USDT',
+            },
+            {
+              status: 'TRADING',
+              isSpotTradingAllowed: true,
+              baseAsset: 'AVAX',
+              quoteAsset: 'USDT',
+            },
+          ],
+        }),
+    });
+
+    const instruments = await provider.listInstruments();
+
+    expect(instruments.map((instrument) => instrument.id)).toEqual(['AVAX-USDT']);
+  });
+
   it('filters discovered instruments by quote asset and forwards abort signals', async () => {
     const controller = new AbortController();
     let requestSignal: AbortSignal | null | undefined;
