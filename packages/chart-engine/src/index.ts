@@ -81,3 +81,12 @@ export {
   priceToVerticalCoordinate,
   timeToHorizontalCoordinate,
 } from './viewport';
+
+export {
+  formatTimeAxisLabel,
+  generateTimeAxisTicks,
+  selectNonOverlappingTimeAxisTicks,
+  type TimeAxisOptions,
+  type TimeAxisPoint,
+  type TimeAxisTick,
+} from './time-axis';
