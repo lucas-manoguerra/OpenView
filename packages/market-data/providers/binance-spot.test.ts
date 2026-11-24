@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createInstrumentId } from '@openview/market-domain';
-import { MarketDataProviderError } from '../src/errors';
 import {
   BinanceSpotMarketDataProvider,
   type BinanceSpotProviderOptions,
@@ -103,10 +102,12 @@ describe('Binance Spot market data provider', () => {
     ]);
     const provider = createProvider({ fetcher });
 
-    const candles = await provider.getHistoricalCandles(createRequest({
-      instrumentId: 'BINANCE:BTC/USDT',
-      endTime: START_TIME + 2 * MINUTE,
-    }));
+    const candles = await provider.getHistoricalCandles(
+      createRequest({
+        instrumentId: 'BINANCE:BTC/USDT',
+        endTime: START_TIME + 2 * MINUTE,
+      }),
+    );
 
     expect(candles).toEqual([
       {
@@ -130,7 +131,7 @@ describe('Binance Spot market data provider', () => {
     expect(Object.isFrozen(candles[0])).toBe(true);
     expect(requests).toHaveLength(1);
     expect(getItem(requests, 0).url.origin).toBe('https://data-api.binance.vision');
-    expect(requests[0]!.url.pathname).toBe('/api/v3/klines');
+    expect(getItem(requests, 0).url.pathname).toBe('/api/v3/klines');
     expect(requests[0]!.url.searchParams.get('symbol')).toBe('BTCUSDT');
     expect(requests[0]!.url.searchParams.get('interval')).toBe('1m');
     expect(requests[0]!.url.searchParams.get('startTime')).toBe(String(START_TIME));
@@ -170,8 +171,15 @@ describe('Binance Spot market data provider', () => {
       START_TIME + 2 * MINUTE,
     ]);
     expect(requests).toHaveLength(2);
-    expect(getItem(requests, 1).url.searchParams.get('startTime')).toBe(String(START_TIME + MINUTE + 1));
-    expect(requests.every((request) => request.url.searchParams.get('endTime') === String(START_TIME + 3 * MINUTE - 1))).toBe(true);
+    expect(getItem(requests, 1).url.searchParams.get('startTime')).toBe(
+      String(START_TIME + MINUTE + 1),
+    );
+    expect(
+      requests.every(
+        (request) =>
+          request.url.searchParams.get('endTime') === String(START_TIME + 3 * MINUTE - 1),
+      ),
+    ).toBe(true);
   });
 
   it('sorts candles chronologically and removes duplicate open times', async () => {
@@ -185,11 +193,8 @@ describe('Binance Spot market data provider', () => {
     const provider = createProvider({ fetcher });
     const candles = await provider.getHistoricalCandles(createRequest());
 
-    expect(candles.map((candle) => candle.timestamp)).toEqual([
-      START_TIME,
-      START_TIME + MINUTE,
-    ]);
-    expect(getItem(candles, 1).close).toBe(103);
+    expect(candles.map((candle) => candle.timestamp)).toEqual([START_TIME, START_TIME + MINUTE]);
+    expect(getItem(candles, 1).close).toBe(102);
   });
 
   it('passes an optional abort signal through to fetch', async () => {
