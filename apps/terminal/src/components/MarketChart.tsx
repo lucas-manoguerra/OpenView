@@ -121,7 +121,8 @@ const getHistoryStartTime = (endTime: number, interval: CandleInterval): number 
 export function MarketChart() {
   const [providerId, setProviderId] = useState(DEFAULT_PROVIDER_ID);
   const [interval, setInterval] = useState<CandleInterval>(DEFAULT_INTERVAL);
-  const [selectedInstrumentId, setSelectedInstrumentId] = useState<InstrumentId>(DEFAULT_INSTRUMENT_ID);
+  const [selectedInstrumentId, setSelectedInstrumentId] =
+    useState<InstrumentId>(DEFAULT_INSTRUMENT_ID);
   const [candles, setCandles] = useState<
     Awaited<ReturnType<typeof historicalService.getHistoricalCandles>>
   >([]);
@@ -515,9 +516,9 @@ export function MarketChart() {
   const selectedSource = historicalService.getSource(providerId);
   const displayedStreamStatus = selectedSource.streamingCandles ? streamStatus : 'unsupported';
   const quote = quotes[selectedInstrumentId] ?? null;
-  const selectedInstrument = WATCHLIST_INSTRUMENTS.find(
-    (instrument) => instrument.id === selectedInstrumentId,
-  ) ?? WATCHLIST_INSTRUMENTS[0];
+  const selectedInstrument =
+    WATCHLIST_INSTRUMENTS.find((instrument) => instrument.id === selectedInstrumentId) ??
+    WATCHLIST_INSTRUMENTS[0];
   const quoteStatusLabel = !selectedSource.streamingQuotes
     ? 'No disponible'
     : quoteStatus === 'connected'
