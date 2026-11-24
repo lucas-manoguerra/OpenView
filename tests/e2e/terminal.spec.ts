@@ -105,17 +105,19 @@ type WebSocketRoutes = Readonly<{
   okxQuotes: WebSocketRoute | null;
 }>;
 
-const webSocketRoutes = new WeakMap<Page, {
+type MutableWebSocketRoutes = {
   binance: WebSocketRoute | null;
   binanceQuotes: WebSocketRoute | null;
   bybit: WebSocketRoute | null;
   bybitQuotes: WebSocketRoute | null;
   okx: WebSocketRoute | null;
   okxQuotes: WebSocketRoute | null;
-}>();
+};
+
+const webSocketRoutes = new WeakMap<Page, MutableWebSocketRoutes>();
 
 const installWebSocketMock = async (page: Page): Promise<void> => {
-  const routes = {
+  const routes: MutableWebSocketRoutes = {
     binance: null,
     binanceQuotes: null,
     bybit: null,
@@ -140,7 +142,12 @@ const installWebSocketMock = async (page: Page): Promise<void> => {
       }
 
       const payload: unknown = JSON.parse(message);
-      const args = Reflect.get(payload as object, 'args');
+
+      if (typeof payload !== 'object' || payload === null) {
+        return;
+      }
+
+      const args = Reflect.get(payload, 'args');
 
       if (!Array.isArray(args)) {
         return;
