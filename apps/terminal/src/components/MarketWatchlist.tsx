@@ -437,6 +437,8 @@ export function MarketWatchlist({
   const shortcutDocumentRef = useRef<Document | null>(null);
   const onOpenSearchRef = useRef(onOpenSearch);
   onOpenSearchRef.current = onOpenSearch;
+  const onSearchOpenChangeRef = useRef(onSearchOpenChange);
+  onSearchOpenChangeRef.current = onSearchOpenChange;
   const handleDocumentShortcut = useCallback((event: KeyboardEvent): void => {
     const target = event.target;
 
@@ -455,7 +457,7 @@ export function MarketWatchlist({
     }
 
     event.preventDefault();
-    onSearchOpenChange(true);
+    onSearchOpenChangeRef.current(true);
     onOpenSearchRef.current();
   }, []);
   const bindShortcutRoot = useCallback(
