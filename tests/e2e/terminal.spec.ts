@@ -477,7 +477,6 @@ test('exposes auto, lock and inverted price scale controls', async ({ page }) =>
   await expect(lockScale).toHaveAttribute('aria-pressed', 'false');
 });
 
-
 test('renders timestamp based time labels instead of logical bar indices', async ({ page }) => {
   await page.addInitScript(() => {
     const labels: string[] = [];
