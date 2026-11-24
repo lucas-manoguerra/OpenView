@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from 'preact/hooks';
+import { useCallback, useMemo, useRef, useState } from 'preact/hooks';
 import type { Candle } from '@openview/market-domain';
 import type { CandleInterval } from '@openview/market-data';
 import {
@@ -17,6 +17,7 @@ import {
   type ChartRenderCandle,
   type ChartRenderScene,
   type NumericRange,
+  type PriceScaleMode,
 } from '@openview/chart-engine';
 
 type ChartCanvasProps = Readonly<{
@@ -30,7 +31,10 @@ type ChartCanvasProps = Readonly<{
 }>;
 
 type ChartRuntime = Readonly<{
-  updateCandles(candles: readonly ChartRenderCandle[]): void;
+  updateCandles(candles: readonly ChartRenderCandle[], mode: PriceScaleMode): void;
+  setPriceScaleMode(mode: PriceScaleMode): void;
+  fitContent(mode: PriceScaleMode): void;
+  fitPriceScale(): void;
   destroy(): void;
 }>;
 
@@ -117,13 +121,21 @@ const createFrame = (
   candles: readonly ChartRenderCandle[],
   previousCandles: readonly ChartRenderCandle[],
   preservePriceZoom: boolean,
+  priceScaleMode: PriceScaleMode,
+  fitContent = false,
 ) => {
   const previousScale = controller?.snapshot.frame.timeScale;
   const previousPriceScale = controller?.snapshot.frame.priceScale;
+  const modeChanged = previousPriceScale !== undefined && previousPriceScale.mode !== priceScaleMode;
   const priceRange =
-    preservePriceZoom && previousPriceScale !== undefined
+    preservePriceZoom && previousPriceScale !== undefined && !modeChanged && !fitContent
       ? getPreservedPriceRange(previousPriceScale, previousCandles, candles)
-      : (previousPriceScale?.range ?? getPriceRange(candles));
+      : getPriceRange(candles);
+  const relativeMode = priceScaleMode === 'percentage' || priceScaleMode === 'indexed-to-100';
+  const baseValue =
+    previousPriceScale?.mode === priceScaleMode && previousPriceScale.baseValue !== null
+      ? previousPriceScale.baseValue
+      : candles[0]?.close;
 
   return createChartFrame(size.width, size.height, priceRange, candles.length - 1, {
     layout: {
@@ -137,23 +149,25 @@ const createFrame = (
       previousScale === undefined
         ? { barSpacing: 7.5, minBarSpacing: 2, maxBarSpacing: 32 }
         : {
-            barSpacing: previousScale.barSpacing,
-            rightOffset: previousScale.rightOffset,
+            barSpacing: fitContent
+              ? Math.min(
+                  previousScale.maxBarSpacing,
+                  Math.max(
+                    previousScale.minBarSpacing,
+                    size.width / Math.max(1, candles.length + 2),
+                  ),
+                )
+              : previousScale.barSpacing,
+            rightOffset: fitContent ? 0 : previousScale.rightOffset,
             minBarSpacing: previousScale.minBarSpacing,
             maxBarSpacing: previousScale.maxBarSpacing,
             inverted: previousScale.inverted,
           },
-    ...(previousPriceScale === undefined
-      ? {}
-      : {
-          priceScale: {
-            mode: previousPriceScale.mode,
-            ...(previousPriceScale.baseValue === null
-              ? {}
-              : { baseValue: previousPriceScale.baseValue }),
-            inverted: previousPriceScale.inverted,
-          },
-        }),
+    priceScale: {
+      mode: priceScaleMode,
+      ...(relativeMode && baseValue !== undefined ? { baseValue } : {}),
+      inverted: previousPriceScale?.inverted ?? false,
+    },
   });
 };
 
@@ -200,6 +214,7 @@ export function ChartCanvas({
   onNeedMoreHistory,
 }: ChartCanvasProps) {
   const runtimeRef = useRef<ChartRuntime | null>(null);
+  const [priceScaleMode, setPriceScaleMode] = useState<PriceScaleMode>('linear');
   const renderCandles = useMemo(() => createRenderCandles(candles), [candles]);
   const onNeedMoreHistoryRef = useRef(onNeedMoreHistory);
   onNeedMoreHistoryRef.current = onNeedMoreHistory;
@@ -255,7 +270,14 @@ export function ChartCanvas({
         return;
       }
 
-      const frame = createFrame(size, controller, currentCandles, currentCandles, false);
+      const frame = createFrame(
+        size,
+        controller,
+        currentCandles,
+        currentCandles,
+        false,
+        'linear',
+      );
 
       if (controller === null) {
         scene = createChartRenderScene(frame, currentCandles);
@@ -277,7 +299,10 @@ export function ChartCanvas({
     const resizeAdapter: CanvasResizeAdapter = attachCanvasResizeObserver(canvas, handleResize);
 
     runtimeRef.current = Object.freeze({
-      updateCandles: (nextCandles: readonly ChartRenderCandle[]): void => {
+      updateCandles: (
+        nextCandles: readonly ChartRenderCandle[],
+        nextMode: PriceScaleMode,
+      ): void => {
         if (nextCandles === currentCandles) {
           return;
         }
@@ -289,10 +314,57 @@ export function ChartCanvas({
           return;
         }
 
-        const frame = createFrame(lastSize, controller, currentCandles, previousCandles, true);
+        const frame = createFrame(
+          lastSize,
+          controller,
+          currentCandles,
+          previousCandles,
+          true,
+          nextMode,
+        );
         scene = createChartRenderScene(frame, currentCandles, controller.snapshot.crosshair);
         controller.setFrame(frame);
         renderer.setScene(scene);
+      },
+      setPriceScaleMode: (nextMode: PriceScaleMode): void => {
+        if (controller === null || lastSize === null) {
+          return;
+        }
+
+        const frame = createFrame(
+          lastSize,
+          controller,
+          currentCandles,
+          currentCandles,
+          false,
+          nextMode,
+        );
+        scene = createChartRenderScene(frame, currentCandles, controller.snapshot.crosshair);
+        controller.setFrame(frame);
+        renderer.setScene(scene);
+      },
+      fitContent: (mode: PriceScaleMode): void => {
+        if (controller === null || lastSize === null || currentCandles.length === 0) {
+          return;
+        }
+
+        const frame = createFrame(
+          lastSize,
+          controller,
+          currentCandles,
+          currentCandles,
+          false,
+          mode,
+          true,
+        );
+        scene = createChartRenderScene(frame, currentCandles);
+        controller.setFrame(frame);
+        renderer.setScene(scene);
+      },
+      fitPriceScale: (): void => {
+        if (controller !== null && currentCandles.length > 0) {
+          controller.fitPriceScale(getVisiblePriceRange(controller, currentCandles));
+        }
       },
       destroy: (): void => {
         pointerAdapter?.destroy();
@@ -306,11 +378,16 @@ export function ChartCanvas({
   const bindDataUpdate = useCallback(
     (element: HTMLSpanElement | null): void => {
       if (element !== null) {
-        runtimeRef.current?.updateCandles(renderDataRef.current.candles);
+        runtimeRef.current?.updateCandles(renderDataRef.current.candles, priceScaleMode);
       }
     },
-    [renderCandles],
+    [renderCandles, priceScaleMode],
   );
+
+  const handlePriceScaleModeChange = (mode: PriceScaleMode): void => {
+    setPriceScaleMode(mode);
+    runtimeRef.current?.setPriceScaleMode(mode);
+  };
 
   return (
     <div
@@ -339,6 +416,42 @@ export function ChartCanvas({
         <span class="rounded border border-white/10 bg-[#101723]/90 px-2 py-1 text-[10px] text-slate-500">
           {renderCandles.length} velas
         </span>
+      </div>
+      <div class="absolute right-3 top-3 z-10 flex flex-wrap items-center justify-end gap-1 rounded-lg border border-white/10 bg-[#101723]/95 p-1 shadow-lg" aria-label="Controles del gráfico">
+        {([
+          ['linear', 'Lin'],
+          ['logarithmic', 'Log'],
+          ['percentage', '%'],
+          ['indexed-to-100', '100'],
+        ] as const).map(([mode, label]) => (
+          <button
+            type="button"
+            aria-label={`Escala ${mode}`}
+            aria-pressed={priceScaleMode === mode}
+            data-testid={`price-scale-${mode}`}
+            onClick={() => handlePriceScaleModeChange(mode)}
+            class={`rounded px-2 py-1 text-[10px] transition-colors ${priceScaleMode === mode ? 'bg-blue-500/20 text-blue-200' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}
+          >
+            {label}
+          </button>
+        ))}
+        <span class="mx-0.5 h-4 w-px bg-white/10" />
+        <button
+          type="button"
+          data-testid="chart-fit-prices"
+          onClick={() => runtimeRef.current?.fitPriceScale()}
+          class="rounded px-2 py-1 text-[10px] text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200"
+        >
+          Ajustar
+        </button>
+        <button
+          type="button"
+          data-testid="chart-fit-content"
+          onClick={() => runtimeRef.current?.fitContent(priceScaleMode)}
+          class="rounded px-2 py-1 text-[10px] text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200"
+        >
+          Ver todo
+        </button>
       </div>
       {loading && (
         <div class="pointer-events-none absolute inset-0 grid place-items-center bg-[#0b0f17]/70">
