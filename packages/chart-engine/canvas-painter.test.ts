@@ -238,6 +238,12 @@ describe('canvas chart painter', () => {
     expect(Object.isFrozen(scene.candles)).toBe(true);
     expect(Object.isFrozen(scene.candles[0])).toBe(true);
     expect(() => createChartRenderScene(frame, [candles[1]!, candles[0]!])).toThrow(RangeError);
+    expect(() =>
+      createChartRenderScene(frame, [
+        candles[0]!,
+        { ...candles[1]!, timestamp: candles[0]!.timestamp },
+      ]),
+    ).toThrow(RangeError);
     expect(() => createChartRenderScene(frame, [{ ...candles[0]!, volume: -1 }])).toThrow(
       RangeError,
     );
