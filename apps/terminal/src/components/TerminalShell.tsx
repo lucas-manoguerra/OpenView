@@ -20,7 +20,10 @@ const sectionTitles: Record<WorkspaceSection, string> = {
 };
 
 const activeNavigationClass =
-  'flex min-w-0 flex-1 items-center gap-3 rounded-lg bg-blue-500/10 px-3 py-3 text-left text-sm text-blue-200 ring-1 ring-inset ring-blue-400/20 transition-colors lg:flex-none';
+  'grid size-9 place-items-center rounded-lg bg-blue-500/15 text-[10px] font-semibold text-blue-200 ring-1 ring-inset ring-blue-400/30 transition-colors';
+
+const inactiveNavigationClass =
+  'grid size-9 place-items-center rounded-lg text-[10px] font-semibold text-slate-500 transition-colors hover:bg-white/[0.06] hover:text-slate-200';
 
 const markTerminalHydrated = (element: HTMLElement | null): void => {
   if (element !== null) {
@@ -28,125 +31,105 @@ const markTerminalHydrated = (element: HTMLElement | null): void => {
   }
 };
 
-const inactiveNavigationClass =
-  'flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-3 text-left text-sm text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200 lg:flex-none';
-
 export function TerminalShell() {
   const [activeSection, setActiveSection] = useState<WorkspaceSection>('chart');
 
   return (
-    <main ref={markTerminalHydrated} class="min-h-screen bg-[#080b12] text-slate-200">
-      <header class="flex h-16 items-center justify-between border-b border-white/10 px-5 lg:px-8">
-        <a class="flex items-center gap-3 no-underline" href="/" aria-label="OpenView inicio">
-          <span class="grid size-9 place-items-center rounded-xl bg-blue-500/15 text-sm font-bold text-blue-300">
-            OV
-          </span>
-          <span class="text-lg font-semibold tracking-tight text-white">OpenView</span>
-          <span class="hidden rounded-md border border-white/10 px-2 py-1 text-[10px] font-semibold tracking-widest text-slate-500 sm:inline">
-            FOUNDATION
-          </span>
-        </a>
-        <div class="flex items-center gap-3">
-          <span class="hidden text-xs text-slate-500 sm:inline">Market workspace</span>
-          <span class="flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/5 px-3 py-1.5 text-xs text-emerald-300">
-            <span class="size-1.5 rounded-full bg-emerald-400"></span>
+    <main
+      ref={markTerminalHydrated}
+      class="flex h-screen min-h-[600px] flex-col overflow-hidden bg-[#0b0e14] text-slate-200"
+    >
+      <header class="flex h-12 shrink-0 items-center justify-between border-b border-white/10 bg-[#11151d] px-3 sm:px-4">
+        <div class="flex min-w-0 items-center gap-3">
+          <a
+            class="flex shrink-0 items-center gap-2.5 no-underline"
+            href="/"
+            aria-label="OpenView inicio"
+          >
+            <span class="grid size-7 place-items-center rounded-md bg-blue-500/15 text-[11px] font-bold text-blue-300">
+              OV
+            </span>
+            <span class="text-sm font-semibold tracking-tight text-white">OpenView</span>
+          </a>
+          <span class="hidden h-5 w-px bg-white/10 sm:block" />
+          <nav
+            aria-label="Navegación del workspace"
+            class="hidden items-center gap-1 sm:flex md:hidden"
+          >
+            <button
+              type="button"
+              aria-current={activeSection === 'chart' ? 'page' : undefined}
+              onClick={() => setActiveSection('chart')}
+              class={
+                'rounded-md px-2.5 py-1.5 text-[11px] transition-colors ' +
+                (activeSection === 'chart'
+                  ? 'bg-white/[0.07] text-white'
+                  : 'text-slate-500 hover:text-slate-200')
+              }
+            >
+              Gráfico
+            </button>
+            <button
+              type="button"
+              aria-current={activeSection === 'markets' ? 'page' : undefined}
+              onClick={() => setActiveSection('markets')}
+              class={
+                'rounded-md px-2.5 py-1.5 text-[11px] transition-colors ' +
+                (activeSection === 'markets'
+                  ? 'bg-white/[0.07] text-white'
+                  : 'text-slate-500 hover:text-slate-200')
+              }
+            >
+              Mercados
+            </button>
+          </nav>
+        </div>
+        <div class="flex shrink-0 items-center gap-2.5">
+          <span class="hidden text-[10px] text-slate-600 md:inline">Market workspace</span>
+          <span class="flex items-center gap-1.5 rounded-full border border-emerald-400/15 bg-emerald-400/[0.04] px-2.5 py-1 text-[10px] text-emerald-300">
+            <span class="size-1.5 rounded-full bg-emerald-400" />
             Local preview
           </span>
         </div>
       </header>
 
-      <div class="mx-auto grid min-h-[calc(100vh-4rem)] max-w-[1600px] grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)]">
-        <aside class="border-b border-white/10 p-4 lg:border-r lg:border-b-0 lg:p-5">
-          <div class="mb-4 px-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-600">
-            Workspace
-          </div>
-          <nav aria-label="Secciones principales" class="flex gap-2 lg:flex-col">
+      <div class="flex min-h-0 flex-1 overflow-hidden">
+        <aside class="hidden w-12 shrink-0 border-r border-white/10 bg-[#11151d] py-2 md:flex md:flex-col md:items-center">
+          <nav aria-label="Secciones principales" class="flex flex-col gap-1.5">
             {navigationItems.map((item) => (
               <button
                 type="button"
+                key={item.id}
+                aria-label={item.label}
                 aria-current={activeSection === item.id ? 'page' : undefined}
+                title={item.label}
                 class={activeSection === item.id ? activeNavigationClass : inactiveNavigationClass}
                 onClick={() => setActiveSection(item.id)}
               >
-                <span class="grid size-7 shrink-0 place-items-center rounded-md bg-white/5 text-[10px] font-semibold text-slate-400">
-                  {item.abbreviation}
-                </span>
-                <span class="hidden truncate sm:inline">{item.label}</span>
+                {item.abbreviation}
               </button>
             ))}
           </nav>
-          <div class="mt-8 hidden rounded-xl border border-white/10 bg-white/[0.02] p-4 lg:block">
-            <div class="text-xs font-medium text-slate-300">Arquitectura modular</div>
-            <p class="mt-2 text-xs leading-5 text-slate-500">
-              Interfaz, dominio, motor gráfico y proveedores evolucionan de forma independiente.
-            </p>
+          <div class="mt-auto grid size-8 place-items-center rounded-lg border border-white/[0.07] text-[10px] font-semibold text-slate-600">
+            OV
           </div>
         </aside>
 
-        <section class="min-w-0 p-5 lg:p-8">
-          <div class="mb-7 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <div class="mb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-blue-300">
-                OpenView terminal
-              </div>
-              <h1 class="text-2xl font-semibold tracking-tight text-white">
+        <section class="min-h-0 min-w-0 flex-1 overflow-y-auto bg-[#0b0e14] p-2 sm:p-3 lg:p-4">
+          <div class="mb-2 flex flex-wrap items-center justify-between gap-2 px-1">
+            <div class="flex min-w-0 items-center gap-2">
+              <h1 class="truncate text-sm font-semibold text-slate-100">
                 {sectionTitles[activeSection]}
               </h1>
-              <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                Velas históricas reales, múltiples fuentes públicas y un motor gráfico independiente
-                se conectan mediante contratos explícitos.
-              </p>
+              <span class="hidden text-[10px] text-slate-600 sm:inline">
+                Motor independiente de la interfaz
+              </span>
             </div>
-            <span class="rounded-lg border border-amber-400/20 bg-amber-400/5 px-3 py-2 text-xs text-amber-200">
-              Foundation stage
+            <span class="rounded border border-white/[0.08] px-2 py-1 text-[9px] font-medium uppercase tracking-wider text-slate-500">
+              Spot workspace
             </span>
           </div>
-
-          <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
-            <div class="overflow-hidden rounded-2xl border border-white/10 bg-[#0d121d]">
-              <div class="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
-                <div>
-                  <div class="text-sm font-medium text-slate-200">Chart engine</div>
-                  <div class="mt-1 text-xs text-slate-500">Motor independiente de la interfaz</div>
-                </div>
-                <span class="rounded-md border border-emerald-400/20 bg-emerald-400/5 px-2 py-1 text-[10px] uppercase tracking-wider text-emerald-300">
-                  Interactive preview
-                </span>
-              </div>
-              <MarketChart />
-            </div>
-
-            <div class="space-y-4">
-              <article class="rounded-2xl border border-white/10 bg-[#0d121d] p-5">
-                <div class="text-xs font-medium text-slate-400">Market data</div>
-                <div class="mt-3 text-lg font-semibold text-white">Fuentes históricas</div>
-                <p class="mt-2 text-sm leading-6 text-slate-500">
-                  Binance, Bybit y OKX entregan velas históricas a través del mismo servicio.
-                </p>
-                <div class="mt-4 flex items-center justify-between border-t border-white/10 pt-4 text-xs">
-                  <span class="text-slate-500">Proveedores disponibles</span>
-                  <span class="font-medium text-emerald-300">3</span>
-                </div>
-              </article>
-
-              <article class="rounded-2xl border border-white/10 bg-[#0d121d] p-5">
-                <div class="text-xs font-medium text-slate-400">Engineering status</div>
-                <div class="mt-4 space-y-3">
-                  {[
-                    ['TypeScript strict', 'Enabled'],
-                    ['Effects policy', 'No useEffect'],
-                    ['Chart dependencies', 'Isolated'],
-                    ['Unit tests', 'Configured'],
-                  ].map(([label, value]) => (
-                    <div class="flex items-center justify-between gap-3 text-xs">
-                      <span class="text-slate-500">{label}</span>
-                      <span class="text-emerald-300">{value}</span>
-                    </div>
-                  ))}
-                </div>
-              </article>
-            </div>
-          </div>
+          <MarketChart />
         </section>
       </div>
     </main>
