@@ -371,7 +371,7 @@ test('switches providers, streams Bybit candles and recovers history after recon
   sendBybitCandle('65075');
   await expect(canvas).toHaveAttribute('data-candles-count', String(baselineCandleCount + 1));
 
-  sendBybitCandle('65100', timestamp + 3 * 60_000);
+  sendBybitCandle('65100', timestamp + 2 * 60_000);
   await expect.poll(() => bybitHistoryRequestCount).toBeGreaterThan(2);
   await expect
     .poll(async () => Number(await streamStatus.getAttribute('data-history-recovery-count')))
