@@ -120,9 +120,7 @@ describe('chart frame composition', () => {
   it('rejects non-finite chart coordinates', () => {
     const frame = createChartFrame(800, 500, { min: 100, max: 200 }, 99);
 
-    expect(() =>
-      chartCoordinateToDataPoint({ x: Number.NaN, y: 100 }, frame),
-    ).toThrow(RangeError);
+    expect(() => chartCoordinateToDataPoint({ x: Number.NaN, y: 100 }, frame)).toThrow(RangeError);
     expect(() =>
       chartCoordinateToDataPoint({ x: 100, y: Number.POSITIVE_INFINITY }, frame),
     ).toThrow(RangeError);
