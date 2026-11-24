@@ -61,10 +61,7 @@ export const createChartRenderScene = (
     previousLogicalIndex = candle.logicalIndex;
   }
 
-  if (
-    crosshair !== null &&
-    (!Number.isFinite(crosshair.x) || !Number.isFinite(crosshair.y))
-  ) {
+  if (crosshair !== null && (!Number.isFinite(crosshair.x) || !Number.isFinite(crosshair.y))) {
     throw new RangeError('Crosshair coordinates must be finite numbers.');
   }
 
@@ -159,12 +156,7 @@ const drawAxes = (
   }
 
   if (timeScaleArea.height > 0) {
-    context.fillRect(
-      timeScaleArea.x,
-      timeScaleArea.y,
-      timeScaleArea.width,
-      timeScaleArea.height,
-    );
+    context.fillRect(timeScaleArea.x, timeScaleArea.y, timeScaleArea.width, timeScaleArea.height);
   }
 
   context.fillStyle = theme.axisText;
@@ -200,17 +192,11 @@ const drawAxes = (
 
   if (rightPriceScaleArea.width > 0) {
     context.moveTo(rightPriceScaleArea.x, rightPriceScaleArea.y);
-    context.lineTo(
-      rightPriceScaleArea.x,
-      rightPriceScaleArea.y + rightPriceScaleArea.height,
-    );
+    context.lineTo(rightPriceScaleArea.x, rightPriceScaleArea.y + rightPriceScaleArea.height);
   }
 
   if (leftPriceScaleArea.width > 0) {
-    context.moveTo(
-      leftPriceScaleArea.x + leftPriceScaleArea.width,
-      leftPriceScaleArea.y,
-    );
+    context.moveTo(leftPriceScaleArea.x + leftPriceScaleArea.width, leftPriceScaleArea.y);
     context.lineTo(
       leftPriceScaleArea.x + leftPriceScaleArea.width,
       leftPriceScaleArea.y + leftPriceScaleArea.height,
@@ -295,12 +281,7 @@ const drawCandles = (
     context.moveTo(x, high);
     context.lineTo(x, low);
     context.stroke();
-    context.fillRect(
-      x - bodyWidth / 2,
-      bodyTop,
-      bodyWidth,
-      Math.max(1, bodyBottom - bodyTop),
-    );
+    context.fillRect(x - bodyWidth / 2, bodyTop, bodyWidth, Math.max(1, bodyBottom - bodyTop));
   }
 
   context.restore();
@@ -345,8 +326,7 @@ const drawVolume = (
   context.clip();
 
   for (const candle of candles) {
-    const x =
-      plotArea.x + logicalIndexToCoordinate(candle.logicalIndex, scene.frame.timeScale);
+    const x = plotArea.x + logicalIndexToCoordinate(candle.logicalIndex, scene.frame.timeScale);
     const barHeight = (candle.volume / maximumVolume) * Math.max(1, volumeArea.height - 2);
 
     if (x < volumeArea.x - barWidth || x > volumeArea.x + volumeArea.width + barWidth) {
@@ -394,10 +374,7 @@ const drawCrosshair = (
   context.setLineDash([4, 4]);
   context.beginPath();
   context.moveTo(crosshair.x, plotArea.y);
-  context.lineTo(
-    crosshair.x,
-    plotArea.y + plotArea.height + scene.frame.layout.volumeArea.height,
-  );
+  context.lineTo(crosshair.x, plotArea.y + plotArea.height + scene.frame.layout.volumeArea.height);
   context.moveTo(plotArea.x, crosshair.y);
   context.lineTo(plotArea.x + plotArea.width, crosshair.y);
   context.stroke();
