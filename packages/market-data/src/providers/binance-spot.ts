@@ -1,4 +1,4 @@
-import { createCandle, type Candle } from '@openview/market-domain';
+import { createCandle, type Candle, type InstrumentId } from '@openview/market-domain';
 import type {
   CandleInterval,
   CandleStreamHandlers,
@@ -8,6 +8,8 @@ import type {
   MarketDataCapabilities,
   MarketDataProvider,
   MarketDataSubscription,
+  QuoteStreamHandlers,
+  QuoteUpdate,
 } from '../contracts';
 import { MarketDataProviderError } from '../errors';
 import {
@@ -44,7 +46,7 @@ const SUPPORTED_INTERVALS: readonly CandleInterval[] = Object.freeze([
 
 const CAPABILITIES: MarketDataCapabilities = Object.freeze({
   historicalCandles: true,
-  streamingQuotes: false,
+  streamingQuotes: true,
   streamingCandles: true,
   supportedIntervals: SUPPORTED_INTERVALS,
   redistribution: 'unknown',
@@ -330,6 +332,93 @@ export class BinanceSpotMarketDataProvider implements MarketDataProvider {
         if (update !== null) {
           handlers.onCandle(update);
         }
+      },
+    });
+  }
+
+
+  subscribeToQuotes(
+    instrumentIds: readonly InstrumentId[],
+    handlers: QuoteStreamHandlers,
+  ): MarketDataSubscription {
+    if (instrumentIds.length === 0) {
+      throw new RangeError('At least one instrument is required for a Binance Spot quote stream.');
+    }
+
+    const instrumentsBySymbol = new Map<string, InstrumentId>();
+
+    for (const instrumentId of instrumentIds) {
+      const symbol = normalizeSymbol(instrumentId);
+
+      if (instrumentsBySymbol.has(symbol)) {
+        throw new RangeError('Binance Spot quote subscriptions cannot contain duplicate symbols.');
+      }
+
+      instrumentsBySymbol.set(symbol, instrumentId);
+    }
+
+    const url = new URL('/stream', this.streamBaseUrl);
+    url.searchParams.set(
+      'streams',
+      [...instrumentsBySymbol.keys()].map((symbol) => symbol.toLowerCase() + '@ticker').join('/'),
+    );
+
+    return createReconnectingWebSocketSubscription({
+      url: url.toString(),
+      webSocketFactory: this.webSocketFactory,
+      reconnectDelayMs: this.reconnectDelayMs,
+      maxReconnectDelayMs: this.maxReconnectDelayMs,
+      ...(handlers.onStatus === undefined ? {} : { onStatus: handlers.onStatus }),
+      ...(handlers.onError === undefined ? {} : { onError: handlers.onError }),
+      onMessage: (message, connection) => {
+        const payload: unknown = JSON.parse(message);
+
+        if (isRecord(payload) && Reflect.get(payload, 'e') === 'serverShutdown') {
+          connection.close();
+          return;
+        }
+
+        const data = isRecord(payload) && isRecord(Reflect.get(payload, 'data'))
+          ? Reflect.get(payload, 'data')
+          : payload;
+
+        if (!isRecord(data) || Reflect.get(data, 'e') !== '24hrTicker') {
+          return;
+        }
+
+        const symbol = Reflect.get(data, 's');
+
+        if (typeof symbol !== 'string') {
+          throw new RangeError('Binance returned a ticker without an instrument symbol.');
+        }
+
+        const instrumentId = instrumentsBySymbol.get(symbol);
+
+        if (instrumentId === undefined) {
+          return;
+        }
+
+        const timestamp = toFiniteNumber(Reflect.get(data, 'E'), 'ticker event time');
+
+        if (!Number.isSafeInteger(timestamp) || timestamp < 0) {
+          throw new RangeError('Binance returned an invalid ticker event timestamp.');
+        }
+
+        const quote: QuoteUpdate = Object.freeze({
+          instrumentId,
+          timestamp,
+          receivedAt: Date.now(),
+          bid: toFiniteNumber(Reflect.get(data, 'b'), 'best bid price'),
+          ask: toFiniteNumber(Reflect.get(data, 'a'), 'best ask price'),
+          last: toFiniteNumber(Reflect.get(data, 'c'), 'last price'),
+          volume24h: toFiniteNumber(Reflect.get(data, 'v'), '24-hour base volume'),
+          changePercent24h: toFiniteNumber(
+            Reflect.get(data, 'P'),
+            '24-hour percentage change',
+          ),
+        });
+
+        handlers.onQuote(quote);
       },
     });
   }
