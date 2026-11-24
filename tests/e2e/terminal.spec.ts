@@ -106,7 +106,12 @@ const installBinanceMock = async (page: Page): Promise<void> => {
           { status: 'TRADING', isSpotTradingAllowed: true, baseAsset: 'SOL', quoteAsset: 'USDT' },
           { status: 'TRADING', isSpotTradingAllowed: true, baseAsset: 'XRP', quoteAsset: 'USDT' },
           { status: 'TRADING', isSpotTradingAllowed: true, baseAsset: 'ETH', quoteAsset: 'BTC' },
-          { status: 'TRADING', isSpotTradingAllowed: true, baseAsset: 'OLD/TOKEN', quoteAsset: 'USDT' },
+          {
+            status: 'TRADING',
+            isSpotTradingAllowed: true,
+            baseAsset: 'OLD/TOKEN',
+            quoteAsset: 'USDT',
+          },
           { status: 'TRADING', isSpotTradingAllowed: true, baseAsset: 'AVAX', quoteAsset: 'USDT' },
         ],
       }),
