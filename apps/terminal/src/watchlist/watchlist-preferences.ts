@@ -120,9 +120,7 @@ const createInstrumentFromId = (value: string, name?: string): WatchlistInstrume
   });
 };
 
-export const createWatchlistInstrument = (
-  instrument: MarketInstrument,
-): WatchlistInstrument => {
+export const createWatchlistInstrument = (instrument: MarketInstrument): WatchlistInstrument => {
   const normalized = createInstrumentFromId(String(instrument.id));
   const baseAsset = instrument.baseAsset.trim().toUpperCase();
   const quoteAsset = instrument.quoteAsset.trim().toUpperCase();
