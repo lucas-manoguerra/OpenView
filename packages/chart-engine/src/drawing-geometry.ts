@@ -189,10 +189,7 @@ const distanceToSegment = (
 
   const progress = Math.max(
     0,
-    Math.min(
-      1,
-      ((point.x - start.x) * deltaX + (point.y - start.y) * deltaY) / lengthSquared,
-    ),
+    Math.min(1, ((point.x - start.x) * deltaX + (point.y - start.y) * deltaY) / lengthSquared),
   );
   return distance(point, {
     x: start.x + progress * deltaX,
@@ -265,9 +262,7 @@ const hitDrawingBody = (
 
   if (drawing.type === 'horizontal-line') {
     return (
-      point.x >= plotArea.x &&
-      point.x <= plotRight &&
-      Math.abs(point.y - start.y) <= tolerance
+      point.x >= plotArea.x && point.x <= plotRight && Math.abs(point.y - start.y) <= tolerance
     );
   }
 
@@ -334,23 +329,11 @@ export const hitTestChartDrawing = (
       return Object.freeze({ drawingId: drawing.id, target: 'start' });
     }
 
-    if (
-      coordinates.end !== null &&
-      distance(point, coordinates.end) <= tolerance + 2
-    ) {
+    if (coordinates.end !== null && distance(point, coordinates.end) <= tolerance + 2) {
       return Object.freeze({ drawingId: drawing.id, target: 'end' });
     }
 
-    if (
-      hitDrawingBody(
-        drawing,
-        coordinates.start,
-        coordinates.end,
-        point,
-        frame,
-        tolerance,
-      )
-    ) {
+    if (hitDrawingBody(drawing, coordinates.start, coordinates.end, point, frame, tolerance)) {
       return Object.freeze({ drawingId: drawing.id, target: 'body' });
     }
   }
@@ -393,11 +376,7 @@ export const updateChartDrawing = (
     if (drawing.type === 'vertical-line') {
       return Object.freeze({
         ...drawing,
-        start: updateAnchor(
-          drawing.start,
-          current.logicalIndex,
-          drawing.start.price,
-        ),
+        start: updateAnchor(drawing.start, current.logicalIndex, drawing.start.price),
       });
     }
 
@@ -437,11 +416,7 @@ export const updateChartDrawing = (
   if (drawing.type === 'vertical-line') {
     return Object.freeze({
       ...drawing,
-      start: updateAnchor(
-        drawing.start,
-        startLogicalIndex + logicalDelta,
-        drawing.start.price,
-      ),
+      start: updateAnchor(drawing.start, startLogicalIndex + logicalDelta, drawing.start.price),
     });
   }
 
