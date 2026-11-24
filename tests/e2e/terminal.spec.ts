@@ -233,13 +233,15 @@ test('streams Binance live candles and updates the current bar without duplicate
   };
 
   await sendEvent('65050');
-  await expect(canvas).toHaveAttribute('data-candles-count', '501');
   await expect(page.getByTestId('market-stream-error')).toHaveCount(0);
+  await expect(streamStatus).toHaveAttribute('data-stream-candle-count', '1');
+  await expect(canvas).toHaveAttribute('data-candles-count', '501');
 
   await sendEvent('65075');
+  await expect(page.getByTestId('market-stream-error')).toHaveCount(0);
+  await expect(streamStatus).toHaveAttribute('data-stream-candle-count', '2');
   await expect(canvas).toHaveAttribute('data-candles-count', '501');
   await expect(streamStatus).toHaveText('En vivo');
-  await expect(page.getByTestId('market-stream-error')).toHaveCount(0);
 });
 
 test('switches historical data between Binance, Bybit and OKX Spot', async ({ page }) => {
