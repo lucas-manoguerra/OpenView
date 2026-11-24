@@ -38,7 +38,9 @@ const request: CandleSubscriptionRequest = Object.freeze({
 describe('market data stream service', () => {
   it('routes a candle subscription to the explicitly selected provider', () => {
     const subscription = Object.freeze({ unsubscribe: vi.fn() });
-    const subscribeToCandles = vi.fn((_request: CandleSubscriptionRequest, _handlers: CandleStreamHandlers) => subscription);
+    const subscribeToCandles = vi.fn(
+      (_request: CandleSubscriptionRequest, _handlers: CandleStreamHandlers) => subscription,
+    );
     const provider = createProvider({}, subscribeToCandles);
     const service = new MarketDataStreamService(new MarketDataProviderRegistry([provider]));
     const handlers: CandleStreamHandlers = { onCandle: vi.fn() };
@@ -51,12 +53,12 @@ describe('market data stream service', () => {
     const provider = createProvider({ streamingCandles: false });
     const service = new MarketDataStreamService(new MarketDataProviderRegistry([provider]));
 
-    expect(() => service.subscribeToCandles('binance-spot', request, { onCandle: vi.fn() })).toThrow(
-      MarketDataProviderError,
-    );
-    expect(() => service.subscribeToCandles('binance-spot', request, { onCandle: vi.fn() })).toThrow(
-      'does not provide live candle streams',
-    );
+    expect(() =>
+      service.subscribeToCandles('binance-spot', request, { onCandle: vi.fn() }),
+    ).toThrow(MarketDataProviderError);
+    expect(() =>
+      service.subscribeToCandles('binance-spot', request, { onCandle: vi.fn() }),
+    ).toThrow('does not provide live candle streams');
   });
 
   it('rejects unsupported stream intervals before opening a connection', () => {
