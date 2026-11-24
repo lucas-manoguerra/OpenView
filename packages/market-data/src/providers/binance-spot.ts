@@ -389,9 +389,11 @@ export class BinanceSpotMarketDataProvider implements MarketDataProvider {
       };
 
       const handleClose = (): void => {
-        if (socket === connection) {
-          socket = null;
+        if (socket !== connection) {
+          return;
         }
+
+        socket = null;
 
         if (active) {
           scheduleReconnect();
