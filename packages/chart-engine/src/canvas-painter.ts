@@ -215,11 +215,13 @@ export const updateChartRenderScene = (
   const crosshair = update.crosshair === undefined ? scene.crosshair : update.crosshair;
   const chartType = update.chartType ?? scene.chartType;
   const indicators =
-    update.indicators === undefined
+    update.indicators === undefined || update.indicators === scene.indicators
       ? scene.indicators
       : normalizeChartIndicators(update.indicators);
   const drawings =
-    update.drawings === undefined ? scene.drawings : normalizeChartDrawings(update.drawings);
+    update.drawings === undefined || update.drawings === scene.drawings
+      ? scene.drawings
+      : normalizeChartDrawings(update.drawings);
 
   if (crosshair !== null && (!Number.isFinite(crosshair.x) || !Number.isFinite(crosshair.y))) {
     throw new RangeError('Crosshair coordinates must be finite numbers.');
@@ -749,10 +751,7 @@ const getLogicalIndexAtTimestamp = (
   return left.logicalIndex + (right.logicalIndex - left.logicalIndex) * progress;
 };
 
-const drawDrawings = (
-  context: CanvasRenderingContext2D,
-  scene: ChartRenderScene,
-): void => {
+const drawDrawings = (context: CanvasRenderingContext2D, scene: ChartRenderScene): void => {
   if (scene.drawings.length === 0 || scene.candles.length === 0) {
     return;
   }
