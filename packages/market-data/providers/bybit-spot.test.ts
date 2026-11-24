@@ -603,6 +603,60 @@ describe('Bybit Spot quote stream', () => {
     expect(states.at(-1)).toBe('disconnected');
   });
 
+  it('clears cached quote fields when a connection is restored', () => {
+    vi.useFakeTimers();
+    const connections: FakeBybitWebSocket[] = [];
+    const provider = createStreamProvider(connections, { reconnectDelayMs: 500 });
+    const updates: unknown[] = [];
+    const subscription = provider.subscribeToQuotes([createInstrumentId('BTC-USDT')], {
+      onQuote: (quote) => updates.push(quote),
+    });
+    const firstConnection = connections[0];
+
+    firstConnection?.open();
+    firstConnection?.emit({
+      topic: 'tickers.BTCUSDT',
+      ts: START_TIME,
+      data: {
+        symbol: 'BTCUSDT',
+        lastPrice: '100',
+        volume24h: '10',
+        price24hPcnt: '0.01',
+      },
+    });
+    firstConnection?.emit({
+      topic: 'orderbook.1.BTCUSDT',
+      ts: START_TIME + 1,
+      data: { s: 'BTCUSDT', b: [['99', '1']], a: [['101', '1']] },
+    });
+
+    firstConnection?.close();
+    vi.advanceTimersByTime(500);
+
+    const secondConnection = connections[1];
+    secondConnection?.open();
+    secondConnection?.emit({
+      topic: 'tickers.BTCUSDT',
+      ts: START_TIME + 2,
+      data: {
+        symbol: 'BTCUSDT',
+        lastPrice: '102',
+        volume24h: '11',
+        price24hPcnt: '0.02',
+      },
+    });
+
+    expect(updates.at(-1)).toMatchObject({
+      instrumentId: 'BTC-USDT',
+      bid: null,
+      ask: null,
+      last: 102,
+      volume24h: 11,
+    });
+
+    subscription.unsubscribe();
+  });
+
   it('splits subscriptions into messages with at most ten Spot topics', () => {
     const connections: FakeBybitWebSocket[] = [];
     const provider = createStreamProvider(connections);
