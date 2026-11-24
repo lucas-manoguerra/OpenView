@@ -37,6 +37,18 @@ export type HistoricalCandleRequest = Readonly<{
   signal?: AbortSignal;
 }>;
 
+export type MarketInstrument = Readonly<{
+  id: InstrumentId;
+  symbol: string;
+  baseAsset: string;
+  quoteAsset: string;
+}>;
+
+export type InstrumentDiscoveryFilter = Readonly<{
+  quoteAsset?: string;
+  signal?: AbortSignal;
+}>;
+
 export type QuoteUpdate = Readonly<{
   instrumentId: InstrumentId;
   timestamp: number;
@@ -82,6 +94,7 @@ export interface MarketDataProvider {
   readonly id: string;
   readonly displayName: string;
   readonly capabilities: MarketDataCapabilities;
+  listInstruments?(filter?: InstrumentDiscoveryFilter): Promise<readonly MarketInstrument[]>;
   getHistoricalCandles(request: HistoricalCandleRequest): Promise<readonly Candle[]>;
   subscribeToQuotes?(
     instrumentIds: readonly InstrumentId[],

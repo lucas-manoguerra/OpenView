@@ -5,6 +5,8 @@ import type {
   CandleSubscriptionRequest,
   CandleUpdate,
   HistoricalCandleRequest,
+  InstrumentDiscoveryFilter,
+  MarketInstrument,
   MarketDataCapabilities,
   MarketDataProvider,
   MarketDataSubscription,
@@ -12,6 +14,7 @@ import type {
   QuoteUpdate,
 } from '../contracts';
 import { MarketDataProviderError } from '../errors';
+import { createMarketInstrument, normalizeMarketInstruments } from '../instrument-catalog';
 import {
   createReconnectingWebSocketSubscription,
   type MarketDataWebSocketConnection,
@@ -418,6 +421,62 @@ export class BinanceSpotMarketDataProvider implements MarketDataProvider {
         handlers.onQuote(quote);
       },
     });
+  }
+
+  async listInstruments(
+    filter: InstrumentDiscoveryFilter = {},
+  ): Promise<readonly MarketInstrument[]> {
+    const url = new URL('/api/v3/exchangeInfo', this.baseUrl);
+    url.searchParams.set('permissions', 'SPOT');
+    url.searchParams.set('symbolStatus', 'TRADING');
+
+    const response = await this.fetcher(url, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      ...(filter.signal === undefined ? {} : { signal: filter.signal }),
+    });
+    const payload: unknown = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      throw new MarketDataProviderError(
+        this.id,
+        getApiErrorMessage(payload, response.status),
+        response.status,
+        getRetryAfterMs(response),
+      );
+    }
+
+    const symbols = isRecord(payload) ? Reflect.get(payload, 'symbols') : undefined;
+
+    if (!Array.isArray(symbols)) {
+      throw new RangeError('Binance returned a malformed exchange information response.');
+    }
+
+    const instruments: MarketInstrument[] = [];
+
+    for (const item of symbols) {
+      if (!isRecord(item)) {
+        throw new RangeError('Binance returned a malformed exchange instrument.');
+      }
+
+      if (
+        Reflect.get(item, 'status') !== 'TRADING' ||
+        Reflect.get(item, 'isSpotTradingAllowed') === false
+      ) {
+        continue;
+      }
+
+      const baseAsset = Reflect.get(item, 'baseAsset');
+      const quoteAsset = Reflect.get(item, 'quoteAsset');
+
+      if (typeof baseAsset !== 'string' || typeof quoteAsset !== 'string') {
+        throw new RangeError('Binance returned an instrument without base and quote assets.');
+      }
+
+      instruments.push(createMarketInstrument(baseAsset, quoteAsset));
+    }
+
+    return normalizeMarketInstruments(instruments, filter);
   }
 
   async getHistoricalCandles(request: HistoricalCandleRequest): Promise<readonly Candle[]> {

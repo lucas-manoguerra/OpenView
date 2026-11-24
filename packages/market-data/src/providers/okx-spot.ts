@@ -5,6 +5,8 @@ import type {
   CandleSubscriptionRequest,
   CandleUpdate,
   HistoricalCandleRequest,
+  InstrumentDiscoveryFilter,
+  MarketInstrument,
   MarketDataCapabilities,
   MarketDataProvider,
   MarketDataSubscription,
@@ -12,6 +14,7 @@ import type {
   QuoteUpdate,
 } from '../contracts';
 import { MarketDataProviderError } from '../errors';
+import { createMarketInstrument, normalizeMarketInstruments } from '../instrument-catalog';
 import { MarketDataRequestScheduler, type RequestWaiter } from '../request-scheduler';
 import {
   createReconnectingWebSocketSubscription,
@@ -557,6 +560,63 @@ export class OkxSpotMarketDataProvider implements MarketDataProvider {
         }
       },
     });
+  }
+
+  async listInstruments(
+    filter: InstrumentDiscoveryFilter = {},
+  ): Promise<readonly MarketInstrument[]> {
+    const url = new URL('/api/v5/public/instruments', this.baseUrl);
+    url.searchParams.set('instType', 'SPOT');
+
+    const response = await this.scheduler.run(
+      () =>
+        this.fetcher(url, {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+          ...(filter.signal === undefined ? {} : { signal: filter.signal }),
+        }),
+      filter.signal,
+    );
+    const payload: unknown = await response.json().catch(() => null);
+    const code = readProperty(payload, 'code');
+
+    if (!response.ok || code !== '0') {
+      throw new MarketDataProviderError(
+        this.id,
+        getApiError(payload, response.status),
+        response.status,
+        getRetryAfterMs(response),
+      );
+    }
+
+    const rows = readProperty(payload, 'data');
+
+    if (!Array.isArray(rows)) {
+      throw new RangeError('OKX returned a malformed public instruments response.');
+    }
+
+    const instruments: MarketInstrument[] = [];
+
+    for (const item of rows) {
+      if (!isRecord(item)) {
+        throw new RangeError('OKX returned a malformed spot instrument.');
+      }
+
+      if (readProperty(item, 'state') !== 'live') {
+        continue;
+      }
+
+      const baseAsset = readProperty(item, 'baseCcy');
+      const quoteAsset = readProperty(item, 'quoteCcy');
+
+      if (typeof baseAsset !== 'string' || typeof quoteAsset !== 'string') {
+        throw new RangeError('OKX returned an instrument without base and quote currencies.');
+      }
+
+      instruments.push(createMarketInstrument(baseAsset, quoteAsset));
+    }
+
+    return normalizeMarketInstruments(instruments, filter);
   }
 
   async getHistoricalCandles(request: HistoricalCandleRequest): Promise<readonly Candle[]> {

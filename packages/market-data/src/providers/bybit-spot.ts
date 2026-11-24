@@ -5,6 +5,8 @@ import type {
   CandleSubscriptionRequest,
   CandleUpdate,
   HistoricalCandleRequest,
+  InstrumentDiscoveryFilter,
+  MarketInstrument,
   MarketDataCapabilities,
   MarketDataProvider,
   MarketDataSubscription,
@@ -12,6 +14,7 @@ import type {
   QuoteUpdate,
 } from '../contracts';
 import { MarketDataProviderError } from '../errors';
+import { createMarketInstrument, normalizeMarketInstruments } from '../instrument-catalog';
 import { MarketDataRequestScheduler, type RequestWaiter } from '../request-scheduler';
 import {
   createReconnectingWebSocketSubscription,
@@ -625,6 +628,64 @@ export class BybitSpotMarketDataProvider implements MarketDataProvider {
         }
       },
     });
+  }
+
+  async listInstruments(
+    filter: InstrumentDiscoveryFilter = {},
+  ): Promise<readonly MarketInstrument[]> {
+    const url = new URL('/v5/market/instruments-info', this.baseUrl);
+    url.searchParams.set('category', 'spot');
+
+    const response = await this.scheduler.run(
+      () =>
+        this.fetcher(url, {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+          ...(filter.signal === undefined ? {} : { signal: filter.signal }),
+        }),
+      filter.signal,
+    );
+    const payload: unknown = await response.json().catch(() => null);
+    const code = readProperty(payload, 'retCode');
+
+    if (!response.ok || Number(code) !== 0) {
+      throw new MarketDataProviderError(
+        this.id,
+        getApiError(payload, response.status),
+        response.status,
+        getRetryAfterMs(response),
+      );
+    }
+
+    const result = readProperty(payload, 'result');
+    const rows = readProperty(result, 'list');
+
+    if (!Array.isArray(rows)) {
+      throw new RangeError('Bybit returned a malformed instruments response.');
+    }
+
+    const instruments: MarketInstrument[] = [];
+
+    for (const item of rows) {
+      if (!isRecord(item)) {
+        throw new RangeError('Bybit returned a malformed spot instrument.');
+      }
+
+      if (readProperty(item, 'status') !== 'Trading') {
+        continue;
+      }
+
+      const baseAsset = readProperty(item, 'baseCoin');
+      const quoteAsset = readProperty(item, 'quoteCoin');
+
+      if (typeof baseAsset !== 'string' || typeof quoteAsset !== 'string') {
+        throw new RangeError('Bybit returned an instrument without base and quote assets.');
+      }
+
+      instruments.push(createMarketInstrument(baseAsset, quoteAsset));
+    }
+
+    return normalizeMarketInstruments(instruments, filter);
   }
 
   async getHistoricalCandles(request: HistoricalCandleRequest): Promise<readonly Candle[]> {
