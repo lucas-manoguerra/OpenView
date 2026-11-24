@@ -323,7 +323,9 @@ export const zoomPriceScale = (
   anchorCoordinate: number,
 ): PriceScale => {
   if (!Number.isFinite(zoomFactor) || zoomFactor <= 0 || !Number.isFinite(anchorCoordinate)) {
-    throw new RangeError('Price zoom factor and anchor coordinate must be finite and zoom positive.');
+    throw new RangeError(
+      'Price zoom factor and anchor coordinate must be finite and zoom positive.',
+    );
   }
 
   const transformedRange = getTransformedRange(scale);
