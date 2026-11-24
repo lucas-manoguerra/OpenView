@@ -305,6 +305,31 @@ test('loads Binance Spot history and changes candle interval', async ({ page }) 
   expect(requestedIntervals).toContain('5m');
 });
 
+test('uses the compact chart toolbar to open symbol search and change timeframe', async ({
+  page,
+}) => {
+  await page.goto('/');
+
+  const canvas = page.locator('canvas[data-candles-count]');
+  await expect(canvas).toHaveAttribute('data-chart-ready', 'true');
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+
+  const symbolSearch = page.getByTestId('toolbar-symbol-search');
+  await expect(symbolSearch).toContainText('BTC / USDT');
+  await symbolSearch.click();
+  await expect(page.getByTestId('symbol-search-modal')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('symbol-search-modal')).toHaveCount(0);
+
+  const fiveMinute = page.getByTestId('chart-timeframe-5m');
+  await expect(fiveMinute).toBeVisible();
+  await fiveMinute.click();
+  await expect(fiveMinute).toHaveAttribute('aria-pressed', 'true');
+  await expect(canvas).toHaveAttribute('data-interval', '5m');
+});
+
 test('loads older historical candles when panning to the left boundary', async ({ page }) => {
   let historyRequestCount = 0;
 
