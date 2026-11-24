@@ -105,10 +105,7 @@ export class ChartInteractionController {
       ? Object.freeze({ ...position })
       : null;
 
-    if (
-      nextCrosshair?.x !== this.crosshair?.x ||
-      nextCrosshair?.y !== this.crosshair?.y
-    ) {
+    if (nextCrosshair?.x !== this.crosshair?.x || nextCrosshair?.y !== this.crosshair?.y) {
       this.crosshair = nextCrosshair;
       changed = true;
     }
@@ -121,9 +118,7 @@ export class ChartInteractionController {
   pointerUp(position?: PointerPosition): void {
     if (position !== undefined) {
       assertFinitePosition(position);
-      this.crosshair = containsPoint(position, this.frame)
-        ? Object.freeze({ ...position })
-        : null;
+      this.crosshair = containsPoint(position, this.frame) ? Object.freeze({ ...position }) : null;
     }
 
     if (this.dragPosition !== null || position !== undefined) {
