@@ -432,10 +432,7 @@ test('switches providers, streams Bybit and OKX candles and recovers history aft
   sendOkxCandle('65075');
   await expect(streamStatus).toHaveAttribute('data-stream-candle-count', '2');
   await page.waitForTimeout(100);
-  await expect(canvas).toHaveAttribute(
-    'data-candles-count',
-    String(candleCountAfterFirstUpdate),
-  );
+  await expect(canvas).toHaveAttribute('data-candles-count', String(candleCountAfterFirstUpdate));
 });
 
 test('shows a provider error and retries the historical request', async ({ page }) => {
