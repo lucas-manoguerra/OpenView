@@ -165,6 +165,21 @@ export const resizeTimeScale = (scale: TimeScale, width: number): TimeScale =>
     inverted: scale.inverted,
   });
 
+export const getRightOffsetAfterDataUpdate = (
+  currentRightOffset: number,
+  appendedBars: number,
+): number => {
+  if (!Number.isFinite(currentRightOffset)) {
+    throw new RangeError('Current right offset must be a finite number.');
+  }
+
+  if (!Number.isInteger(appendedBars) || appendedBars < 0) {
+    throw new RangeError('Appended bar count must be a non-negative integer.');
+  }
+
+  return currentRightOffset < 0 ? currentRightOffset - appendedBars : currentRightOffset;
+};
+
 export type TimeScaleTick = Readonly<{
   logicalIndex: number;
   coordinate: number;
