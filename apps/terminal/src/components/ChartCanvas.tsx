@@ -566,7 +566,9 @@ export function ChartCanvas({
           type="button"
           disabled={renderCandles.length === 0}
           aria-pressed={priceScaleLocked}
-          aria-label={priceScaleLocked ? 'Desbloquear escala de precios' : 'Bloquear escala de precios'}
+          aria-label={
+            priceScaleLocked ? 'Desbloquear escala de precios' : 'Bloquear escala de precios'
+          }
           data-testid="chart-lock-price-scale"
           onClick={handlePriceScaleLockChange}
           class={`rounded px-2 py-1 text-[10px] transition-colors ${priceScaleLocked ? 'bg-amber-500/20 text-amber-200' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}
