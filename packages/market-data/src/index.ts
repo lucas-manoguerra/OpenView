@@ -14,3 +14,12 @@ export {
   BinanceSpotMarketDataProvider,
   type BinanceSpotProviderOptions,
 } from './providers/binance-spot';
+
+export {
+  BybitSpotMarketDataProvider,
+  type BybitSpotProviderOptions,
+} from './providers/bybit-spot';
+export {
+  OkxSpotMarketDataProvider,
+  type OkxSpotProviderOptions,
+} from './providers/okx-spot';
