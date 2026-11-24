@@ -65,9 +65,7 @@ const createPointerEvent = (values: Partial<PointerEvent> = {}): PointerEvent =>
     ...values,
   }) as PointerEvent;
 
-const createDoubleClickEvent = (
-  values: Partial<MouseEvent> = {},
-): MouseEvent =>
+const createDoubleClickEvent = (values: Partial<MouseEvent> = {}): MouseEvent =>
   ({
     clientX: 980,
     clientY: 250,
@@ -182,8 +180,10 @@ describe('canvas pointer event adapter', () => {
     dispatch('wheel', event);
 
     expect(event.preventDefault).toHaveBeenCalledOnce();
-    expect(controller.snapshot.frame.priceScale.range.max - controller.snapshot.frame.priceScale.range.min)
-      .toBeLessThan(frame.priceScale.range.max - frame.priceScale.range.min);
+    expect(
+      controller.snapshot.frame.priceScale.range.max -
+        controller.snapshot.frame.priceScale.range.min,
+    ).toBeLessThan(frame.priceScale.range.max - frame.priceScale.range.min);
     expect(controller.snapshot.frame.timeScale.barSpacing).toBe(frame.timeScale.barSpacing);
   });
 
@@ -253,7 +253,7 @@ describe('canvas pointer event adapter', () => {
       createChartFrame(900, 500, { min: 90, max: 120 }, 99),
     );
     attachCanvasPointerEvents(canvas, controller);
-    const event = createWheelEvent({ clientX: 990, clientY: 60 });
+    const event = createWheelEvent({ clientX: 990, clientY: 40 });
 
     dispatch('wheel', event);
 
