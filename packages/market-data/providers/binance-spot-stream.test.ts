@@ -244,3 +244,95 @@ describe('Binance Spot candle stream', () => {
     subscription.unsubscribe();
   });
 });
+
+describe('Binance Spot quote stream', () => {
+  it('streams normalized quotes for multiple instruments over one combined connection', () => {
+    const connections: FakeWebSocket[] = [];
+    const provider = createProvider(connections);
+    const updates: unknown[] = [];
+    const states: string[] = [];
+    const errors: Error[] = [];
+    const subscription = provider.subscribeToQuotes(
+      [createInstrumentId('BTC-USDT'), createInstrumentId('ETH-USDT')],
+      {
+        onQuote: (quote) => updates.push(quote),
+        onStatus: (state) => states.push(state),
+        onError: (error) => errors.push(error),
+      },
+    );
+    const connection = connections[0];
+    const url = new URL(connection?.url ?? 'wss://invalid.example');
+
+    expect(url.pathname).toBe('/stream');
+    expect(url.searchParams.get('streams')).toBe('btcusdt@ticker/ethusdt@ticker');
+
+    connection?.open();
+    connection?.emit({
+      stream: 'btcusdt@ticker',
+      data: {
+        e: '24hrTicker',
+        E: START_TIME,
+        s: 'BTCUSDT',
+        c: '100.5',
+        b: '100',
+        a: '101',
+        v: '123.45',
+        P: '2.5',
+      },
+    });
+    connection?.emit({
+      stream: 'ethusdt@ticker',
+      data: {
+        e: '24hrTicker',
+        E: START_TIME + 1,
+        s: 'ETHUSDT',
+        c: '25',
+        b: '24.9',
+        a: '25.1',
+        v: '456.78',
+        P: '-1.25',
+      },
+    });
+
+    expect(states).toEqual(['connecting', 'connected']);
+    expect(errors).toEqual([]);
+    expect(updates).toMatchObject([
+      {
+        instrumentId: 'BTC-USDT',
+        timestamp: START_TIME,
+        bid: 100,
+        ask: 101,
+        last: 100.5,
+        volume24h: 123.45,
+        changePercent24h: 2.5,
+      },
+      {
+        instrumentId: 'ETH-USDT',
+        timestamp: START_TIME + 1,
+        bid: 24.9,
+        ask: 25.1,
+        last: 25,
+        volume24h: 456.78,
+        changePercent24h: -1.25,
+      },
+    ]);
+    expect((updates[0] as { receivedAt: number }).receivedAt).toBeGreaterThan(0);
+
+    subscription.unsubscribe();
+    expect(connection?.closeCalls).toBe(1);
+    expect(states.at(-1)).toBe('disconnected');
+  });
+
+  it('rejects duplicate exchange symbols before opening a connection', () => {
+    const connections: FakeWebSocket[] = [];
+    const provider = createProvider(connections);
+
+    expect(() =>
+      provider.subscribeToQuotes(
+        [createInstrumentId('BTC-USDT'), createInstrumentId('BINANCE:BTCUSDT')],
+        { onQuote: () => undefined },
+      ),
+    ).toThrow('cannot contain duplicate symbols');
+    expect(connections).toHaveLength(0);
+  });
+});

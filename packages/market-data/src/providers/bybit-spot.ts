@@ -1,4 +1,4 @@
-import { createCandle, type Candle } from '@openview/market-domain';
+import { createCandle, type Candle, type InstrumentId } from '@openview/market-domain';
 import type {
   CandleInterval,
   CandleStreamHandlers,
@@ -8,6 +8,8 @@ import type {
   MarketDataCapabilities,
   MarketDataProvider,
   MarketDataSubscription,
+  QuoteStreamHandlers,
+  QuoteUpdate,
 } from '../contracts';
 import { MarketDataProviderError } from '../errors';
 import { MarketDataRequestScheduler, type RequestWaiter } from '../request-scheduler';
@@ -61,7 +63,7 @@ const SUPPORTED_INTERVALS: readonly CandleInterval[] = Object.freeze([
 
 const CAPABILITIES: MarketDataCapabilities = Object.freeze({
   historicalCandles: true,
-  streamingQuotes: false,
+  streamingQuotes: true,
   streamingCandles: true,
   supportedIntervals: SUPPORTED_INTERVALS,
   redistribution: 'unknown',
@@ -408,6 +410,218 @@ export class BybitSpotMarketDataProvider implements MarketDataProvider {
 
         for (const update of parseStreamCandles(payload, request, symbol, interval)) {
           handlers.onCandle(update);
+        }
+      },
+    });
+  }
+
+  subscribeToQuotes(
+    instrumentIds: readonly InstrumentId[],
+    handlers: QuoteStreamHandlers,
+  ): MarketDataSubscription {
+    if (instrumentIds.length === 0) {
+      throw new RangeError('At least one instrument is required for a Bybit Spot quote stream.');
+    }
+
+    const instrumentsBySymbol = new Map<string, InstrumentId>();
+
+    for (const instrumentId of instrumentIds) {
+      const symbol = normalizeSymbol(instrumentId);
+
+      if (instrumentsBySymbol.has(symbol)) {
+        throw new RangeError('Bybit Spot quote subscriptions cannot contain duplicate symbols.');
+      }
+
+      instrumentsBySymbol.set(symbol, instrumentId);
+    }
+
+    type MutableQuoteState = {
+      timestamp: number;
+      bid: number | null;
+      ask: number | null;
+      last: number | null;
+      volume24h: number | null;
+      changePercent24h: number | null;
+    };
+    const quoteStates = new Map<string, MutableQuoteState>();
+
+    for (const symbol of instrumentsBySymbol.keys()) {
+      quoteStates.set(symbol, {
+        timestamp: 0,
+        bid: null,
+        ask: null,
+        last: null,
+        volume24h: null,
+        changePercent24h: null,
+      });
+    }
+    const topics = [...instrumentsBySymbol.keys()].flatMap((symbol) => [
+      'tickers.' + symbol,
+      'orderbook.1.' + symbol,
+    ]);
+
+    const publishQuote = (symbol: string, timestamp: number): void => {
+      const instrumentId = instrumentsBySymbol.get(symbol);
+      const state = quoteStates.get(symbol);
+
+      if (instrumentId === undefined || state === undefined) {
+        return;
+      }
+
+      if (!Number.isSafeInteger(timestamp) || timestamp < 0) {
+        throw new RangeError('Bybit returned an invalid quote timestamp.');
+      }
+
+      state.timestamp = Math.max(state.timestamp, timestamp);
+      const quote: QuoteUpdate = Object.freeze({
+        instrumentId,
+        timestamp: state.timestamp,
+        receivedAt: Date.now(),
+        bid: state.bid,
+        ask: state.ask,
+        last: state.last,
+        volume24h: state.volume24h,
+        changePercent24h: state.changePercent24h,
+      });
+
+      handlers.onQuote(quote);
+    };
+
+    const readOptionalNumber = (value: unknown, field: string): number | null => {
+      if (value === undefined || value === null || value === '') {
+        return null;
+      }
+
+      return toFiniteNumber(value, field);
+    };
+
+    const readTopOfBookPrice = (levels: unknown, field: string): number | null => {
+      if (!Array.isArray(levels) || levels.length === 0) {
+        return null;
+      }
+
+      const level = levels[0];
+
+      if (!Array.isArray(level) || level.length < 2) {
+        throw new RangeError('Bybit returned a malformed ' + field + ' orderbook level.');
+      }
+
+      const size = toFiniteNumber(level[1], field + ' size');
+
+      return size === 0 ? null : toFiniteNumber(level[0], field + ' price');
+    };
+
+    return createReconnectingWebSocketSubscription({
+      url: this.streamBaseUrl,
+      webSocketFactory: this.webSocketFactory,
+      reconnectDelayMs: this.reconnectDelayMs,
+      maxReconnectDelayMs: this.maxReconnectDelayMs,
+      heartbeatIntervalMs: this.heartbeatIntervalMs,
+      ...(handlers.onStatus === undefined ? {} : { onStatus: handlers.onStatus }),
+      ...(handlers.onError === undefined ? {} : { onError: handlers.onError }),
+      onOpen: (connection) => {
+        if (connection.send === undefined) {
+          throw new Error('Bybit Spot WebSocket connection cannot send subscription messages.');
+        }
+
+        for (const state of quoteStates.values()) {
+          state.timestamp = 0;
+          state.bid = null;
+          state.ask = null;
+          state.last = null;
+          state.volume24h = null;
+          state.changePercent24h = null;
+        }
+
+        for (let index = 0; index < topics.length; index += 10) {
+          connection.send(
+            JSON.stringify({ op: 'subscribe', args: topics.slice(index, index + 10) }),
+          );
+        }
+      },
+      onMessage: (message, connection) => {
+        const payload: unknown = JSON.parse(message);
+        const operation = readProperty(payload, 'op');
+
+        if (operation === 'ping') {
+          if (connection.send === undefined) {
+            throw new Error('Bybit Spot WebSocket connection cannot send pong messages.');
+          }
+
+          connection.send(JSON.stringify({ op: 'pong' }));
+          return;
+        }
+
+        const success = readProperty(payload, 'success');
+
+        if (success === false && operation === 'subscribe') {
+          connection.close();
+          const reason = readProperty(payload, 'ret_msg');
+          throw new Error(
+            typeof reason === 'string'
+              ? 'Bybit Spot quote subscription failed: ' + reason
+              : 'Bybit Spot quote subscription was rejected.',
+          );
+        }
+
+        const topic = readProperty(payload, 'topic');
+
+        if (typeof topic !== 'string') {
+          return;
+        }
+
+        const isTicker = topic.startsWith('tickers.');
+        const isOrderbook = topic.startsWith('orderbook.1.');
+
+        if (!isTicker && !isOrderbook) {
+          return;
+        }
+
+        const symbol = topic.slice(isTicker ? 'tickers.'.length : 'orderbook.1.'.length);
+        const state = quoteStates.get(symbol);
+
+        if (state === undefined || !instrumentsBySymbol.has(symbol)) {
+          return;
+        }
+
+        const data = readProperty(payload, 'data');
+        const items = Array.isArray(data) ? data : [data];
+        const timestamp = toFiniteNumber(readProperty(payload, 'ts'), 'quote timestamp');
+
+        for (const item of items) {
+          if (!isRecord(item) || (readProperty(item, 'symbol') !== symbol && isTicker)) {
+            throw new RangeError('Bybit returned a quote for an unexpected instrument.');
+          }
+
+          if (isTicker) {
+            const last = readOptionalNumber(readProperty(item, 'lastPrice'), 'last price');
+            const volume = readOptionalNumber(readProperty(item, 'volume24h'), '24-hour volume');
+            const change = readOptionalNumber(
+              readProperty(item, 'price24hPcnt'),
+              '24-hour percentage change',
+            );
+
+            if (last !== null) {
+              state.last = last;
+            }
+
+            if (volume !== null) {
+              state.volume24h = volume;
+            }
+
+            if (change !== null) {
+              state.changePercent24h = change * 100;
+            }
+          } else {
+            if (readProperty(item, 's') !== symbol) {
+              throw new RangeError('Bybit returned an orderbook for an unexpected instrument.');
+            }
+
+            state.bid = readTopOfBookPrice(readProperty(item, 'b'), 'bid');
+            state.ask = readTopOfBookPrice(readProperty(item, 'a'), 'ask');
+          }
+
+          publishQuote(symbol, timestamp);
         }
       },
     });
