@@ -12,7 +12,7 @@ on:
       - main
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: quality-${{ github.workflow }}-${{ github.ref }}
@@ -38,6 +38,22 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
+
+      - name: Apply canonical formatting
+        run: pnpm format
+
+      - name: Commit generated lockfile and formatting
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --all
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "style: apply canonical formatting and lockfile"
+          git push origin HEAD
 
       - name: Run quality checks
         run: pnpm check
