@@ -94,9 +94,7 @@ export interface MarketDataProvider {
   readonly id: string;
   readonly displayName: string;
   readonly capabilities: MarketDataCapabilities;
-  listInstruments?(
-    filter?: InstrumentDiscoveryFilter,
-  ): Promise<readonly MarketInstrument[]>;
+  listInstruments?(filter?: InstrumentDiscoveryFilter): Promise<readonly MarketInstrument[]>;
   getHistoricalCandles(request: HistoricalCandleRequest): Promise<readonly Candle[]>;
   subscribeToQuotes?(
     instrumentIds: readonly InstrumentId[],
