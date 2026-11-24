@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createChartFrame } from './src/chart-frame';
-import {
-  coordinateToLogicalIndex,
-  logicalIndexToCoordinate,
-} from './src/time-scale';
+import { coordinateToLogicalIndex, logicalIndexToCoordinate } from './src/time-scale';
 import { createChartInteractionController } from './src/chart-interaction';
 
 const createFrame = () =>
@@ -147,7 +144,8 @@ describe('chart interaction controller', () => {
 
     const nextFrame = controller.snapshot.frame;
     const nextX =
-      nextFrame.layout.plotArea.x + logicalIndexToCoordinate(previousLogicalIndex, nextFrame.timeScale);
+      nextFrame.layout.plotArea.x +
+      logicalIndexToCoordinate(previousLogicalIndex, nextFrame.timeScale);
 
     expect(nextX).toBe(previousX - 50);
     expect(nextFrame.timeScale.barSpacing).toBe(frame.timeScale.barSpacing);
@@ -160,7 +158,9 @@ describe('chart interaction controller', () => {
     controller.wheel(centerOfPlot(frame), 20, -60);
 
     expect(controller.snapshot.frame.timeScale.rightOffset).not.toBe(frame.timeScale.rightOffset);
-    expect(controller.snapshot.frame.timeScale.barSpacing).toBeGreaterThan(frame.timeScale.barSpacing);
+    expect(controller.snapshot.frame.timeScale.barSpacing).toBeGreaterThan(
+      frame.timeScale.barSpacing,
+    );
   });
 
   it('does not handle wheel input outside the plot or with no movement', () => {
@@ -217,9 +217,7 @@ describe('chart interaction controller', () => {
     const controller = createChartInteractionController(createFrame());
 
     expect(() => controller.pointerMove({ x: Number.NaN, y: 0 })).toThrow(RangeError);
-    expect(() => controller.pointerDown({ x: 0, y: Number.POSITIVE_INFINITY })).toThrow(
-      RangeError,
-    );
+    expect(() => controller.pointerDown({ x: 0, y: Number.POSITIVE_INFINITY })).toThrow(RangeError);
     expect(() => controller.wheel(centerOfPlot(), 0, Number.NaN)).toThrow(RangeError);
   });
 });
