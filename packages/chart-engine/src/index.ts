@@ -20,6 +20,12 @@ export {
   zoomTimeScale,
 } from './time-scale';
 export {
+  createChartLayout,
+  type ChartLayout,
+  type ChartLayoutOptions,
+  type LayoutRect,
+} from './layout';
+export {
   type ChartViewport,
   createChartViewport,
   type NumericRange,
