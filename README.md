@@ -1,0 +1,2 @@
+# OpenView
+remplazo de tradingview
