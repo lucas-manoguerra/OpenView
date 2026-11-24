@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createChartFrame, dataPointToChartCoordinate } from './src/chart-frame';
 import {
   createChartRenderScene,
+  updateChartRenderScene,
   DEFAULT_CHART_THEME,
   drawChartScene,
   type ChartRenderCandle,
@@ -33,6 +34,8 @@ const createMockContext = (): Readonly<{
     restore: () => record('restore'),
     clearRect: (...args: number[]) => record('clearRect', ...args),
     fillRect: (...args: number[]) => record('fillRect', ...args),
+    fill: () => record('fill'),
+    closePath: () => record('closePath'),
     beginPath: () => record('beginPath'),
     moveTo: (...args: number[]) => record('moveTo', ...args),
     lineTo: (...args: number[]) => record('lineTo', ...args),
@@ -134,6 +137,49 @@ describe('canvas chart painter', () => {
     expect(calls.some((call) => call.name === 'clip')).toBe(true);
     expect(calls.filter((call) => call.name === 'fillRect').length).toBeGreaterThanOrEqual(5);
     expect(calls.some((call) => call.name === 'stroke')).toBe(true);
+  });
+
+
+  it('draws OHLC bars with high-low stems and open-close ticks', () => {
+    const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 10);
+    const scene = createChartRenderScene(frame, createCandles(), null, 'bars');
+    const { context, calls } = createMockContext();
+
+    drawChartScene(context, scene);
+
+    expect(scene.chartType).toBe('bars');
+    expect(calls.filter((call) => call.name === 'moveTo').length).toBeGreaterThan(6);
+    expect(calls.filter((call) => call.name === 'lineTo').length).toBeGreaterThan(6);
+    expect(calls.some((call) => call.name === 'fill')).toBe(false);
+  });
+
+  it('draws close-price line and area styles without candle bodies', () => {
+    const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 10);
+    const lineScene = createChartRenderScene(frame, createCandles(), null, 'line');
+    const areaScene = createChartRenderScene(frame, createCandles(), null, 'area');
+    const lineContext = createMockContext();
+    const areaContext = createMockContext();
+
+    drawChartScene(lineContext.context, lineScene);
+    drawChartScene(areaContext.context, areaScene);
+
+    expect(lineScene.chartType).toBe('line');
+    expect(lineContext.calls.some((call) => call.name === 'stroke')).toBe(true);
+    expect(lineContext.calls.some((call) => call.name === 'fill')).toBe(false);
+    expect(areaScene.chartType).toBe('area');
+    expect(areaContext.calls.filter((call) => call.name === 'fill')).toHaveLength(1);
+    expect(areaContext.calls.some((call) => call.name === 'closePath')).toBe(true);
+  });
+
+  it('updates chart type immutably without rebuilding candle data', () => {
+    const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 10);
+    const scene = createChartRenderScene(frame, createCandles());
+    const updated = updateChartRenderScene(scene, { chartType: 'line' });
+
+    expect(updated).not.toBe(scene);
+    expect(updated.chartType).toBe('line');
+    expect(updated.candles).toBe(scene.candles);
+    expect(updateChartRenderScene(updated, { chartType: 'line' })).toBe(updated);
   });
 
   it('draws a separate volume panel with bars relative to the visible maximum', () => {
