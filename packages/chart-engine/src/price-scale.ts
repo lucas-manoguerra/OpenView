@@ -188,9 +188,16 @@ const generateLogarithmicValues = (
   const uniqueValues = [...new Set(values)].sort((left, right) => left - right);
 
   if (uniqueValues.length > 1) {
-    const step = Math.min(
-      ...uniqueValues.slice(1).map((value, index) => value - uniqueValues[index]!),
-    );
+    let step = Number.POSITIVE_INFINITY;
+
+    for (let index = 1; index < uniqueValues.length; index += 1) {
+      const previousValue = uniqueValues[index - 1];
+      const currentValue = uniqueValues[index];
+
+      if (previousValue !== undefined && currentValue !== undefined) {
+        step = Math.min(step, currentValue - previousValue);
+      }
+    }
 
     return { values: uniqueValues, step };
   }
