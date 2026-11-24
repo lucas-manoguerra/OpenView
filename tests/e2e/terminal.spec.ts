@@ -477,12 +477,22 @@ test('preserves the temporal offset when older history is prepended', async ({ p
   const canvas = page.locator('canvas[data-candles-count]');
   await expect.poll(async () => Number(await canvas.getAttribute('data-candles-count'))).toBe(500);
 
-  await page.getByTestId('chart-pan-older').click();
-  await expect(canvas).toHaveAttribute('data-right-offset', '-20');
+  const bounds = await canvas.boundingBox();
+  expect(bounds).not.toBeNull();
+
+  if (bounds === null) {
+    throw new Error('The chart canvas must have a visible bounding box.');
+  }
+
+  await page.mouse.move(bounds.x + bounds.width * 0.5, bounds.y + bounds.height * 0.5);
+  await page.mouse.wheel(-2600, 0);
+
+  const offsetBeforeHistory = await canvas.getAttribute('data-right-offset');
+  expect(offsetBeforeHistory).not.toBeNull();
   await expect
     .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
     .toBeGreaterThan(500);
-  await expect(canvas).toHaveAttribute('data-right-offset', '-20');
+  await expect(canvas).toHaveAttribute('data-right-offset', offsetBeforeHistory ?? '');
 });
 
 test('exposes auto, lock and inverted price scale controls', async ({ page }) => {
