@@ -55,23 +55,23 @@ const createFrame = (size: CanvasResize, controller: ChartInteractionController 
   const previousScale = controller?.snapshot.frame.timeScale;
 
   return createChartFrame(size.width, size.height, DEMO_PRICE_RANGE, DEMO_CANDLES.length - 1, {
-      layout: {
-        rightPriceScaleWidth: 78,
-        timeScaleHeight: 32,
-        volumeHeight: 84,
-        topInset: 12,
-        bottomInset: 8,
-      },
-      timeScale:
-        previousScale === undefined
-          ? { barSpacing: 7.5, minBarSpacing: 2, maxBarSpacing: 32 }
-          : {
-              barSpacing: previousScale.barSpacing,
-              rightOffset: previousScale.rightOffset,
-              minBarSpacing: previousScale.minBarSpacing,
-              maxBarSpacing: previousScale.maxBarSpacing,
-              inverted: previousScale.inverted,
-            },
+    layout: {
+      rightPriceScaleWidth: 78,
+      timeScaleHeight: 32,
+      volumeHeight: 84,
+      topInset: 12,
+      bottomInset: 8,
+    },
+    timeScale:
+      previousScale === undefined
+        ? { barSpacing: 7.5, minBarSpacing: 2, maxBarSpacing: 32 }
+        : {
+            barSpacing: previousScale.barSpacing,
+            rightOffset: previousScale.rightOffset,
+            minBarSpacing: previousScale.minBarSpacing,
+            maxBarSpacing: previousScale.maxBarSpacing,
+            inverted: previousScale.inverted,
+          },
   });
 };
 
