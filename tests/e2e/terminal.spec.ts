@@ -414,9 +414,7 @@ test('navigates historical time, zooms the time scale and returns to realtime', 
   await page.goto('/');
 
   const canvas = page.locator('canvas[data-candles-count]');
-  await expect
-    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
-    .toBe(500);
+  await expect.poll(async () => Number(await canvas.getAttribute('data-candles-count'))).toBe(500);
 
   const initialImage = await canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL());
 
@@ -425,19 +423,25 @@ test('navigates historical time, zooms the time scale and returns to realtime', 
     .poll(() => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL()))
     .not.toBe(initialImage);
 
-  const historicalImage = await canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL());
+  const historicalImage = await canvas.evaluate((element: HTMLCanvasElement) =>
+    element.toDataURL(),
+  );
   await page.getByTestId('chart-pan-newer').click();
   await expect
     .poll(() => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL()))
     .not.toBe(historicalImage);
 
-  const imageBeforeZoom = await canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL());
+  const imageBeforeZoom = await canvas.evaluate((element: HTMLCanvasElement) =>
+    element.toDataURL(),
+  );
   await page.getByTestId('chart-time-zoom-in').click();
   await expect
     .poll(() => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL()))
     .not.toBe(imageBeforeZoom);
 
-  const imageBeforeRealtime = await canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL());
+  const imageBeforeRealtime = await canvas.evaluate((element: HTMLCanvasElement) =>
+    element.toDataURL(),
+  );
   await page.getByTestId('chart-pan-older').click();
   await page.getByTestId('chart-go-realtime').click();
   await expect
