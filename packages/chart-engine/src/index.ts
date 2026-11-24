@@ -60,6 +60,7 @@ export {
   coordinateToLogicalIndex,
   createTimeScale,
   generateTimeTicks,
+  getRightOffsetAfterDataUpdate,
   logicalIndexToCoordinate,
   panTimeScale,
   resizeTimeScale,
