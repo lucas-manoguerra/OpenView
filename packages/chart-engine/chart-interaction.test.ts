@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { createChartFrame } from './src/chart-frame';
 import {
   coordinateToLogicalIndex,
-  createTimeScale,
   logicalIndexToCoordinate,
 } from './src/time-scale';
 import { createChartInteractionController } from './src/chart-interaction';
