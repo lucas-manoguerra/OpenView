@@ -6,8 +6,8 @@ The `MarketInstrumentDiscoveryService` exposes the optional discovery capability
 
 ## Initial providers
 
-| Provider | Public endpoint | Eligibility |
-| --- | --- | --- |
+| Provider      | Public endpoint                                                        | Eligibility                                    |
+| ------------- | ---------------------------------------------------------------------- | --------------------------------------------- |
 | Binance Spot | `GET /api/v3/exchangeInfo?permissions=SPOT&symbolStatus=TRADING` | Trading symbols returned for Spot permission |
 | Bybit Spot | `GET /v5/market/instruments-info?category=spot` | Instruments with `status=Trading` |
 | OKX Spot | `GET /api/v5/public/instruments?instType=SPOT` | Instruments with `state=live` |
