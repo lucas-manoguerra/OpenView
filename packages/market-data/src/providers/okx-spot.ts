@@ -1,18 +1,32 @@
 import { createCandle, type Candle } from '@openview/market-domain';
 import type {
   CandleInterval,
+  CandleStreamHandlers,
+  CandleSubscriptionRequest,
+  CandleUpdate,
   HistoricalCandleRequest,
   MarketDataCapabilities,
   MarketDataProvider,
+  MarketDataSubscription,
 } from '../contracts';
 import { MarketDataProviderError } from '../errors';
 import { MarketDataRequestScheduler, type RequestWaiter } from '../request-scheduler';
+import {
+  createReconnectingWebSocketSubscription,
+  type MarketDataWebSocketConnection,
+  type MarketDataWebSocketFactory,
+} from '../reconnecting-websocket';
 
 const PROVIDER_ID = 'okx-spot';
 const DEFAULT_BASE_URL = 'https://www.okx.com';
 const DEFAULT_PAGE_SIZE = 100;
 const DEFAULT_MAX_PAGES = 100;
 const DEFAULT_REQUEST_INTERVAL_MS = 110;
+const DEFAULT_STREAM_BASE_URL = 'wss://ws.okx.com:8443/ws/v5/business';
+const DEFAULT_RECONNECT_DELAY_MS = 1_000;
+const DEFAULT_MAX_RECONNECT_DELAY_MS = 30_000;
+const DEFAULT_HEARTBEAT_INTERVAL_MS = 25_000;
+const DEFAULT_HEARTBEAT_RESPONSE_TIMEOUT_MS = 5_000;
 
 const INTERVALS: ReadonlyMap<CandleInterval, string> = new Map([
   ['1s', '1s'],
@@ -51,6 +65,7 @@ const SUPPORTED_INTERVALS: readonly CandleInterval[] = Object.freeze([
 const CAPABILITIES: MarketDataCapabilities = Object.freeze({
   historicalCandles: true,
   streamingQuotes: false,
+  streamingCandles: true,
   supportedIntervals: SUPPORTED_INTERVALS,
   redistribution: 'unknown',
   attributionRequired: false,
@@ -58,12 +73,21 @@ const CAPABILITIES: MarketDataCapabilities = Object.freeze({
 
 export type OkxSpotProviderOptions = Readonly<{
   baseUrl?: string;
+  streamBaseUrl?: string;
   fetcher?: typeof fetch;
+  webSocketFactory?: MarketDataWebSocketFactory;
   pageSize?: number;
   maxPages?: number;
   minimumRequestIntervalMs?: number;
+  reconnectDelayMs?: number;
+  maxReconnectDelayMs?: number;
+  heartbeatIntervalMs?: number;
+  heartbeatResponseTimeoutMs?: number;
   waiter?: RequestWaiter;
 }>;
+
+export type OkxWebSocketConnection = MarketDataWebSocketConnection;
+export type OkxWebSocketFactory = MarketDataWebSocketFactory;
 
 const isRecord = (value: unknown): value is object =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -182,15 +206,61 @@ const getApiError = (payload: unknown, status: number): string => {
   return `OKX API request failed with HTTP ${status}${codeLabel}${messageLabel}.`;
 };
 
+const parseStreamCandles = (
+  value: unknown,
+  request: CandleSubscriptionRequest,
+  instrumentId: string,
+  channel: string,
+): readonly CandleUpdate[] => {
+  const argument = readProperty(value, 'arg');
+
+  if (
+    readProperty(argument, 'channel') !== channel ||
+    readProperty(argument, 'instId') !== instrumentId
+  ) {
+    return Object.freeze([]);
+  }
+
+  const data = readProperty(value, 'data');
+
+  if (!Array.isArray(data)) {
+    throw new RangeError('OKX returned a malformed WebSocket candlesticks payload.');
+  }
+
+  return Object.freeze(
+    data.map((row) => {
+      const candle = parseCandle(row);
+      const confirmation = Array.isArray(row) ? row[8] : undefined;
+
+      if (confirmation !== '0' && confirmation !== '1') {
+        throw new RangeError('OKX returned an invalid streamed candle confirmation flag.');
+      }
+
+      return Object.freeze({
+        instrumentId: request.instrumentId,
+        interval: request.interval,
+        candle,
+        isFinal: confirmation === '1',
+      });
+    }),
+  );
+};
+
 export class OkxSpotMarketDataProvider implements MarketDataProvider {
   readonly id = PROVIDER_ID;
   readonly displayName = 'OKX Spot';
   readonly capabilities = CAPABILITIES;
 
   private readonly baseUrl: string;
+  private readonly streamBaseUrl: string;
   private readonly fetcher: typeof fetch;
+  private readonly webSocketFactory: MarketDataWebSocketFactory;
   private readonly pageSize: number;
   private readonly maxPages: number;
+  private readonly reconnectDelayMs: number;
+  private readonly maxReconnectDelayMs: number;
+  private readonly heartbeatIntervalMs: number;
+  private readonly heartbeatResponseTimeoutMs: number;
   private readonly scheduler: MarketDataRequestScheduler;
 
   constructor(options: OkxSpotProviderOptions = {}) {
@@ -200,9 +270,16 @@ export class OkxSpotMarketDataProvider implements MarketDataProvider {
       throw new RangeError('OKX Spot provider base URLs must use HTTPS.');
     }
 
+    const streamBaseUrl = new URL(options.streamBaseUrl ?? DEFAULT_STREAM_BASE_URL);
     const fetcher = options.fetcher ?? globalThis.fetch.bind(globalThis);
+    const webSocketFactory = options.webSocketFactory ?? ((url: string) => new WebSocket(url));
     const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE;
     const maxPages = options.maxPages ?? DEFAULT_MAX_PAGES;
+    const reconnectDelayMs = options.reconnectDelayMs ?? DEFAULT_RECONNECT_DELAY_MS;
+    const maxReconnectDelayMs = options.maxReconnectDelayMs ?? DEFAULT_MAX_RECONNECT_DELAY_MS;
+    const heartbeatIntervalMs = options.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS;
+    const heartbeatResponseTimeoutMs =
+      options.heartbeatResponseTimeoutMs ?? DEFAULT_HEARTBEAT_RESPONSE_TIMEOUT_MS;
 
     if (typeof fetcher !== 'function') {
       throw new Error('A Fetch API implementation is required for the OKX Spot provider.');
@@ -216,13 +293,126 @@ export class OkxSpotMarketDataProvider implements MarketDataProvider {
       throw new RangeError('OKX Spot maximum pages must be an integer between 1 and 1000.');
     }
 
+    if (streamBaseUrl.protocol !== 'wss:') {
+      throw new RangeError('OKX Spot stream URLs must use WSS.');
+    }
+
+    if (typeof webSocketFactory !== 'function') {
+      throw new Error('A WebSocket factory is required for the OKX Spot provider.');
+    }
+
+    if (!Number.isInteger(reconnectDelayMs) || reconnectDelayMs < 1) {
+      throw new RangeError('OKX Spot reconnect delay must be a positive integer.');
+    }
+
+    if (!Number.isInteger(maxReconnectDelayMs) || maxReconnectDelayMs < reconnectDelayMs) {
+      throw new RangeError(
+        'OKX Spot maximum reconnect delay must be at least the initial delay.',
+      );
+    }
+
+    if (!Number.isInteger(heartbeatIntervalMs) || heartbeatIntervalMs < 1) {
+      throw new RangeError('OKX Spot heartbeat interval must be a positive integer.');
+    }
+
+    if (!Number.isInteger(heartbeatResponseTimeoutMs) || heartbeatResponseTimeoutMs < 1) {
+      throw new RangeError('OKX Spot heartbeat response timeout must be a positive integer.');
+    }
+
     this.baseUrl = parsedBaseUrl.toString().replace(/\/$/, '');
+    this.streamBaseUrl = streamBaseUrl.toString().replace(/\/$/, '');
     this.fetcher = fetcher;
+    this.webSocketFactory = webSocketFactory;
     this.pageSize = pageSize;
     this.maxPages = maxPages;
+    this.reconnectDelayMs = reconnectDelayMs;
+    this.maxReconnectDelayMs = maxReconnectDelayMs;
+    this.heartbeatIntervalMs = heartbeatIntervalMs;
+    this.heartbeatResponseTimeoutMs = heartbeatResponseTimeoutMs;
     this.scheduler = new MarketDataRequestScheduler({
       minimumIntervalMs: options.minimumRequestIntervalMs ?? DEFAULT_REQUEST_INTERVAL_MS,
       ...(options.waiter === undefined ? {} : { waiter: options.waiter }),
+    });
+  }
+
+  subscribeToCandles(
+    request: CandleSubscriptionRequest,
+    handlers: CandleStreamHandlers,
+  ): MarketDataSubscription {
+    const interval = INTERVALS.get(request.interval);
+
+    if (
+      interval === undefined ||
+      !this.capabilities.supportedIntervals.includes(request.interval)
+    ) {
+      throw new RangeError(
+        'OKX Spot does not support the ' + request.interval + ' candle interval.',
+      );
+    }
+
+    const instrumentId = normalizeInstrumentId(request.instrumentId);
+    const channel = 'candle' + interval;
+
+    return createReconnectingWebSocketSubscription({
+      url: this.streamBaseUrl,
+      webSocketFactory: this.webSocketFactory,
+      reconnectDelayMs: this.reconnectDelayMs,
+      maxReconnectDelayMs: this.maxReconnectDelayMs,
+      heartbeatIntervalMs: this.heartbeatIntervalMs,
+      heartbeatMessage: 'ping',
+      heartbeatOnIdle: true,
+      heartbeatResponse: 'pong',
+      heartbeatResponseTimeoutMs: this.heartbeatResponseTimeoutMs,
+      ...(handlers.onStatus === undefined ? {} : { onStatus: handlers.onStatus }),
+      ...(handlers.onError === undefined ? {} : { onError: handlers.onError }),
+      onOpen: (connection) => {
+        if (connection.send === undefined) {
+          throw new Error('OKX Spot WebSocket connection cannot send subscription messages.');
+        }
+
+        connection.send(
+          JSON.stringify({
+            op: 'subscribe',
+            args: [{ channel, instId: instrumentId }],
+          }),
+        );
+      },
+      onMessage: (message, connection) => {
+        if (message === 'ping') {
+          if (connection.send === undefined) {
+            throw new Error('OKX Spot WebSocket connection cannot send pong messages.');
+          }
+
+          connection.send('pong');
+          return;
+        }
+
+        if (message === 'pong') {
+          return;
+        }
+
+        const payload: unknown = JSON.parse(message);
+        const event = readProperty(payload, 'event');
+
+        if (event === 'error') {
+          connection.close();
+          const code = readProperty(payload, 'code');
+          const reason = readProperty(payload, 'msg');
+          throw new Error(
+            'OKX Spot subscription failed' +
+              (code === undefined ? '' : ' (code ' + String(code) + ')') +
+              (typeof reason === 'string' && reason.length > 0 ? ': ' + reason : '.') ,
+          );
+        }
+
+        if (event !== undefined) {
+          return;
+        }
+
+        for (const update of parseStreamCandles(payload, request, instrumentId, channel)) {
+          handlers.onCandle(update);
+        }
+      },
     });
   }
 
