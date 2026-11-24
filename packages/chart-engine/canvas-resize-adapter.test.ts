@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createChartFrame } from './src/chart-frame';
 import {
   attachCanvasResizeObserver,
   type CanvasResize,
