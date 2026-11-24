@@ -101,10 +101,11 @@ export class CanvasRenderer {
     this.invalidate();
   }
 
-  setScene(scene: ChartRenderScene): void {
+  setScene(scene: ChartRenderScene | null): void {
     this.assertActive();
 
     if (
+      scene !== null &&
       this.width > 0 &&
       this.height > 0 &&
       (scene.frame.layout.bounds.width !== this.width ||
