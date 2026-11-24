@@ -123,7 +123,7 @@ const installWebSocketMock = async (page: Page): Promise<void> => {
     routes.bybit = route;
   });
 
-  await page.routeWebSocket('wss://ws.okx.com:8443/ws/v5/business', (route) => {
+  await page.routeWebSocket('wss://ws.okx.com/ws/v5/business', (route) => {
     routes.okx = route;
   });
 };
