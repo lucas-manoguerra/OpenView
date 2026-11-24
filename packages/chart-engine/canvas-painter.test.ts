@@ -267,7 +267,13 @@ describe('canvas chart painter', () => {
     expect(updated.drawings).toBe(scene.drawings);
     expect(updateChartRenderScene(updated, { drawings: updated.drawings })).toBe(updated);
     expect(() =>
-      createChartRenderScene(frame, createCandles(), null, 'candles', [], [
+      createChartRenderScene(
+        frame,
+        createCandles(),
+        null,
+        'candles',
+        [],
+        [
         {
           id: 'trend-invalid',
           type: 'trend-line',
@@ -275,7 +281,8 @@ describe('canvas chart painter', () => {
           end: null,
           color: '#60a5fa',
         },
-      ]),
+        ],
+      ),
     ).toThrow(RangeError);
   });
 
