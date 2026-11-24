@@ -212,11 +212,7 @@ describe('Binance Spot market data provider', () => {
 
   it('surfaces rate limit status and retry-after metadata without retrying automatically', async () => {
     const { fetcher, requests } = createFetcher([
-      createResponse(
-        { code: -1003, msg: 'Too many requests' },
-        429,
-        { 'Retry-After': '2' },
-      ),
+      createResponse({ code: -1003, msg: 'Too many requests' }, 429, { 'Retry-After': '2' }),
     ]);
     const provider = createProvider({ fetcher });
 
@@ -240,7 +236,9 @@ describe('Binance Spot market data provider', () => {
       createProvider({ fetcher: malformedResponse.fetcher }).getHistoricalCandles(createRequest()),
     ).rejects.toThrow('malformed klines response');
     await expect(
-      createProvider({ fetcher: invalidCandleResponse.fetcher }).getHistoricalCandles(createRequest()),
+      createProvider({ fetcher: invalidCandleResponse.fetcher }).getHistoricalCandles(
+        createRequest(),
+      ),
     ).rejects.toThrow('non-finite close');
   });
 
@@ -249,7 +247,9 @@ describe('Binance Spot market data provider', () => {
     const provider = createProvider({ fetcher });
 
     await expect(
-      provider.getHistoricalCandles(createRequest({ startTime: START_TIME + MINUTE, endTime: START_TIME })),
+      provider.getHistoricalCandles(
+        createRequest({ startTime: START_TIME + MINUTE, endTime: START_TIME }),
+      ),
     ).rejects.toThrow(RangeError);
     await expect(
       provider.getHistoricalCandles(createRequest({ instrumentId: 'BYBIT:BTCUSDT' })),
@@ -261,9 +261,7 @@ describe('Binance Spot market data provider', () => {
   });
 
   it('rejects non-advancing history requests when the configured page limit is reached', async () => {
-    const { fetcher, requests } = createFetcher([
-      createResponse([createKline(START_TIME)]),
-    ]);
+    const { fetcher, requests } = createFetcher([createResponse([createKline(START_TIME)])]);
     const provider = createProvider({ fetcher, pageSize: 1, maxPages: 1 });
 
     await expect(provider.getHistoricalCandles(createRequest())).rejects.toThrow(
