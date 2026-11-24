@@ -408,6 +408,43 @@ test('changes price scale modes and restores the full chart viewport', async ({ 
   await expect(canvas).toHaveAttribute('data-candles-count', '500');
 });
 
+test('navigates historical time, zooms the time scale and returns to realtime', async ({
+  page,
+}) => {
+  await page.goto('/');
+
+  const canvas = page.locator('canvas[data-candles-count]');
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBe(500);
+
+  const initialImage = await canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL());
+
+  await page.getByTestId('chart-pan-older').click();
+  await expect
+    .poll(() => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL()))
+    .not.toBe(initialImage);
+
+  const historicalImage = await canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL());
+  await page.getByTestId('chart-pan-newer').click();
+  await expect
+    .poll(() => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL()))
+    .not.toBe(historicalImage);
+
+  const imageBeforeZoom = await canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL());
+  await page.getByTestId('chart-time-zoom-in').click();
+  await expect
+    .poll(() => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL()))
+    .not.toBe(imageBeforeZoom);
+
+  const imageBeforeRealtime = await canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL());
+  await page.getByTestId('chart-pan-older').click();
+  await page.getByTestId('chart-go-realtime').click();
+  await expect
+    .poll(() => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL()))
+    .not.toBe(imageBeforeRealtime);
+});
+
 test('renders timestamp based time labels instead of logical bar indices', async ({ page }) => {
   await page.addInitScript(() => {
     const labels: string[] = [];
