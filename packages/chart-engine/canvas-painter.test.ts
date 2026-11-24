@@ -98,7 +98,9 @@ describe('canvas chart painter', () => {
   });
 
   it('draws timestamp labels instead of logical indices on the time axis', () => {
-    const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 2);
+    const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 2, {
+      timeScale: { barSpacing: 50, maxBarSpacing: 50 },
+    });
     const scene = createChartRenderScene(frame, createCandles());
     const { context, calls } = createMockContext();
 
