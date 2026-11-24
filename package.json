@@ -1,0 +1,30 @@
+{
+  "name": "openview",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.23.0",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @openview/terminal dev",
+    "build": "pnpm --filter @openview/terminal build",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "lint": "biome lint .",
+    "architecture:check": "node scripts/verify-architecture.mjs",
+    "typecheck": "pnpm --filter @openview/market-domain typecheck && pnpm --filter @openview/chart-engine typecheck && pnpm --filter @openview/market-data typecheck && pnpm --filter @openview/terminal typecheck",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "check": "biome check . && pnpm architecture:check && pnpm typecheck && pnpm test && pnpm build",
+    "check:all": "pnpm check && pnpm test:e2e"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.8",
+    "@playwright/test": "1.65.1",
+    "typescript": "7.0.2",
+    "vitest": "5.1.1",
+    "@typescript/typescript6": "6.0.2"
+  }
+}
