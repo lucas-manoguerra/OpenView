@@ -40,7 +40,7 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Apply canonical formatting
-        run: pnpm format
+        run: pnpm exec biome check --write .
 
       - name: Commit generated lockfile and formatting
         shell: bash
