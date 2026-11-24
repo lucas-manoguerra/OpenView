@@ -17,7 +17,9 @@ test('switches between workspace sections after hydration', async ({ page }) => 
   await expect(page.getByRole('heading', { name: 'Mercados' })).toBeVisible();
 });
 
-test('renders an interactive canvas chart and responds to pointer and wheel input', async ({ page }) => {
+test('renders an interactive canvas chart and responds to pointer and wheel input', async ({
+  page,
+}) => {
   await page.goto('/');
 
   const canvas = page.getByRole('img', {
@@ -36,16 +38,15 @@ test('renders an interactive canvas chart and responds to pointer and wheel inpu
   }
 
   const initialImage = await canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL());
-  await page.mouse.move(
-    bounds.x + bounds.width * 0.5,
-    bounds.y + bounds.height * 0.5,
-  );
+  await page.mouse.move(bounds.x + bounds.width * 0.5, bounds.y + bounds.height * 0.5);
 
   await expect
     .poll(() => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL()))
     .not.toBe(initialImage);
 
-  const imageBeforeZoom = await canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL());
+  const imageBeforeZoom = await canvas.evaluate((element: HTMLCanvasElement) =>
+    element.toDataURL(),
+  );
   await page.mouse.wheel(0, -120);
 
   await expect
