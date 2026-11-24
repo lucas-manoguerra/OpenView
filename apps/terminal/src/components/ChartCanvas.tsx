@@ -633,10 +633,7 @@ export function ChartCanvas({
             <option value="area">Área</option>
           </select>
         </label>
-        <details
-          class="relative"
-          data-testid="chart-indicators-menu"
-        >
+        <details class="relative" data-testid="chart-indicators-menu">
           <summary class="cursor-pointer list-none rounded px-2 py-1 text-[10px] text-slate-300 transition-colors hover:bg-white/5">
             Indicadores
           </summary>
@@ -656,10 +653,7 @@ export function ChartCanvas({
                   onChange={() => handleIndicatorToggle(indicator.id)}
                   class="accent-blue-400"
                 />
-                <span
-                  class="size-2 rounded-full"
-                  style={{ backgroundColor: indicator.color }}
-                />
+                <span class="size-2 rounded-full" style={{ backgroundColor: indicator.color }} />
                 {indicator.label}
               </label>
             ))}
