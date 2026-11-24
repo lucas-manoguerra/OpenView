@@ -26,7 +26,14 @@ import { ChartCanvas } from './ChartCanvas';
 
 const DEFAULT_PROVIDER_ID = 'binance-spot';
 const DEFAULT_INTERVAL: CandleInterval = '1m';
-const DEFAULT_INSTRUMENT_ID = createInstrumentId(DEFAULT_WATCHLIST[0]?.id ?? 'BTC-USDT');
+const FALLBACK_WATCHLIST_INSTRUMENT: WatchlistInstrument = Object.freeze({
+  id: 'BTC-USDT',
+  symbol: 'BTC / USDT',
+  name: 'Bitcoin',
+  chartSymbol: 'BTC / USDT',
+});
+const DEFAULT_WATCHLIST_INSTRUMENT = DEFAULT_WATCHLIST[0] ?? FALLBACK_WATCHLIST_INSTRUMENT;
+const DEFAULT_INSTRUMENT_ID = createInstrumentId(DEFAULT_WATCHLIST_INSTRUMENT.id);
 const HISTORY_CANDLE_COUNT = 500;
 
 const INTERVAL_DURATION_MS: Readonly<Record<CandleInterval, number>> = Object.freeze({
@@ -512,7 +519,8 @@ export function MarketChart() {
   const displayedStreamStatus = selectedSource.streamingCandles ? streamStatus : 'unsupported';
   const quote = quotes[selectedInstrumentId] ?? null;
   const selectedInstrument =
-    watchlist.find((instrument) => instrument.id === selectedInstrumentId) ?? DEFAULT_WATCHLIST[0];
+    watchlist.find((instrument) => instrument.id === selectedInstrumentId) ??
+    DEFAULT_WATCHLIST_INSTRUMENT;
   const quoteStatusLabel = !selectedSource.streamingQuotes
     ? 'No disponible'
     : quoteStatus === 'connected'
@@ -619,7 +627,7 @@ export function MarketChart() {
     const nextWatchlist = watchlist.filter((instrument) => instrument.id !== instrumentId);
     const nextSelectedInstrumentId =
       selectedInstrumentId === instrumentId
-        ? createInstrumentId(nextWatchlist[0]?.id ?? DEFAULT_WATCHLIST[0]?.id ?? 'BTC-USDT')
+        ? createInstrumentId(nextWatchlist[0]?.id ?? DEFAULT_WATCHLIST_INSTRUMENT.id)
         : selectedInstrumentId;
 
     setWatchlist(nextWatchlist);
