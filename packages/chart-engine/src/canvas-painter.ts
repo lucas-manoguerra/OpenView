@@ -28,6 +28,9 @@ export type ChartRenderTheme = Readonly<{
   crosshair: string;
 }>;
 
+const getTargetTimeTickCount = (plotWidth: number): number =>
+  Math.max(2, Math.min(50, Math.floor(plotWidth / 110)));
+
 export const DEFAULT_CHART_THEME: ChartRenderTheme = Object.freeze({
   background: '#0b0f17',
   plotBackground: '#0d121d',
@@ -148,7 +151,7 @@ const drawGrid = (
     }
   }
 
-  for (const tick of generateTimeAxisTicks(frame.timeScale, scene.candles, { targetTickCount: 8 })) {
+  for (const tick of generateTimeAxisTicks(frame.timeScale, scene.candles, { targetTickCount: getTargetTimeTickCount(plotArea.width) })) {
     const x = plotArea.x + tick.coordinate;
     context.moveTo(x, plotArea.y);
     context.lineTo(x, plotArea.y + plotArea.height + volumeArea.height);
@@ -213,7 +216,7 @@ const drawAxes = (
     context.textAlign = 'center';
 
     const timeTicks = generateTimeAxisTicks(timeScale, scene.candles, {
-      targetTickCount: 8,
+      targetTickCount: getTargetTimeTickCount(plotArea.width),
       locale: 'es-AR',
     });
     const visibleTimeTicks = selectNonOverlappingTimeAxisTicks(
