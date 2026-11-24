@@ -78,11 +78,11 @@ describe('canvas resize observer adapter', () => {
     const canvas = createCanvas({ width: 640, height: 360 });
     const windowTarget = createWindowTarget();
     const onResize = vi.fn<(size: CanvasResize) => void>();
-    let notifyObserver: ((entries: readonly ResizeObserverEntry[]) => void) | null = null;
+    const observerCallback: { current: ((entries: readonly ResizeObserverEntry[]) => void) | null } = { current: null };
 
     attachCanvasResizeObserver(canvas, onResize, {
       createObserver: (callback) => {
-        notifyObserver = callback;
+        observerCallback.current = callback;
         return { observe: vi.fn(), disconnect: vi.fn() };
       },
       getDevicePixelRatio: () => 1.5,
@@ -94,7 +94,7 @@ describe('canvas resize observer adapter', () => {
       contentRect: { width: 820, height: 420 },
     } as ResizeObserverEntry;
 
-    notifyObserver?.([entry]);
+    observerCallback.current?.([entry]);
 
     expect(onResize).toHaveBeenLastCalledWith({
       width: 820,
@@ -171,7 +171,7 @@ describe('canvas resize observer adapter', () => {
     const otherCanvas = createCanvas({ width: 320, height: 180 });
     const windowTarget = createWindowTarget();
     const onResize = vi.fn<(size: CanvasResize) => void>();
-    let notifyObserver: ((entries: readonly ResizeObserverEntry[]) => void) | null = null;
+    const observerCallback: { current: ((entries: readonly ResizeObserverEntry[]) => void) | null } = { current: null };
 
     attachCanvasResizeObserver(canvas, onResize, {
       createObserver: (callback) => {
@@ -183,7 +183,7 @@ describe('canvas resize observer adapter', () => {
     });
     onResize.mockClear();
 
-    notifyObserver?.([
+    observerCallback.current?.([
       {
         target: otherCanvas,
         contentRect: { width: 320, height: 180 },
