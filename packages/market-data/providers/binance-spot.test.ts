@@ -43,17 +43,35 @@ const createFetcher = (
     const url = input instanceof URL ? input : new URL(String(input));
     requests.push({ url, init });
 
-    return pendingResponses.shift()!;
+    const response = pendingResponses.shift();
+
+    if (response === undefined) {
+      throw new Error('No mocked Binance response is available.');
+    }
+
+    return response;
   };
 
   return { fetcher, requests };
 };
 
-const createRequest = (overrides: Partial<{
-  instrumentId: string;
-  startTime: number;
-  endTime: number;
-}> = {}) => ({
+const getItem = <T>(items: readonly T[], index: number): T => {
+  const item = items[index];
+
+  if (item === undefined) {
+    throw new Error('The requested test value does not exist.');
+  }
+
+  return item;
+};
+
+const createRequest = (
+  overrides: Partial<{
+    instrumentId: string;
+    startTime: number;
+    endTime: number;
+  }> = {},
+) => ({
   instrumentId: createInstrumentId(overrides.instrumentId ?? 'BINANCE:BTC/USDT'),
   interval: '1m' as const,
   startTime: overrides.startTime ?? START_TIME,
@@ -111,7 +129,7 @@ describe('Binance Spot market data provider', () => {
     expect(Object.isFrozen(candles)).toBe(true);
     expect(Object.isFrozen(candles[0])).toBe(true);
     expect(requests).toHaveLength(1);
-    expect(requests[0]!.url.origin).toBe('https://data-api.binance.vision');
+    expect(getItem(requests, 0).url.origin).toBe('https://data-api.binance.vision');
     expect(requests[0]!.url.pathname).toBe('/api/v3/klines');
     expect(requests[0]!.url.searchParams.get('symbol')).toBe('BTCUSDT');
     expect(requests[0]!.url.searchParams.get('interval')).toBe('1m');
@@ -152,7 +170,7 @@ describe('Binance Spot market data provider', () => {
       START_TIME + 2 * MINUTE,
     ]);
     expect(requests).toHaveLength(2);
-    expect(requests[1]!.url.searchParams.get('startTime')).toBe(String(START_TIME + MINUTE + 1));
+    expect(getItem(requests, 1).url.searchParams.get('startTime')).toBe(String(START_TIME + MINUTE + 1));
     expect(requests.every((request) => request.url.searchParams.get('endTime') === String(START_TIME + 3 * MINUTE - 1))).toBe(true);
   });
 
@@ -171,7 +189,7 @@ describe('Binance Spot market data provider', () => {
       START_TIME,
       START_TIME + MINUTE,
     ]);
-    expect(candles[1]!.close).toBe(103);
+    expect(getItem(candles, 1).close).toBe(103);
   });
 
   it('passes an optional abort signal through to fetch', async () => {
