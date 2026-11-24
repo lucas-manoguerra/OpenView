@@ -354,8 +354,13 @@ export class BybitSpotMarketDataProvider implements MarketDataProvider {
   ): MarketDataSubscription {
     const interval = INTERVALS.get(request.interval);
 
-    if (interval === undefined || !this.capabilities.supportedIntervals.includes(request.interval)) {
-      throw new RangeError('Bybit Spot does not support the ' + request.interval + ' candle interval.');
+    if (
+      interval === undefined ||
+      !this.capabilities.supportedIntervals.includes(request.interval)
+    ) {
+      throw new RangeError(
+        'Bybit Spot does not support the ' + request.interval + ' candle interval.',
+      );
     }
 
     const symbol = normalizeSymbol(request.instrumentId);
