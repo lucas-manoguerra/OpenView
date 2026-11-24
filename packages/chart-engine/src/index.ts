@@ -84,9 +84,11 @@ export {
 } from './viewport';
 
 export {
+  createTimeAxisData,
   formatTimeAxisLabel,
   generateTimeAxisTicks,
   selectNonOverlappingTimeAxisTicks,
+  type TimeAxisData,
   type TimeAxisOptions,
   type TimeAxisPoint,
   type TimeAxisTick,
