@@ -24,7 +24,6 @@ import {
   type ChartRenderScene,
   type ChartType,
   type ChartIndicatorSeries,
-  type ChartDrawingPoint,
   type ChartRenderDrawing,
   type NumericRange,
   type PriceScaleMode,
