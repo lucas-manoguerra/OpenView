@@ -168,6 +168,34 @@ describe('canvas resize observer adapter', () => {
     expect(windowTarget.listenerCount()).toBe(0);
   });
 
+  it('ignores queued observer notifications after destruction', () => {
+    const canvas = createCanvas({ width: 640, height: 360 });
+    const windowTarget = createWindowTarget();
+    const onResize = vi.fn<(size: CanvasResize) => void>();
+    const observerCallback: {
+      current: ((entries: readonly ResizeObserverEntry[]) => void) | null;
+    } = { current: null };
+    const adapter = attachCanvasResizeObserver(canvas, onResize, {
+      createObserver: (callback) => {
+        observerCallback.current = callback;
+        return { observe: vi.fn(), disconnect: vi.fn() };
+      },
+      getDevicePixelRatio: () => 1,
+      windowTarget: windowTarget.target,
+    });
+
+    onResize.mockClear();
+    adapter.destroy();
+    observerCallback.current?.([
+      {
+        target: canvas,
+        contentRect: { width: 820, height: 420 },
+      } as ResizeObserverEntry,
+    ]);
+
+    expect(onResize).not.toHaveBeenCalled();
+  });
+
   it('does not emit entries belonging to other elements', () => {
     const canvas = createCanvas({ width: 640, height: 360 });
     const otherCanvas = createCanvas({ width: 320, height: 180 });
