@@ -8,6 +8,16 @@ Los rangos históricos utilizan timestamps Unix en milisegundos y la semántica 
 
 `MarketDataProviderRegistry` registra proveedores por un identificador estable, rechaza IDs duplicados y permite obtener el proveedor elegido por el usuario. Las credenciales privadas no forman parte del contrato de datos públicos.
 
+## Servicio de histórico
+
+`HistoricalCandleService` consume el registro y ofrece una entrada común para la aplicación:
+
+- `listSources()` devuelve una instantánea inmutable de los proveedores que ofrecen velas históricas, junto con sus intervalos y metadatos de redistribución.
+- `getSource(providerId)` devuelve los metadatos de la fuente seleccionada.
+- `getHistoricalCandles(providerId, request)` valida la capacidad histórica y el intervalo antes de delegar en el adaptador correspondiente.
+
+La selección del proveedor es siempre explícita. El servicio no cambia automáticamente de exchange ni reinterpreta símbolos: un fallback silencioso podría mostrar otro mercado. Conserva el `AbortSignal` y los errores del adaptador, no agrega caché y no modifica las velas devueltas.
+
 ## Adaptador implementado
 
 ### Binance Spot
