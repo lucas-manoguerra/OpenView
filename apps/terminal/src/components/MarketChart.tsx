@@ -572,9 +572,6 @@ export function MarketChart() {
         catalogAbortControllerRef.current = null;
         streamSubscriptionRef.current?.unsubscribe();
         streamSubscriptionRef.current = null;
-        catalogRequestIdRef.current += 1;
-        catalogAbortControllerRef.current?.abort();
-        catalogAbortControllerRef.current = null;
         quoteRequestIdRef.current += 1;
         quoteSubscriptionRef.current?.unsubscribe();
         quoteSubscriptionRef.current = null;
@@ -693,6 +690,19 @@ export function MarketChart() {
 
     setProviderId(nextProviderId);
     setInterval(nextInterval);
+    requestIdRef.current += 1;
+    abortControllerRef.current?.abort();
+    olderAbortControllerRef.current?.abort();
+    recoveryAbortControllerRef.current?.abort();
+    recoveryAbortControllerRef.current = null;
+    recoveryRequestRef.current = false;
+    streamSubscriptionRef.current?.unsubscribe();
+    streamSubscriptionRef.current = null;
+    candlesRef.current = [];
+    setCandles([]);
+    setLoading(true);
+    setError(null);
+    setStreamStatus('disconnected');
 
     const catalogRequest = loadInstrumentCatalog(nextProviderId);
     const catalogRequestId = catalogRequestIdRef.current;
@@ -717,6 +727,7 @@ export function MarketChart() {
       supportedInstruments[0];
 
     if (nextSelectedInstrument === undefined) {
+      candlesRef.current = [];
       setCandles([]);
       setLoading(false);
       setError('Ningún instrumento guardado está disponible en este proveedor. Agrega uno del catálogo.');
@@ -802,10 +813,19 @@ export function MarketChart() {
     }
 
     const nextWatchlist = watchlist.filter((instrument) => instrument.id !== instrumentId);
-    const nextSelectedInstrumentId =
-      selectedInstrumentId === instrumentId
-        ? createInstrumentId(nextWatchlist[0]?.id ?? DEFAULT_WATCHLIST_INSTRUMENT.id)
-        : selectedInstrumentId;
+    const supportedWatchlist =
+      catalogStatus === 'ready'
+        ? nextWatchlist.filter((instrument) =>
+            availableInstruments.some((available) => available.id === instrument.id),
+          )
+        : nextWatchlist;
+    const selectedInstrument =
+      supportedWatchlist.find((instrument) => instrument.id === selectedInstrumentId) ??
+      supportedWatchlist[0] ??
+      nextWatchlist[0];
+    const nextSelectedInstrumentId = createInstrumentId(
+      selectedInstrument?.id ?? DEFAULT_WATCHLIST_INSTRUMENT.id,
+    );
 
     setWatchlist(nextWatchlist);
     setSelectedInstrumentId(nextSelectedInstrumentId);
@@ -816,7 +836,14 @@ export function MarketChart() {
     loadQuotes(providerId, nextWatchlist, catalogStatus === 'ready' ? availableInstruments : null);
 
     if (nextSelectedInstrumentId !== selectedInstrumentId) {
-      void loadCandles(providerId, interval, nextSelectedInstrumentId);
+      if (supportedWatchlist.length === 0) {
+        candlesRef.current = [];
+        setCandles([]);
+        setLoading(false);
+        setError('Ningún instrumento restante está disponible en este proveedor.');
+      } else {
+        void loadCandles(providerId, interval, nextSelectedInstrumentId);
+      }
     }
   };
 
