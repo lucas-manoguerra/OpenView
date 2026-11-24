@@ -56,7 +56,7 @@ export class MarketInstrumentDiscoveryService {
     filter.signal?.throwIfAborted();
 
     const quoteAsset = filter.quoteAsset?.trim().toUpperCase();
-    const cacheKey = quoteAsset ?? '*';
+    const cacheKey = quoteAsset === undefined ? 'all' : 'quote:' + quoteAsset;
     const currentTime = this.now();
     const providerCache = this.cache.get(provider.id);
     const cached = providerCache?.get(cacheKey);
