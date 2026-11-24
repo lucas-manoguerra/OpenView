@@ -18,6 +18,8 @@ export {
   type ChartRenderSceneUpdate,
   type ChartRenderTheme,
   type ChartIndicatorSeries,
+  type ChartDrawingPoint,
+  type ChartRenderDrawing,
 } from './canvas-painter';
 export {
   createChartInteractionController,
@@ -29,6 +31,8 @@ export {
 export {
   attachCanvasPointerEvents,
   type CanvasPointerAdapter,
+  type CanvasDrawingGesture,
+  type CanvasDrawingTool,
 } from './canvas-pointer-adapter';
 export {
   attachCanvasResizeObserver,
