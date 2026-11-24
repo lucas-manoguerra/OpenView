@@ -401,7 +401,7 @@ export class OkxSpotMarketDataProvider implements MarketDataProvider {
           throw new Error(
             'OKX Spot subscription failed' +
               (code === undefined ? '' : ' (code ' + String(code) + ')') +
-              (typeof reason === 'string' && reason.length > 0 ? ': ' + reason : '.') ,
+              (typeof reason === 'string' && reason.length > 0 ? ': ' + reason : '.'),
           );
         }
 
