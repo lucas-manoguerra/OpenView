@@ -203,7 +203,9 @@ export const generateTimeAxisTicks = (
   }
 
   const isValidatedData = !Array.isArray(data);
-  const points = isValidatedData ? (data as TimeAxisData).points : (data as readonly TimeAxisPoint[]);
+  const points = isValidatedData
+    ? (data as TimeAxisData).points
+    : (data as readonly TimeAxisPoint[]);
 
   if (!isValidatedData) {
     validateTimeAxisPoints(points);
