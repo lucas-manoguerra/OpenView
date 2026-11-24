@@ -1,4 +1,4 @@
-import type { Candle } from '@openview/market-domain';
+import { createCandle, type Candle } from '@openview/market-domain';
 import { generatePriceTicks, priceToCoordinate } from './price-scale';
 import { generateTimeTicks, logicalIndexToCoordinate } from './time-scale';
 import type { ChartCoordinate, ChartFrame } from './chart-frame';
@@ -48,13 +48,14 @@ export const createChartRenderScene = (
   let previousLogicalIndex = Number.NEGATIVE_INFINITY;
 
   for (const candle of candles) {
-    if (
-      !Number.isFinite(candle.logicalIndex) ||
-      candle.logicalIndex <= previousLogicalIndex ||
-      !Number.isFinite(candle.volume) ||
-      candle.volume < 0
-    ) {
-      throw new RangeError('Render candles must have ordered logical indices and valid volumes.');
+    const validation = createCandle(candle);
+
+    if (!Number.isFinite(candle.logicalIndex) || candle.logicalIndex <= previousLogicalIndex) {
+      throw new RangeError('Render candles must have unique, ascending logical indices.');
+    }
+
+    if (!validation.ok) {
+      throw new RangeError('Render candles must satisfy market domain validation.');
     }
 
     previousLogicalIndex = candle.logicalIndex;
@@ -69,7 +70,17 @@ export const createChartRenderScene = (
 
   return Object.freeze({
     frame,
-    candles: Object.freeze(candles.map((candle) => Object.freeze({ ...candle }))),
+    candles: Object.freeze(
+      candles.map((candle) => {
+        const validation = createCandle(candle);
+
+        if (!validation.ok) {
+          throw new RangeError('Render candles must satisfy market domain validation.');
+        }
+
+        return Object.freeze({ ...validation.value, logicalIndex: candle.logicalIndex });
+      }),
+    ),
     crosshair: crosshair === null ? null : Object.freeze({ ...crosshair }),
   });
 };
@@ -215,12 +226,46 @@ const drawAxes = (
   context.restore();
 };
 
+const getVisibleCandles = (scene: ChartRenderScene): readonly ChartRenderCandle[] => {
+  const { candles, frame } = scene;
+  const minimumIndex = frame.timeScale.visibleLogicalRange.from - 1;
+  const maximumIndex = frame.timeScale.visibleLogicalRange.to + 1;
+  let start = 0;
+  let end = candles.length;
+
+  while (start < end) {
+    const middle = Math.floor((start + end) / 2);
+
+    if (candles[middle]!.logicalIndex < minimumIndex) {
+      start = middle + 1;
+    } else {
+      end = middle;
+    }
+  }
+
+  const firstVisibleIndex = start;
+  end = candles.length;
+
+  while (start < end) {
+    const middle = Math.floor((start + end) / 2);
+
+    if (candles[middle]!.logicalIndex <= maximumIndex) {
+      start = middle + 1;
+    } else {
+      end = middle;
+    }
+  }
+
+  return candles.slice(firstVisibleIndex, start);
+};
+
 const drawCandles = (
   context: CanvasRenderingContext2D,
   scene: ChartRenderScene,
   theme: ChartRenderTheme,
 ): void => {
-  const { frame, candles } = scene;
+  const { frame } = scene;
+  const candles = getVisibleCandles(scene);
   const { plotArea } = frame.layout;
   const bodyWidth = Math.max(1, Math.min(20, frame.timeScale.barSpacing * 0.7));
 
@@ -276,14 +321,16 @@ const drawVolume = (
   context.fillStyle = theme.volumeBackground;
   context.fillRect(volumeArea.x, volumeArea.y, volumeArea.width, volumeArea.height);
 
-  if (scene.candles.length === 0) {
+  const candles = getVisibleCandles(scene);
+
+  if (candles.length === 0) {
     context.restore();
     return;
   }
 
   let maximumVolume = 0;
 
-  for (const candle of scene.candles) {
+  for (const candle of candles) {
     maximumVolume = Math.max(maximumVolume, candle.volume);
   }
 
@@ -297,7 +344,7 @@ const drawVolume = (
   context.rect(volumeArea.x, volumeArea.y, volumeArea.width, volumeArea.height);
   context.clip();
 
-  for (const candle of scene.candles) {
+  for (const candle of candles) {
     const x =
       plotArea.x + logicalIndexToCoordinate(candle.logicalIndex, scene.frame.timeScale);
     const barHeight = (candle.volume / maximumVolume) * Math.max(1, volumeArea.height - 2);
@@ -347,7 +394,10 @@ const drawCrosshair = (
   context.setLineDash([4, 4]);
   context.beginPath();
   context.moveTo(crosshair.x, plotArea.y);
-  context.lineTo(crosshair.x, plotArea.y + plotArea.height);
+  context.lineTo(
+    crosshair.x,
+    plotArea.y + plotArea.height + scene.frame.layout.volumeArea.height,
+  );
   context.moveTo(plotArea.x, crosshair.y);
   context.lineTo(plotArea.x + plotArea.width, crosshair.y);
   context.stroke();
