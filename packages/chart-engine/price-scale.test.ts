@@ -38,22 +38,20 @@ describe('price scale transformations', () => {
   });
 
   it('round trips percentage coordinates around the selected base value', () => {
-    const scale = createPriceScale(
-      { min: 90, max: 110 },
-      400,
-      { mode: 'percentage', baseValue: 100 },
-    );
+    const scale = createPriceScale({ min: 90, max: 110 }, 400, {
+      mode: 'percentage',
+      baseValue: 100,
+    });
 
     expect(priceToCoordinate(100, scale)).toBe(200);
     expect(coordinateToPrice(200, scale)).toBe(100);
   });
 
   it('round trips indexed-to-100 coordinates', () => {
-    const scale = createPriceScale(
-      { min: 50, max: 150 },
-      400,
-      { mode: 'indexed-to-100', baseValue: 100 },
-    );
+    const scale = createPriceScale({ min: 50, max: 150 }, 400, {
+      mode: 'indexed-to-100',
+      baseValue: 100,
+    });
 
     expect(priceToCoordinate(100, scale)).toBe(200);
     expect(coordinateToPrice(priceToCoordinate(125, scale), scale)).toBeCloseTo(125);
@@ -68,11 +66,10 @@ describe('price scale transformations', () => {
   });
 
   it('formats percentage ticks in relative units', () => {
-    const scale = createPriceScale(
-      { min: 90, max: 110 },
-      400,
-      { mode: 'percentage', baseValue: 100 },
-    );
+    const scale = createPriceScale({ min: 90, max: 110 }, 400, {
+      mode: 'percentage',
+      baseValue: 100,
+    });
     const ticks = generatePriceTicks(scale, 5);
 
     expect(ticks.map((tick) => tick.label)).toEqual(['-10%', '-5%', '0%', '+5%', '+10%']);
@@ -101,9 +98,9 @@ describe('price scale transformations', () => {
     expect(() => createPriceScale({ min: 0, max: Number.POSITIVE_INFINITY }, 400)).toThrow(
       RangeError,
     );
-    expect(() =>
-      createPriceScale({ min: -1, max: 10 }, 400, { mode: 'logarithmic' }),
-    ).toThrow(RangeError);
+    expect(() => createPriceScale({ min: -1, max: 10 }, 400, { mode: 'logarithmic' })).toThrow(
+      RangeError,
+    );
   });
 
   it('requires a positive base value for relative price scales', () => {
