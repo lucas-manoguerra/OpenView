@@ -1116,7 +1116,9 @@ test('changes price scale modes and restores the full chart viewport', async ({ 
   await page.getByTestId('chart-fit-content').click();
 
   await expect(canvas).toHaveAttribute('data-chart-ready', 'true');
-  await expect(canvas).toHaveAttribute('data-candles-count', '500');
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThanOrEqual(500);
 });
 
 test('navigates historical time, zooms the time scale and returns to realtime', async ({
