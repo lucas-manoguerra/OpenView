@@ -61,7 +61,7 @@ export const attachCanvasPointerEvents = (
 ): CanvasPointerAdapter => {
   let destroyed = false;
   let activePointerId: number | null = null;
-  let activeDrawingTool: Exclude<CanvasDrawingTool, 'cursor'> | null = null;
+  let activeDrawingTool: Exclude<CanvasDrawingTool, 'cursor' | 'select'> | null = null;
   let drawingStart: ChartDataPoint | null = null;
   let activeDrawingEdit: CanvasDrawingEditGesture | null = null;
 
