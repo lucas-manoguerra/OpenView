@@ -60,6 +60,12 @@ describe('Binance Spot instrument discovery', () => {
         baseAsset: 'BTC',
         quoteAsset: 'USDT',
       },
+      {
+        id: 'ETH-BTC',
+        symbol: 'ETH/BTC',
+        baseAsset: 'ETH',
+        quoteAsset: 'BTC',
+      },
     ]);
   });
 
