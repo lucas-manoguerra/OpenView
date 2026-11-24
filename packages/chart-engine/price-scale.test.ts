@@ -141,6 +141,15 @@ describe('price scale transformations', () => {
     expect(ticks.map((tick) => tick.price)).toEqual([1.02, 1.04, 1.06, 1.08]);
   });
 
+  it('formats large price ticks with locale-aware grouping and decimal precision', () => {
+    const scale = createPriceScale({ min: 12_340, max: 12_360 }, 400);
+    const defaultTicks = generatePriceTicks(scale, 5);
+    const localizedTicks = generatePriceTicks(scale, 5, { locale: 'es-AR' });
+
+    expect(defaultTicks.map((tick) => tick.label)).toContain('12,350');
+    expect(localizedTicks.map((tick) => tick.label)).toContain('12.350');
+  });
+
   it('formats percentage ticks in relative units', () => {
     const scale = createPriceScale({ min: 90, max: 110 }, 400, {
       mode: 'percentage',
