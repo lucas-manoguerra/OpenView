@@ -164,3 +164,46 @@ export const resizeTimeScale = (scale: TimeScale, width: number): TimeScale =>
     maxBarSpacing: scale.maxBarSpacing,
     inverted: scale.inverted,
   });
+
+export type TimeScaleTick = Readonly<{
+  logicalIndex: number;
+  coordinate: number;
+}>;
+
+const getNiceLogicalStep = (range: LogicalRange, targetTickCount: number): number => {
+  const roughStep = (range.to - range.from) / Math.max(1, targetTickCount - 1);
+  const magnitude = 10 ** Math.floor(Math.log10(roughStep));
+  const normalizedStep = roughStep / magnitude;
+  const tolerance = Number.EPSILON * Math.max(1, normalizedStep) * 16;
+  const multiplier =
+    [1, 2, 2.5, 5, 10].find((candidate) => normalizedStep <= candidate + tolerance) ?? 10;
+
+  return Math.max(1, multiplier * magnitude);
+};
+
+export const generateTimeTicks = (
+  scale: TimeScale,
+  targetTickCount = 6,
+): readonly TimeScaleTick[] => {
+  if (!Number.isInteger(targetTickCount) || targetTickCount < 2 || targetTickCount > 50) {
+    throw new RangeError('Target time tick count must be an integer between 2 and 50.');
+  }
+
+  const step = getNiceLogicalStep(scale.visibleLogicalRange, targetTickCount);
+  const firstIndex = Math.ceil(scale.visibleLogicalRange.from / step) * step;
+  const ticks: TimeScaleTick[] = [];
+
+  for (let logicalIndex = firstIndex; ticks.length < 100; logicalIndex += step) {
+    if (logicalIndex > scale.visibleLogicalRange.to + Number.EPSILON * 16) {
+      break;
+    }
+
+    const coordinate = logicalIndexToCoordinate(logicalIndex, scale);
+
+    if (coordinate >= 0 && coordinate <= scale.width) {
+      ticks.push(Object.freeze({ logicalIndex, coordinate }));
+    }
+  }
+
+  return Object.freeze(ticks);
+};
