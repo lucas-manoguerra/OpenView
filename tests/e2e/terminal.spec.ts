@@ -344,7 +344,7 @@ test('tracks multiple instruments and changes the selected chart market', async 
   const sendTicker = (symbol: string, last: string, bid: string, ask: string, change: string) => {
     quotesRoute.send(
       JSON.stringify({
-        stream: symbol.toLowerCase() + '@ticker',
+        stream: `${symbol.toLowerCase()}@ticker`,
         data: {
           e: '24hrTicker',
           E: Date.now(),
