@@ -190,7 +190,8 @@ export const generateTimeTicks = (
   }
 
   const step = getNiceLogicalStep(scale.visibleLogicalRange, targetTickCount);
-  const firstIndex = Math.ceil(scale.visibleLogicalRange.from / step) * step;
+  const firstTickIndex = Math.ceil(scale.visibleLogicalRange.from / step) * step;
+  const firstIndex = Object.is(firstTickIndex, -0) ? 0 : firstTickIndex;
   const ticks: TimeScaleTick[] = [];
 
   for (let logicalIndex = firstIndex; ticks.length < 100; logicalIndex += step) {
