@@ -226,9 +226,10 @@ export function ChartCanvas({
   const [priceScaleInverted, setPriceScaleInverted] = useState(false);
   const priceScaleModeRef = useRef<PriceScaleMode>(priceScaleMode);
   const autoScaleRef = useRef(autoScale);
-  const priceScaleModeRef = useRef<PriceScaleMode>(priceScaleMode);
+  const priceScaleLockedRef = useRef(priceScaleLocked);
   priceScaleModeRef.current = priceScaleMode;
   autoScaleRef.current = autoScale;
+  priceScaleLockedRef.current = priceScaleLocked;
   const renderCandles = useMemo(() => createRenderCandles(candles), [candles]);
   const onNeedMoreHistoryRef = useRef(onNeedMoreHistory);
   onNeedMoreHistoryRef.current = onNeedMoreHistory;
@@ -303,12 +304,16 @@ export function ChartCanvas({
           },
         });
         controller = interactionController;
+        interactionController.setPriceScaleLocked(priceScaleLockedRef.current);
         renderer.setScene(scene);
         pointerAdapter = attachCanvasPointerEvents(canvas, interactionController, {
           getAutoScalePriceRange: () => getVisiblePriceRange(interactionController, currentCandles),
         });
       } else {
         controller.setFrame(frame);
+        if (autoScaleRef.current) {
+          controller.fitPriceScale(getVisiblePriceRange(controller, currentCandles));
+        }
       }
 
       canvas.dataset['chartReady'] = 'true';
