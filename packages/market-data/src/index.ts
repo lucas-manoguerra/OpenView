@@ -30,6 +30,8 @@ export {
 export {
   BybitSpotMarketDataProvider,
   type BybitSpotProviderOptions,
+  type BybitWebSocketConnection,
+  type BybitWebSocketFactory,
 } from './providers/bybit-spot';
 export {
   OkxSpotMarketDataProvider,
