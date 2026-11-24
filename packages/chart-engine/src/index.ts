@@ -8,6 +8,22 @@ export {
   type ChartFrameOptions,
 } from './chart-frame';
 export {
+  createChartRenderScene,
+  DEFAULT_CHART_THEME,
+  drawChartScene,
+  type ChartRenderCandle,
+  type ChartRenderScene,
+  type ChartRenderTheme,
+} from './canvas-painter';
+export {
+  CanvasRenderer,
+  createCanvasRenderer,
+  type CanvasFrameScheduler,
+  type CanvasRendererOptions,
+  type CanvasRendererSize,
+  type CanvasSurface,
+} from './canvas-renderer';
+export {
   coordinateToPrice,
   createPriceScale,
   generatePriceTicks,
@@ -20,12 +36,14 @@ export {
 export {
   coordinateToLogicalIndex,
   createTimeScale,
+  generateTimeTicks,
   logicalIndexToCoordinate,
   panTimeScale,
   resizeTimeScale,
   type LogicalRange,
   type TimeScale,
   type TimeScaleOptions,
+  type TimeScaleTick,
   zoomTimeScale,
 } from './time-scale';
 export {
