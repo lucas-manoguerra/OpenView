@@ -37,6 +37,32 @@ const createKlines = (interval: string, startTime: number, endTime: number): unk
   });
 };
 
+const createBybitRows = (
+  interval: string,
+  startTime: number,
+  endTime: number,
+): unknown[][] =>
+  createKlines(interval, startTime, endTime)
+    .map((row) => [...row.slice(0, 6), 'turnover'])
+    .reverse();
+
+const createOkxRows = (
+  interval: string,
+  startTime: number,
+  endTime: number,
+): unknown[][] =>
+  createKlines(interval, startTime, endTime).map((row) => [
+    row[0],
+    row[1],
+    row[2],
+    row[3],
+    row[4],
+    row[5],
+    'quote-volume',
+    'quote-volume',
+    '1',
+  ]);
+
 const installBinanceMock = async (page: Page): Promise<void> => {
   await page.route(BINANCE_KLINES_URL, async (route) => {
     const url = new URL(route.request().url());
@@ -104,6 +130,69 @@ test('loads Binance Spot history and changes candle interval', async ({ page }) 
     .toBeGreaterThan(400);
   expect(requestedIntervals).toContain('1m');
   expect(requestedIntervals).toContain('5m');
+});
+
+test('switches historical data between Binance, Bybit and OKX Spot', async ({ page }) => {
+  await page.route('https://api.bybit.com/v5/market/kline**', async (route) => {
+    const url = new URL(route.request().url());
+    const interval = url.searchParams.get('interval') === '5' ? '5m' : '1m';
+    const startTime = Number(url.searchParams.get('start') ?? 0);
+    const endTime = Number(url.searchParams.get('end') ?? Date.now()) + 1;
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        retCode: 0,
+        retMsg: 'OK',
+        result: {
+          category: 'spot',
+          symbol: 'BTCUSDT',
+          list: createBybitRows(interval, startTime, endTime),
+        },
+      }),
+    });
+  });
+
+  await page.route('https://www.okx.com/api/v5/market/history-candles**', async (route) => {
+    const url = new URL(route.request().url());
+    const interval = url.searchParams.get('bar') ?? '1m';
+    const after = Number(url.searchParams.get('after') ?? Date.now());
+    const limit = Number(url.searchParams.get('limit') ?? 100);
+    const duration = getIntervalDuration(interval);
+    const startTime = after - duration * 501;
+    const rows = createOkxRows(interval, startTime, after)
+      .filter((row) => Number(row[0]) < after)
+      .sort((left, right) => Number(right[0]) - Number(left[0]))
+      .slice(0, limit);
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ code: '0', msg: '', data: rows }),
+    });
+  });
+
+  await page.goto('/');
+
+  const canvas = page.locator('canvas[data-candles-count]');
+  const providerSelect = page.getByTestId('provider-select');
+
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+
+  await providerSelect.selectOption('bybit-spot');
+  await expect(providerSelect).toHaveValue('bybit-spot');
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+
+  await providerSelect.selectOption('okx-spot');
+  await expect(providerSelect).toHaveValue('okx-spot');
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
 });
 
 test('shows a provider error and retries the historical request', async ({ page }) => {
