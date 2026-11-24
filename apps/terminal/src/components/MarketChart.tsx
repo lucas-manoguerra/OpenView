@@ -240,7 +240,10 @@ export function MarketChart() {
 
                   const latestCandle = candlesRef.current.at(-1);
 
-                  if (latestCandle !== undefined && update.candle.timestamp > latestCandle.timestamp) {
+                  if (
+                    latestCandle !== undefined &&
+                    update.candle.timestamp > latestCandle.timestamp
+                  ) {
                     const nextExpectedTimestamp = getNextCandleTimestamp(
                       latestCandle.timestamp,
                       nextInterval,
@@ -507,7 +510,7 @@ export function MarketChart() {
             data-stream-status={displayedStreamStatus}
             data-stream-candle-count={streamCandleCount}
           >
-              {streamStatusLabel}
+            {streamStatusLabel}
           </span>
           {recoveringHistory && (
             <span data-testid="market-stream-recovery" class="text-blue-300">
