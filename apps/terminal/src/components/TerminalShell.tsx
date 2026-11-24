@@ -41,7 +41,11 @@ export function TerminalShell() {
     >
       <header class="flex h-12 shrink-0 items-center justify-between border-b border-white/10 bg-[#11151d] px-3 sm:px-4">
         <div class="flex min-w-0 items-center gap-3">
-          <a class="flex shrink-0 items-center gap-2.5 no-underline" href="/" aria-label="OpenView inicio">
+          <a
+            class="flex shrink-0 items-center gap-2.5 no-underline"
+            href="/"
+            aria-label="OpenView inicio"
+          >
             <span class="grid size-7 place-items-center rounded-md bg-blue-500/15 text-[11px] font-bold text-blue-300">
               OV
             </span>
@@ -96,9 +100,7 @@ export function TerminalShell() {
                 aria-label={item.label}
                 aria-current={activeSection === item.id ? 'page' : undefined}
                 title={item.label}
-                class={
-                  activeSection === item.id ? activeNavigationClass : inactiveNavigationClass
-                }
+                class={activeSection === item.id ? activeNavigationClass : inactiveNavigationClass}
                 onClick={() => setActiveSection(item.id)}
               >
                 {item.abbreviation}
