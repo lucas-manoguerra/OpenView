@@ -5,6 +5,8 @@ export type {
   CandleUpdate,
   DataRedistribution,
   HistoricalCandleRequest,
+  InstrumentDiscoveryFilter,
+  MarketInstrument,
   MarketDataCapabilities,
   MarketDataProvider,
   MarketDataStreamState,
@@ -16,6 +18,7 @@ export type {
 export { MarketDataProviderError } from './errors';
 export { getNextCandleTimestamp } from './candle-continuity';
 export { MarketDataProviderRegistry } from './registry';
+export { MarketInstrumentDiscoveryService } from './instrument-service';
 export { MarketDataStreamService } from './stream-service';
 export {
   HistoricalCandleService,
