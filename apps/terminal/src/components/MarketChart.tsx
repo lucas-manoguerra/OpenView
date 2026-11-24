@@ -52,7 +52,7 @@ const getFallbackInterval = (
   supportedIntervals: readonly CandleInterval[],
 ): CandleInterval | undefined => (supportedIntervals.includes('1m') ? '1m' : supportedIntervals[0]);
 
-const mergeCandleSeries = (...series: readonly (readonly Candle[])[]): readonly Candle[] => {
+const mergeCandleSeries = (...series: (readonly Candle[])[]): readonly Candle[] => {
   const merged = new Map<number, Candle>();
 
   for (const candles of series) {
