@@ -661,10 +661,9 @@ describe('OKX Spot quote stream', () => {
   it('responds to server pings and rejects duplicate normalized instruments', () => {
     const connections: FakeOkxWebSocket[] = [];
     const provider = createStreamProvider(connections);
-    const subscription = provider.subscribeToQuotes(
-      [createInstrumentId('BTC-USDT')],
-      { onQuote: () => undefined },
-    );
+    const subscription = provider.subscribeToQuotes([createInstrumentId('BTC-USDT')], {
+      onQuote: () => undefined,
+    });
     const connection = getItem(connections, 0);
 
     connection.open();
@@ -686,18 +685,16 @@ describe('OKX Spot quote stream', () => {
     const connections: FakeOkxWebSocket[] = [];
     const provider = createStreamProvider(connections);
     const errors: Error[] = [];
-    const subscription = provider.subscribeToQuotes(
-      [createInstrumentId('BTC-USDT')],
-      { onQuote: () => undefined, onError: (error) => errors.push(error) },
-    );
+    const subscription = provider.subscribeToQuotes([createInstrumentId('BTC-USDT')], {
+      onQuote: () => undefined,
+      onError: (error) => errors.push(error),
+    });
     const connection = getItem(connections, 0);
 
     connection.open();
     connection.emit({ event: 'error', code: '60012', msg: 'Invalid channel' });
 
-    expect(errors.at(-1)?.message).toContain(
-      'OKX Spot quote subscription failed (code 60012)',
-    );
+    expect(errors.at(-1)?.message).toContain('OKX Spot quote subscription failed (code 60012)');
     expect(connection.closeCalls).toBe(1);
 
     subscription.unsubscribe();
