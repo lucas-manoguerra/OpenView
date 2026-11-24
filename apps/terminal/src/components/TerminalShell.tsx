@@ -52,7 +52,7 @@ export function TerminalShell() {
             <span class="text-sm font-semibold tracking-tight text-white">OpenView</span>
           </a>
           <span class="hidden h-5 w-px bg-white/10 sm:block" />
-          <nav aria-label="Navegación del workspace" class="hidden items-center gap-1 sm:flex">
+          <nav aria-label="Navegación del workspace" class="hidden items-center gap-1 sm:flex md:hidden">
             <button
               type="button"
               aria-current={activeSection === 'chart' ? 'page' : undefined}
