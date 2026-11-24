@@ -393,7 +393,9 @@ test('adds, removes and restores watchlist preferences after reload', async ({ p
   await page.getByTestId('watchlist-add-instrument').click();
 
   await expect(page.getByTestId('watchlist-instrument')).toHaveCount(4);
-  await expect(page.getByTestId('watchlist-instrument').filter({ hasText: 'XRP / USDT' })).toBeVisible();
+  await expect(
+    page.getByTestId('watchlist-instrument').filter({ hasText: 'XRP / USDT' }),
+  ).toBeVisible();
 
   await page.getByRole('button', { name: 'Ethereum ETH / USDT' }).click();
   await page.getByTestId('watchlist-remove-ETH-USDT').click();
