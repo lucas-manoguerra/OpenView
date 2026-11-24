@@ -26,6 +26,7 @@ type ChartCanvasProps = Readonly<{
   loading: boolean;
   error: string | null;
   onRetry: () => void;
+  onNeedMoreHistory: () => void;
 }>;
 
 type ChartRuntime = Readonly<{
@@ -38,6 +39,7 @@ type ChartRenderData = Readonly<{
 }>;
 
 const EMPTY_PRICE_RANGE: NumericRange = Object.freeze({ min: 0, max: 1 });
+const OLDER_HISTORY_TRIGGER_LOGICAL_INDEX = 120;
 
 const createRenderCandles = (candles: readonly Candle[]): readonly ChartRenderCandle[] =>
   Object.freeze(
@@ -195,9 +197,12 @@ export function ChartCanvas({
   loading,
   error,
   onRetry,
+  onNeedMoreHistory,
 }: ChartCanvasProps) {
   const runtimeRef = useRef<ChartRuntime | null>(null);
   const renderCandles = useMemo(() => createRenderCandles(candles), [candles]);
+  const onNeedMoreHistoryRef = useRef(onNeedMoreHistory);
+  onNeedMoreHistoryRef.current = onNeedMoreHistory;
   const renderDataRef = useRef<ChartRenderData>({ candles: renderCandles });
   renderDataRef.current = { candles: renderCandles };
 
@@ -229,6 +234,13 @@ export function ChartCanvas({
         crosshair: snapshot.crosshair,
       });
       renderer.setScene(scene);
+
+      if (
+        snapshot.frame.timeScale.visibleLogicalRange.from <= OLDER_HISTORY_TRIGGER_LOGICAL_INDEX &&
+        currentCandles.length > 0
+      ) {
+        onNeedMoreHistoryRef.current();
+      }
     };
 
     const handleResize = (size: CanvasResize): void => {

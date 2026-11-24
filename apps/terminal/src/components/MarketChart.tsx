@@ -48,6 +48,19 @@ const getFallbackInterval = (
   supportedIntervals: readonly CandleInterval[],
 ): CandleInterval | undefined => (supportedIntervals.includes('1m') ? '1m' : supportedIntervals[0]);
 
+const getOlderHistoryStartTime = (endTime: number, interval: CandleInterval): number => {
+  if (interval !== '1M') {
+    return endTime - INTERVAL_DURATION_MS[interval] * HISTORY_CANDLE_COUNT;
+  }
+
+  const start = new Date(endTime);
+  start.setUTCDate(1);
+  start.setUTCHours(0, 0, 0, 0);
+  start.setUTCMonth(start.getUTCMonth() - HISTORY_CANDLE_COUNT);
+
+  return start.getTime();
+};
+
 const getHistoryStartTime = (endTime: number, interval: CandleInterval): number => {
   if (interval !== '1M') {
     return endTime - INTERVAL_DURATION_MS[interval] * HISTORY_CANDLE_COUNT;
@@ -69,15 +82,27 @@ export function MarketChart() {
   >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [olderLoading, setOlderLoading] = useState(false);
+  const [olderError, setOlderError] = useState<string | null>(null);
   const initializedRef = useRef(false);
   const requestIdRef = useRef(0);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const olderAbortControllerRef = useRef<AbortController | null>(null);
+  const olderRequestRef = useRef(false);
+  const hasMoreHistoryRef = useRef(true);
+  const candlesRef = useRef(candles);
+  candlesRef.current = candles;
 
   const loadCandles = useCallback(
     async (nextProviderId: string, nextInterval: CandleInterval): Promise<void> => {
       const requestId = requestIdRef.current + 1;
       requestIdRef.current = requestId;
       abortControllerRef.current?.abort();
+      olderAbortControllerRef.current?.abort();
+      olderRequestRef.current = false;
+      hasMoreHistoryRef.current = true;
+      setOlderLoading(false);
+      setOlderError(null);
 
       const controller = new AbortController();
       abortControllerRef.current = controller;
@@ -121,6 +146,72 @@ export function MarketChart() {
     },
     [],
   );
+
+  const loadOlderCandles = useCallback(async (): Promise<void> => {
+    const currentCandles = candlesRef.current;
+    const oldestCandle = currentCandles[0];
+
+    if (
+      oldestCandle === undefined ||
+      olderRequestRef.current ||
+      !hasMoreHistoryRef.current ||
+      loading
+    ) {
+      return;
+    }
+
+    const requestId = requestIdRef.current;
+    const controller = new AbortController();
+    olderAbortControllerRef.current = controller;
+    olderRequestRef.current = true;
+    setOlderLoading(true);
+    setOlderError(null);
+
+    try {
+      const result = await historicalService.getHistoricalCandles(providerId, {
+        instrumentId: INSTRUMENT_ID,
+        interval,
+        startTime: getOlderHistoryStartTime(oldestCandle.timestamp, interval),
+        endTime: oldestCandle.timestamp,
+        signal: controller.signal,
+      });
+
+      if (requestId !== requestIdRef.current) {
+        return;
+      }
+
+      const mergedCandles = new Map<number, (typeof result)[number]>();
+
+      for (const candle of [...result, ...candlesRef.current]) {
+        mergedCandles.set(candle.timestamp, candle);
+      }
+
+      const nextCandles = [...mergedCandles.values()].sort(
+        (first, second) => first.timestamp - second.timestamp,
+      );
+
+      if (nextCandles.length === candlesRef.current.length) {
+        hasMoreHistoryRef.current = false;
+        return;
+      }
+
+      candlesRef.current = nextCandles;
+      setCandles(nextCandles);
+    } catch (cause) {
+      if (controller.signal.aborted || requestId !== requestIdRef.current) {
+        return;
+      }
+
+      setOlderError(
+        cause instanceof Error ? cause.message : 'No se pudo cargar el bloque histórico anterior.',
+      );
+    } finally {
+      if (requestId === requestIdRef.current) {
+        olderRequestRef.current = false;
+        setOlderLoading(false);
+      }
+    }
+  }, [interval, loading, providerId]);
 
   const bindInitializer = useCallback(
     (element: HTMLSpanElement | null): void => {
@@ -219,7 +310,28 @@ export function MarketChart() {
         loading={loading}
         error={error}
         onRetry={() => void loadCandles(providerId, interval)}
+        onNeedMoreHistory={() => void loadOlderCandles()}
       />
+      {(olderLoading || olderError !== null) && (
+        <div
+          class="flex items-center justify-end gap-2 px-1 text-[11px] text-slate-500"
+          role="status"
+        >
+          {olderLoading && <span>Cargando histórico anterior…</span>}
+          {olderError !== null && (
+            <>
+              <span class="text-rose-300">{olderError}</span>
+              <button
+                type="button"
+                onClick={() => void loadOlderCandles()}
+                class="rounded border border-white/10 px-2 py-1 text-slate-300 hover:bg-white/5"
+              >
+                Reintentar histórico
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

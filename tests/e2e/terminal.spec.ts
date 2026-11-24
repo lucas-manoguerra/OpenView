@@ -124,6 +124,37 @@ test('loads Binance Spot history and changes candle interval', async ({ page }) 
   expect(requestedIntervals).toContain('5m');
 });
 
+test('loads older historical candles when panning to the left boundary', async ({ page }) => {
+  let historyRequestCount = 0;
+
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname === '/api/v3/klines') {
+      historyRequestCount += 1;
+    }
+  });
+
+  await page.goto('/');
+
+  const canvas = page.locator('canvas[data-candles-count]');
+  await expect.poll(async () => Number(await canvas.getAttribute('data-candles-count'))).toBe(500);
+
+  const bounds = await canvas.boundingBox();
+
+  expect(bounds).not.toBeNull();
+
+  if (bounds === null) {
+    throw new Error('The chart canvas must have a visible bounding box.');
+  }
+
+  await page.mouse.move(bounds.x + bounds.width * 0.5, bounds.y + bounds.height * 0.5);
+  await page.mouse.wheel(-2600, 0);
+
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(500);
+  expect(historyRequestCount).toBeGreaterThan(1);
+});
+
 test('switches historical data between Binance, Bybit and OKX Spot', async ({ page }) => {
   await page.route('https://api.bybit.com/v5/market/kline**', async (route) => {
     const url = new URL(route.request().url());

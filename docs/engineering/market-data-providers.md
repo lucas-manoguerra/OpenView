@@ -25,6 +25,10 @@ La terminal utiliza `HistoricalCandleService` desde el componente `MarketChart` 
 - La fuente inicial es `binance-spot`, con el instrumento `BTC-USDT` y temporalidad `1m`.
 - El selector de fuente ofrece Binance Spot, Bybit Spot y OKX Spot. El selector de temporalidad se construye a partir de `supportedIntervals` de la fuente elegida.
 - Cada consulta solicita hasta 500 períodos recientes y utiliza timestamps Unix en milisegundos con rango final exclusivo.
+- Al acercarse al inicio de la ventana visible (120 índices lógicos), `ChartCanvas` solicita otro bloque mediante un callback; `MarketChart` consulta el mismo proveedor e intervalo desde el timestamp de la vela más antigua.
+- Los bloques anteriores se combinan por timestamp, se ordenan cronológicamente y no duplican velas. Una respuesta sin velas nuevas detiene nuevas consultas hasta que se cambie la fuente o la temporalidad.
+- Al anteponer velas, los índices lógicos de la serie se desplazan junto con el extremo derecho, conservando el `rightOffset` y la posición de las velas que ya estaban visibles.
+- La carga incremental tiene control de concurrencia, cancelación al cambiar la consulta principal y un reintento independiente si falla el bloque anterior.
 - Para `1M`, el inicio del rango se calcula usando límites de mes calendario UTC; no se aproxima como 30 días por mes.
 - Al iniciar una consulta, se cancela la anterior. Un identificador de solicitud evita que una respuesta antigua reemplace datos más recientes.
 - Los errores del proveedor se muestran con una acción de reintento; una respuesta vacía se distingue de un error.
