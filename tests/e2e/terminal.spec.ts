@@ -37,20 +37,12 @@ const createKlines = (interval: string, startTime: number, endTime: number): unk
   });
 };
 
-const createBybitRows = (
-  interval: string,
-  startTime: number,
-  endTime: number,
-): unknown[][] =>
+const createBybitRows = (interval: string, startTime: number, endTime: number): unknown[][] =>
   createKlines(interval, startTime, endTime)
     .map((row) => [...row.slice(0, 6), 'turnover'])
     .reverse();
 
-const createOkxRows = (
-  interval: string,
-  startTime: number,
-  endTime: number,
-): unknown[][] =>
+const createOkxRows = (interval: string, startTime: number, endTime: number): unknown[][] =>
   createKlines(interval, startTime, endTime).map((row) => [
     row[0],
     row[1],
