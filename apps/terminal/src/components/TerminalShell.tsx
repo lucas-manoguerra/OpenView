@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { ChartCanvas } from './ChartCanvas';
+import { MarketChart } from './MarketChart';
 
 type WorkspaceSection = 'watchlist' | 'markets' | 'chart';
 
@@ -93,8 +93,8 @@ export function TerminalShell() {
                 {sectionTitles[activeSection]}
               </h1>
               <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                La infraestructura inicial está preparada. Las capacidades de mercado se
-                incorporarán sobre contratos explícitos y módulos independientes.
+                Velas históricas reales, múltiples fuentes públicas y un motor gráfico independiente
+                se conectan mediante contratos explícitos.
               </p>
             </div>
             <span class="rounded-lg border border-amber-400/20 bg-amber-400/5 px-3 py-2 text-xs text-amber-200">
@@ -113,19 +113,19 @@ export function TerminalShell() {
                   Interactive preview
                 </span>
               </div>
-              <ChartCanvas />
+              <MarketChart />
             </div>
 
             <div class="space-y-4">
               <article class="rounded-2xl border border-white/10 bg-[#0d121d] p-5">
                 <div class="text-xs font-medium text-slate-400">Market data</div>
-                <div class="mt-3 text-lg font-semibold text-white">Provider contracts</div>
+                <div class="mt-3 text-lg font-semibold text-white">Fuentes históricas</div>
                 <p class="mt-2 text-sm leading-6 text-slate-500">
-                  Históricos y streaming se conectarán mediante interfaces independientes.
+                  Binance, Bybit y OKX entregan velas históricas a través del mismo servicio.
                 </p>
                 <div class="mt-4 flex items-center justify-between border-t border-white/10 pt-4 text-xs">
-                  <span class="text-slate-500">Providers connected</span>
-                  <span class="font-medium text-slate-300">0</span>
+                  <span class="text-slate-500">Proveedores disponibles</span>
+                  <span class="font-medium text-emerald-300">3</span>
                 </div>
               </article>
 
