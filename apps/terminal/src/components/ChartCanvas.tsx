@@ -703,10 +703,9 @@ export function ChartCanvas({
     }
 
     drawingUndoStackRef.current = Object.freeze(drawingUndoStackRef.current.slice(0, -1));
-    drawingRedoStackRef.current = Object.freeze([
-      ...drawingRedoStackRef.current,
-      drawingsRef.current,
-    ].slice(-50));
+    drawingRedoStackRef.current = Object.freeze(
+      [...drawingRedoStackRef.current, drawingsRef.current].slice(-50),
+    );
     drawingsRef.current = previousDrawings;
     setDrawings(previousDrawings);
     setDrawingUndoCount(drawingUndoStackRef.current.length);
@@ -722,10 +721,9 @@ export function ChartCanvas({
     }
 
     drawingRedoStackRef.current = Object.freeze(drawingRedoStackRef.current.slice(0, -1));
-    drawingUndoStackRef.current = Object.freeze([
-      ...drawingUndoStackRef.current,
-      drawingsRef.current,
-    ].slice(-50));
+    drawingUndoStackRef.current = Object.freeze(
+      [...drawingUndoStackRef.current, drawingsRef.current].slice(-50),
+    );
     drawingsRef.current = nextDrawings;
     setDrawings(nextDrawings);
     setDrawingUndoCount(drawingUndoStackRef.current.length);
