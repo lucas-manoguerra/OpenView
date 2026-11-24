@@ -416,7 +416,6 @@ export class OkxSpotMarketDataProvider implements MarketDataProvider {
     });
   }
 
-
   subscribeToQuotes(
     instrumentIds: readonly InstrumentId[],
     handlers: QuoteStreamHandlers,
