@@ -297,6 +297,31 @@ export class ChartInteractionController {
     return true;
   }
 
+  setRightOffset(rightOffset: number): boolean {
+    if (!Number.isFinite(rightOffset)) {
+      throw new RangeError('Right offset must be a finite number.');
+    }
+
+    const currentScale = this.frame.timeScale;
+
+    if (currentScale.rightOffset === rightOffset) {
+      return false;
+    }
+
+    const timeScale = createTimeScale(currentScale.width, currentScale.rightmostLogicalIndex, {
+      barSpacing: currentScale.barSpacing,
+      rightOffset,
+      minBarSpacing: currentScale.minBarSpacing,
+      maxBarSpacing: currentScale.maxBarSpacing,
+      inverted: currentScale.inverted,
+    });
+
+    this.frame = withTimeScale(this.frame, timeScale);
+    this.crosshair = null;
+    this.emit();
+    return true;
+  }
+
   scrollToRealtime(): boolean {
     const currentScale = this.frame.timeScale;
 
