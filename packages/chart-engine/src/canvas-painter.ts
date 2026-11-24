@@ -721,6 +721,8 @@ const drawDrawings = (context: CanvasRenderingContext2D, scene: ChartRenderScene
 
     const startX = plotArea.x + logicalIndexToCoordinate(startIndex, frame.timeScale);
     const startY = plotArea.y + priceToCoordinate(drawing.start.price, frame.priceScale);
+    const startHandle: ChartCoordinate = { x: startX, y: startY };
+    let endHandle: ChartCoordinate | null = null;
 
     context.beginPath();
 
@@ -739,6 +741,7 @@ const drawDrawings = (context: CanvasRenderingContext2D, scene: ChartRenderScene
 
       const endX = plotArea.x + logicalIndexToCoordinate(endIndex, frame.timeScale);
       const endY = plotArea.y + priceToCoordinate(drawing.end.price, frame.priceScale);
+      endHandle = { x: endX, y: endY };
 
       if (drawing.type === 'rectangle') {
         context.moveTo(startX, startY);
@@ -790,10 +793,10 @@ const drawDrawings = (context: CanvasRenderingContext2D, scene: ChartRenderScene
     context.stroke();
 
     if (scene.selectedDrawingId === drawing.id) {
-      const handles = [start];
+      const handles: ChartCoordinate[] = [startHandle];
 
-      if (drawing.end !== null && end !== null) {
-        handles.push(end);
+      if (endHandle !== null) {
+        handles.push(endHandle);
       }
 
       for (const handle of handles) {
