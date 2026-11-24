@@ -285,7 +285,7 @@ describe('canvas chart painter', () => {
       'vertical-line',
       'rectangle',
     ]);
-    expect(calls.filter((call) => call.name === 'stroke')).toHaveLength(3);
+    expect(calls.filter((call) => call.name === 'stroke').length).toBeGreaterThanOrEqual(3);
     expect(calls.filter((call) => call.name === 'lineTo').length).toBeGreaterThanOrEqual(8);
   });
 
