@@ -489,6 +489,29 @@ test('adds, removes and restores watchlist preferences after reload', async ({ p
 test('searches continuous symbols across all Spot providers and filters by exchange', async ({
   page,
 }) => {
+  await page.route('https://api.bybit.com/v5/market/kline**', async (route) => {
+    const url = new URL(route.request().url());
+    const interval = url.searchParams.get('interval') === '5' ? '5m' : '1m';
+    const startTime = Number(url.searchParams.get('start') ?? 0);
+    const endTime = Number(url.searchParams.get('end') ?? Date.now());
+    const candles = createBybitRows(interval, startTime, endTime);
+    const latestCandle = candles.at(-1);
+
+    if (latestCandle !== undefined) {
+      updateLatestHistoricalCandleTimestamp(page, Number(latestCandle[0]));
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        retCode: 0,
+        retMsg: 'OK',
+        result: { category: 'spot', symbol: 'ADAUSDT', list: candles },
+      }),
+    });
+  });
+
   await page.goto('/');
   await page.keyboard.press('/');
 
