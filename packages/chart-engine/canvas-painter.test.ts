@@ -96,6 +96,31 @@ describe('canvas chart painter', () => {
     expect(calls.some((call) => call.name === 'fillRect' && call.args[0] === 0)).toBe(true);
   });
 
+  it('draws timestamp labels instead of logical indices on the time axis', () => {
+    const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 2);
+    const scene = createChartRenderScene(frame, createCandles());
+    const { context, calls } = createMockContext();
+
+    drawChartScene(context, scene);
+
+    const timeAxisLabels = calls
+      .filter(
+        (call) =>
+          call.name === 'fillText' &&
+          typeof call.args[0] === 'string' &&
+          call.args[2] === frame.layout.timeScaleArea.y + frame.layout.timeScaleArea.height / 2,
+      )
+      .map((call) => call.args[0]);
+
+    expect(timeAxisLabels.length).toBeGreaterThan(0);
+    expect(timeAxisLabels.every((label) => typeof label === 'string' && label.includes(':'))).toBe(
+      true,
+    );
+    expect(timeAxisLabels).not.toContain('0');
+    expect(timeAxisLabels).not.toContain('1');
+    expect(timeAxisLabels).not.toContain('2');
+  });
+
   it('draws bullish, bearish and unchanged candles inside the plot clip', () => {
     const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 10);
     const scene = createChartRenderScene(frame, createCandles());
