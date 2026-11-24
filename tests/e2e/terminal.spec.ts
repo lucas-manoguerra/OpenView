@@ -449,6 +449,7 @@ test('adds, removes and restores watchlist preferences after reload', async ({ p
 
   const watchlist = page.getByTestId('market-watchlist');
 
+  await expect(watchlist).toHaveAttribute('data-catalog-status', 'ready');
   await expect(page.getByTestId('watchlist-instrument')).toHaveCount(3);
   await page.getByTestId('watchlist-open-search').click();
   await expect(page.getByTestId('symbol-search-modal')).toBeVisible();
@@ -513,6 +514,10 @@ test('searches continuous symbols across all Spot providers and filters by excha
   });
 
   await page.goto('/');
+  await expect(page.getByTestId('market-watchlist')).toHaveAttribute(
+    'data-catalog-status',
+    'ready',
+  );
   await page.keyboard.press('/');
 
   const modal = page.getByTestId('symbol-search-modal');
