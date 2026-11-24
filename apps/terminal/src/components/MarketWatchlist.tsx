@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'preact/hooks';
+import { useCallback, useMemo, useRef, useState } from 'preact/hooks';
 import type { QuoteUpdate } from '@openview/market-data';
 import {
   MAX_WATCHLIST_INSTRUMENTS,
@@ -422,6 +422,42 @@ export function MarketWatchlist({
   onRemove,
 }: MarketWatchlistProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const shortcutDocumentRef = useRef<Document | null>(null);
+  const onOpenSearchRef = useRef(onOpenSearch);
+  onOpenSearchRef.current = onOpenSearch;
+  const handleDocumentShortcut = useCallback((event: KeyboardEvent): void => {
+    const target = event.target;
+
+    if (
+      event.key !== '/' ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey ||
+      (target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT'))
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    setIsSearchOpen(true);
+    onOpenSearchRef.current();
+  }, []);
+  const bindShortcutRoot = useCallback(
+    (element: HTMLDivElement | null): void => {
+      shortcutDocumentRef.current?.removeEventListener('keydown', handleDocumentShortcut);
+      shortcutDocumentRef.current = null;
+
+      if (element !== null) {
+        shortcutDocumentRef.current = element.ownerDocument;
+        shortcutDocumentRef.current.addEventListener('keydown', handleDocumentShortcut);
+      }
+    },
+    [handleDocumentShortcut],
+  );
   const atCapacity = instruments.length >= MAX_WATCHLIST_INSTRUMENTS;
   const availableIds = new Set(availableInstrumentIds);
 
@@ -431,7 +467,7 @@ export function MarketWatchlist({
   };
 
   return (
-    <>
+    <div ref={bindShortcutRoot}>
       <section
         class="overflow-hidden rounded-xl border border-white/10 bg-[#0a101a]"
         aria-label="Lista de seguimiento"
@@ -586,6 +622,6 @@ export function MarketWatchlist({
           onAdd={onAdd}
         />
       )}
-    </>
+    </div>
   );
 }
