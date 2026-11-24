@@ -14,6 +14,10 @@ export type ReconnectingWebSocketOptions = Readonly<{
   reconnectDelayMs: number;
   maxReconnectDelayMs: number;
   heartbeatIntervalMs?: number;
+  heartbeatMessage?: string;
+  heartbeatOnIdle?: boolean;
+  heartbeatResponse?: string;
+  heartbeatResponseTimeoutMs?: number;
   onOpen?: (connection: MarketDataWebSocketConnection) => void;
   onMessage: (message: string, connection: MarketDataWebSocketConnection) => void;
   onStatus?: (state: MarketDataStreamState) => void;
@@ -27,7 +31,8 @@ export const createReconnectingWebSocketSubscription = (
   let reconnectAttempt = 0;
   let socket: MarketDataWebSocketConnection | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  let heartbeatTimer: ReturnType<typeof setTimeout> | null = null;
+  let heartbeatResponseTimer: ReturnType<typeof setTimeout> | null = null;
 
   const emitError = (cause: unknown): void => {
     options.onError?.(
@@ -44,8 +49,13 @@ export const createReconnectingWebSocketSubscription = (
 
   const clearHeartbeatTimer = (): void => {
     if (heartbeatTimer !== null) {
-      clearInterval(heartbeatTimer);
+      clearTimeout(heartbeatTimer);
       heartbeatTimer = null;
+    }
+
+    if (heartbeatResponseTimer !== null) {
+      clearTimeout(heartbeatResponseTimer);
+      heartbeatResponseTimer = null;
     }
   };
 
@@ -64,14 +74,23 @@ export const createReconnectingWebSocketSubscription = (
     }, delay);
   };
 
-  const startHeartbeat = (connection: MarketDataWebSocketConnection): void => {
-    clearHeartbeatTimer();
-
-    if (options.heartbeatIntervalMs === undefined) {
+  const scheduleHeartbeat = (connection: MarketDataWebSocketConnection): void => {
+    if (
+      options.heartbeatIntervalMs === undefined ||
+      !active ||
+      socket !== connection ||
+      heartbeatResponseTimer !== null
+    ) {
       return;
     }
 
-    heartbeatTimer = setInterval(() => {
+    if (heartbeatTimer !== null) {
+      clearTimeout(heartbeatTimer);
+    }
+
+    heartbeatTimer = setTimeout(() => {
+      heartbeatTimer = null;
+
       if (!active || socket !== connection) {
         return;
       }
@@ -85,14 +104,31 @@ export const createReconnectingWebSocketSubscription = (
       }
 
       try {
-        connection.send(JSON.stringify({ op: 'ping' }));
+        connection.send(options.heartbeatMessage ?? JSON.stringify({ op: 'ping' }));
       } catch (cause) {
         emitError(cause);
         connection.close();
+        return;
+      }
+
+      if (options.heartbeatResponse !== undefined) {
+        heartbeatResponseTimer = setTimeout(() => {
+          heartbeatResponseTimer = null;
+          emitError(new Error('The market data WebSocket heartbeat response timed out.'));
+          connection.close();
+        }, options.heartbeatResponseTimeoutMs ?? options.heartbeatIntervalMs);
+      }
+
+      if (options.heartbeatOnIdle !== true) {
+        scheduleHeartbeat(connection);
       }
     }, options.heartbeatIntervalMs);
   };
 
+  const startHeartbeat = (connection: MarketDataWebSocketConnection): void => {
+    clearHeartbeatTimer();
+    scheduleHeartbeat(connection);
+  };
   const connect = (): void => {
     if (!active) {
       return;
@@ -143,6 +179,20 @@ export const createReconnectingWebSocketSubscription = (
           new RangeError('The market data WebSocket returned a message without text data.'),
         );
         return;
+      }
+
+      if (options.heartbeatResponse !== undefined && messageData === options.heartbeatResponse) {
+        if (heartbeatResponseTimer !== null) {
+          clearTimeout(heartbeatResponseTimer);
+          heartbeatResponseTimer = null;
+        }
+
+        scheduleHeartbeat(connection);
+        return;
+      }
+
+      if (options.heartbeatOnIdle === true && heartbeatResponseTimer === null) {
+        scheduleHeartbeat(connection);
       }
 
       try {

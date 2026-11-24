@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createInstrumentId } from '@openview/market-domain';
-import { OkxSpotMarketDataProvider } from '../src/providers/okx-spot';
+import { OkxSpotMarketDataProvider, type OkxWebSocketConnection } from '../src/providers/okx-spot';
 
 const MINUTE = 60_000;
 const START_TIME = Date.UTC(2024, 0, 1);
@@ -90,6 +90,7 @@ describe('OKX Spot market data provider', () => {
     expect(provider.displayName).toBe('OKX Spot');
     expect(provider.capabilities.historicalCandles).toBe(true);
     expect(provider.capabilities.streamingQuotes).toBe(false);
+    expect(provider.capabilities.streamingCandles).toBe(true);
     expect(provider.capabilities.supportedIntervals).toContain('1s');
     expect(provider.capabilities.supportedIntervals).toContain('1M');
     expect(provider.capabilities.redistribution).toBe('unknown');
@@ -275,5 +276,297 @@ describe('OKX Spot market data provider', () => {
     expect(() => new OkxSpotMarketDataProvider({ baseUrl: 'http://api.test' })).toThrow(RangeError);
     expect(() => new OkxSpotMarketDataProvider({ pageSize: 101 })).toThrow(RangeError);
     expect(() => new OkxSpotMarketDataProvider({ maxPages: 0 })).toThrow(RangeError);
+  });
+});
+
+class FakeOkxWebSocket extends EventTarget {
+  readonly url: string;
+  readonly sent: string[] = [];
+  closeCalls = 0;
+
+  constructor(url: string) {
+    super();
+    this.url = url;
+  }
+
+  send(payload: string): void {
+    this.sent.push(payload);
+  }
+
+  close(): void {
+    this.closeCalls += 1;
+    this.dispatchEvent(new Event('close'));
+  }
+
+  open(): void {
+    this.dispatchEvent(new Event('open'));
+  }
+
+  emit(payload: unknown): void {
+    this.dispatchEvent(
+      new MessageEvent('message', {
+        data: typeof payload === 'string' ? payload : JSON.stringify(payload),
+      }),
+    );
+  }
+}
+
+const createStreamProvider = (
+  connections: FakeOkxWebSocket[],
+  options: Readonly<{
+    reconnectDelayMs?: number;
+    heartbeatIntervalMs?: number;
+    heartbeatResponseTimeoutMs?: number;
+  }> = {},
+) =>
+  new OkxSpotMarketDataProvider({
+    webSocketFactory: (url: string): OkxWebSocketConnection => {
+      const connection = new FakeOkxWebSocket(url);
+      connections.push(connection);
+      return connection;
+    },
+    reconnectDelayMs: options.reconnectDelayMs ?? 1_000,
+    maxReconnectDelayMs: 4_000,
+    heartbeatIntervalMs: options.heartbeatIntervalMs ?? 25_000,
+    heartbeatResponseTimeoutMs: options.heartbeatResponseTimeoutMs ?? 5_000,
+  });
+
+const createStreamRow = (
+  timestamp: number,
+  close = '102',
+  confirm: '0' | '1' = '0',
+): readonly string[] => [
+  String(timestamp),
+  '100',
+  '105',
+  '98',
+  close,
+  '12.5',
+  '1250',
+  '1250',
+  confirm,
+];
+
+describe('OKX Spot candle stream', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('subscribes to the selected candle channel and normalizes partial and final updates', () => {
+    const connections: FakeOkxWebSocket[] = [];
+    const provider = createStreamProvider(connections);
+    const updates: unknown[] = [];
+    const states: string[] = [];
+    const errors: Error[] = [];
+    const subscription = provider.subscribeToCandles(
+      { instrumentId: createInstrumentId('OKX:BTC-USDT'), interval: '1m' },
+      {
+        onCandle: (update) => updates.push(update),
+        onStatus: (state) => states.push(state),
+        onError: (error) => errors.push(error),
+      },
+    );
+    const connection = getItem(connections, 0);
+
+    expect(connection.url).toBe('wss://ws.okx.com:8443/ws/v5/business');
+    connection.open();
+    expect(connection.sent).toEqual([
+      JSON.stringify({
+        op: 'subscribe',
+        args: [{ channel: 'candle1m', instId: 'BTC-USDT' }],
+      }),
+    ]);
+
+    connection.emit({
+      arg: { channel: 'candle1m', instId: 'BTC-USDT' },
+      data: [createStreamRow(START_TIME, '103.5', '0')],
+    });
+    connection.emit({
+      arg: { channel: 'candle1m', instId: 'BTC-USDT' },
+      data: [createStreamRow(START_TIME, '104', '1')],
+    });
+
+    expect(states).toEqual(['connecting', 'connected']);
+    expect(errors).toEqual([]);
+    expect(updates).toMatchObject([
+      {
+        instrumentId: 'OKX:BTC-USDT',
+        interval: '1m',
+        candle: {
+          timestamp: START_TIME,
+          open: 100,
+          high: 105,
+          low: 98,
+          close: 103.5,
+          volume: 12.5,
+        },
+        isFinal: false,
+      },
+      {
+        instrumentId: 'OKX:BTC-USDT',
+        interval: '1m',
+        candle: { timestamp: START_TIME, open: 100, high: 105, low: 98, close: 104, volume: 12.5 },
+        isFinal: true,
+      },
+    ]);
+
+    subscription.unsubscribe();
+    expect(connection.closeCalls).toBe(1);
+    expect(states.at(-1)).toBe('disconnected');
+  });
+
+  it('uses UTC candlestick channels for monthly intervals', () => {
+    const connections: FakeOkxWebSocket[] = [];
+    const provider = createStreamProvider(connections);
+    const subscription = provider.subscribeToCandles(
+      { instrumentId: createInstrumentId('BTC-USDT'), interval: '1M' },
+      { onCandle: () => undefined },
+    );
+    const connection = getItem(connections, 0);
+
+    connection.open();
+    expect(connection.sent).toContain(
+      JSON.stringify({
+        op: 'subscribe',
+        args: [{ channel: 'candle1Mutc', instId: 'BTC-USDT' }],
+      }),
+    );
+
+    subscription.unsubscribe();
+  });
+
+  it('responds to OKX server ping messages with the raw pong string', () => {
+    const connections: FakeOkxWebSocket[] = [];
+    const provider = createStreamProvider(connections);
+    const errors: Error[] = [];
+    const subscription = provider.subscribeToCandles(
+      { instrumentId: createInstrumentId('BTC-USDT'), interval: '1m' },
+      { onCandle: () => undefined, onError: (error) => errors.push(error) },
+    );
+    const connection = getItem(connections, 0);
+
+    connection.open();
+    connection.emit('ping');
+
+    expect(connection.sent.at(-1)).toBe('pong');
+    expect(errors).toEqual([]);
+
+    subscription.unsubscribe();
+  });
+
+  it('sends a raw ping only after the connection has been idle and awaits pong', () => {
+    vi.useFakeTimers();
+    const connections: FakeOkxWebSocket[] = [];
+    const provider = createStreamProvider(connections);
+    const errors: Error[] = [];
+    const subscription = provider.subscribeToCandles(
+      { instrumentId: createInstrumentId('BTC-USDT'), interval: '1m' },
+      { onCandle: () => undefined, onError: (error) => errors.push(error) },
+    );
+    const connection = getItem(connections, 0);
+
+    connection.open();
+    connection.emit({ event: 'subscribe', code: '0' });
+    vi.advanceTimersByTime(24_999);
+    expect(connection.sent).toHaveLength(1);
+
+    vi.advanceTimersByTime(1);
+    expect(connection.sent.at(-1)).toBe('ping');
+
+    vi.advanceTimersByTime(4_999);
+    expect(connection.closeCalls).toBe(0);
+    connection.emit('pong');
+    expect(errors).toEqual([]);
+
+    vi.advanceTimersByTime(24_999);
+    expect(connection.sent.filter((message) => message === 'ping')).toHaveLength(1);
+    vi.advanceTimersByTime(1);
+    expect(connection.sent.filter((message) => message === 'ping')).toHaveLength(2);
+
+    subscription.unsubscribe();
+  });
+
+  it('reconnects after heartbeat timeout and resubscribes after reopening', () => {
+    vi.useFakeTimers();
+    const connections: FakeOkxWebSocket[] = [];
+    const provider = createStreamProvider(connections, {
+      reconnectDelayMs: 500,
+      heartbeatIntervalMs: 1_000,
+      heartbeatResponseTimeoutMs: 250,
+    });
+    const errors: Error[] = [];
+    const states: string[] = [];
+    const subscription = provider.subscribeToCandles(
+      { instrumentId: createInstrumentId('BTC-USDT'), interval: '5m' },
+      {
+        onCandle: () => undefined,
+        onError: (error) => errors.push(error),
+        onStatus: (state) => states.push(state),
+      },
+    );
+    const firstConnection = getItem(connections, 0);
+
+    firstConnection.open();
+    vi.advanceTimersByTime(1_000);
+    expect(firstConnection.sent.at(-1)).toBe('ping');
+    vi.advanceTimersByTime(250);
+
+    expect(firstConnection.closeCalls).toBe(1);
+    expect(errors.at(-1)?.message).toContain('heartbeat response timed out');
+    expect(states.at(-1)).toBe('reconnecting');
+
+    vi.advanceTimersByTime(500);
+    const secondConnection = getItem(connections, 1);
+    secondConnection.open();
+
+    expect(secondConnection.sent).toEqual([
+      JSON.stringify({
+        op: 'subscribe',
+        args: [{ channel: 'candle5m', instId: 'BTC-USDT' }],
+      }),
+    ]);
+    expect(states.at(-1)).toBe('connected');
+
+    subscription.unsubscribe();
+  });
+
+  it('reports malformed candles and rejected subscriptions', () => {
+    const connections: FakeOkxWebSocket[] = [];
+    const provider = createStreamProvider(connections);
+    const errors: Error[] = [];
+    const subscription = provider.subscribeToCandles(
+      { instrumentId: createInstrumentId('BTC-USDT'), interval: '1m' },
+      { onCandle: () => undefined, onError: (error) => errors.push(error) },
+    );
+    const connection = getItem(connections, 0);
+
+    connection.open();
+    connection.emit({
+      arg: { channel: 'candle1m', instId: 'BTC-USDT' },
+      data: [createStreamRow(START_TIME, 'not-a-price', '0')],
+    });
+    expect(errors[0]?.message).toContain('non-finite close price');
+
+    connection.emit({ event: 'error', code: '60012', msg: 'Invalid channel' });
+    expect(errors.at(-1)?.message).toContain('OKX Spot subscription failed (code 60012)');
+    expect(connection.closeCalls).toBe(1);
+
+    subscription.unsubscribe();
+  });
+
+  it('rejects unsupported intervals and insecure stream URLs', () => {
+    const connections: FakeOkxWebSocket[] = [];
+    const provider = createStreamProvider(connections);
+
+    expect(() =>
+      provider.subscribeToCandles(
+        { instrumentId: createInstrumentId('BTC-USDT'), interval: '8h' },
+        { onCandle: () => undefined },
+      ),
+    ).toThrow('does not support the 8h');
+    expect(
+      () => new OkxSpotMarketDataProvider({ streamBaseUrl: 'ws://stream.example.test' }),
+    ).toThrow('must use WSS');
+    expect(connections).toHaveLength(0);
   });
 });

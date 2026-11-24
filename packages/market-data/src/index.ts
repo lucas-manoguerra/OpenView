@@ -36,4 +36,6 @@ export {
 export {
   OkxSpotMarketDataProvider,
   type OkxSpotProviderOptions,
+  type OkxWebSocketConnection,
+  type OkxWebSocketFactory,
 } from './providers/okx-spot';
