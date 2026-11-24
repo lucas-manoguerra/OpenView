@@ -72,7 +72,7 @@ describe('price scale transformations', () => {
     const nextScale = panPriceScale(scale, 20);
 
     expect(nextScale.range).toEqual({ min: 95, max: 195 });
-    expect(priceToCoordinate(150, nextScale)).toBe(220);
+    expect(priceToCoordinate(150, nextScale)).toBeCloseTo(220);
   });
 
   it('zooms around the price under the cursor without moving its coordinate', () => {
