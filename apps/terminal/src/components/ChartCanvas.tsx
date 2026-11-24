@@ -8,6 +8,8 @@ import {
   createChartInteractionController,
   createChartRenderScene,
   createCanvasRenderer,
+  calculateExponentialMovingAverage,
+  calculateSimpleMovingAverage,
   countAppendedBars,
   getRightOffsetAfterDataUpdate,
   updateChartRenderScene,
@@ -19,6 +21,7 @@ import {
   type ChartRenderCandle,
   type ChartRenderScene,
   type ChartType,
+  type ChartIndicatorSeries,
   type NumericRange,
   type PriceScaleMode,
 } from '@openview/chart-engine';
@@ -45,6 +48,7 @@ type ChartRuntime = Readonly<{
   zoomTime(factor: number): void;
   setPriceScaleLocked(locked: boolean): void;
   invertPriceScale(): void;
+  setIndicators(indicators: readonly ChartIndicatorSeries[]): void;
   destroy(): void;
 }>;
 
@@ -54,6 +58,12 @@ type ChartRenderData = Readonly<{
 
 const EMPTY_PRICE_RANGE: NumericRange = Object.freeze({ min: 0, max: 1 });
 const OLDER_HISTORY_TRIGGER_LOGICAL_INDEX = 120;
+
+const INDICATOR_OPTIONS = Object.freeze([
+  { id: 'sma-20', label: 'SMA 20', method: 'sma', period: 20, color: '#f4c542' },
+  { id: 'ema-20', label: 'EMA 20', method: 'ema', period: 20, color: '#42a5f5' },
+  { id: 'ema-50', label: 'EMA 50', method: 'ema', period: 50, color: '#ab47bc' },
+] as const);
 
 const createRenderCandles = (candles: readonly Candle[]): readonly ChartRenderCandle[] =>
   Object.freeze(
@@ -229,11 +239,13 @@ export function ChartCanvas({
   const rightOffsetInputRef = useRef<HTMLInputElement | null>(null);
   const [priceScaleMode, setPriceScaleMode] = useState<PriceScaleMode>('linear');
   const [chartType, setChartType] = useState<ChartType>('candles');
+  const [activeIndicators, setActiveIndicators] = useState<readonly string[]>([]);
   const [autoScale, setAutoScale] = useState(true);
   const [priceScaleLocked, setPriceScaleLocked] = useState(false);
   const [priceScaleInverted, setPriceScaleInverted] = useState(false);
   const priceScaleModeRef = useRef<PriceScaleMode>(priceScaleMode);
   const chartTypeRef = useRef<ChartType>(chartType);
+  const indicatorsRef = useRef<readonly ChartIndicatorSeries[]>([]);
   const autoScaleRef = useRef(autoScale);
   const priceScaleLockedRef = useRef(priceScaleLocked);
   priceScaleModeRef.current = priceScaleMode;
@@ -241,6 +253,25 @@ export function ChartCanvas({
   autoScaleRef.current = autoScale;
   priceScaleLockedRef.current = priceScaleLocked;
   const renderCandles = useMemo(() => createRenderCandles(candles), [candles]);
+  const renderIndicators = useMemo(
+    () =>
+      Object.freeze(
+        INDICATOR_OPTIONS.filter((indicator) => activeIndicators.includes(indicator.id)).map(
+          (indicator) =>
+            Object.freeze({
+              id: indicator.id,
+              label: indicator.label,
+              color: indicator.color,
+              points:
+                indicator.method === 'sma'
+                  ? calculateSimpleMovingAverage(renderCandles, indicator.period)
+                  : calculateExponentialMovingAverage(renderCandles, indicator.period),
+            }),
+        ),
+      ),
+    [activeIndicators, renderCandles],
+  );
+  indicatorsRef.current = renderIndicators;
   const onNeedMoreHistoryRef = useRef(onNeedMoreHistory);
   onNeedMoreHistoryRef.current = onNeedMoreHistory;
   const renderDataRef = useRef<ChartRenderData>({ candles: renderCandles });
@@ -314,7 +345,13 @@ export function ChartCanvas({
       );
 
       if (controller === null) {
-        scene = createChartRenderScene(frame, currentCandles, null, chartTypeRef.current);
+        scene = createChartRenderScene(
+          frame,
+          currentCandles,
+          null,
+          chartTypeRef.current,
+          indicatorsRef.current,
+        );
         const interactionController = createChartInteractionController(frame, {
           onChange: handleControllerChange,
           onPriceScaleInteraction: () => {
@@ -385,6 +422,7 @@ export function ChartCanvas({
           currentCandles,
           controller.snapshot.crosshair,
           chartTypeRef.current,
+          indicatorsRef.current,
         );
         controller.setFrame(frame);
         if (autoScaleRef.current) {
@@ -414,6 +452,14 @@ export function ChartCanvas({
         controller.setFrame(frame);
         renderer.setScene(scene);
       },
+      setIndicators: (nextIndicators: readonly ChartIndicatorSeries[]): void => {
+        if (scene === null) {
+          return;
+        }
+
+        scene = updateChartRenderScene(scene, { indicators: nextIndicators });
+        renderer.setScene(scene);
+      },
       setChartType: (nextChartType: ChartType): void => {
         if (scene === null) {
           return;
@@ -436,7 +482,13 @@ export function ChartCanvas({
           mode,
           true,
         );
-        scene = createChartRenderScene(frame, currentCandles, null, chartTypeRef.current);
+        scene = createChartRenderScene(
+          frame,
+          currentCandles,
+          null,
+          chartTypeRef.current,
+          indicatorsRef.current,
+        );
         controller.setFrame(frame);
         renderer.setScene(scene);
       },
@@ -482,6 +534,23 @@ export function ChartCanvas({
     },
     [renderCandles, priceScaleMode],
   );
+
+  const bindIndicatorsUpdate = useCallback(
+    (element: HTMLSpanElement | null): void => {
+      if (element !== null) {
+        runtimeRef.current?.setIndicators(indicatorsRef.current);
+      }
+    },
+    [renderIndicators],
+  );
+
+  const handleIndicatorToggle = (indicatorId: string): void => {
+    setActiveIndicators((current) =>
+      current.includes(indicatorId)
+        ? current.filter((activeId) => activeId !== indicatorId)
+        : [...current, indicatorId],
+    );
+  };
 
   const handleAutoScaleChange = (): void => {
     const nextAutoScale = !autoScaleRef.current;
@@ -532,9 +601,11 @@ export function ChartCanvas({
         }
         data-candles-count={renderCandles.length}
         data-chart-type={chartType}
+        data-indicator-count={renderIndicators.length}
         data-interval={interval}
       />
       <span ref={bindDataUpdate} class="hidden" aria-hidden="true" />
+      <span ref={bindIndicatorsUpdate} class="hidden" aria-hidden="true" />
       <div class="pointer-events-none absolute left-4 top-3 flex items-center gap-2">
         <span class="text-xs font-semibold text-slate-200">{symbol}</span>
         <span class="rounded border border-white/10 bg-[#101723]/90 px-2 py-1 text-[10px] text-slate-400">
@@ -561,6 +632,38 @@ export function ChartCanvas({
             <option value="area">Área</option>
           </select>
         </label>
+        <details
+          class="relative"
+          data-testid="chart-indicators-menu"
+        >
+          <summary class="cursor-pointer list-none rounded px-2 py-1 text-[10px] text-slate-300 transition-colors hover:bg-white/5">
+            Indicadores
+          </summary>
+          <div class="absolute left-0 top-full z-20 mt-2 min-w-40 rounded-lg border border-white/10 bg-[#101723] p-2 shadow-xl">
+            <div class="mb-2 px-1 text-[9px] font-semibold uppercase tracking-wider text-slate-500">
+              Medias móviles
+            </div>
+            {INDICATOR_OPTIONS.map((indicator) => (
+              <label
+                key={indicator.id}
+                class="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-[11px] text-slate-300 hover:bg-white/5"
+              >
+                <input
+                  type="checkbox"
+                  checked={activeIndicators.includes(indicator.id)}
+                  data-testid={'chart-indicator-' + indicator.id}
+                  onChange={() => handleIndicatorToggle(indicator.id)}
+                  class="accent-blue-400"
+                />
+                <span
+                  class="size-2 rounded-full"
+                  style={{ backgroundColor: indicator.color }}
+                />
+                {indicator.label}
+              </label>
+            ))}
+          </div>
+        </details>
         <span class="mx-0.5 h-4 w-px bg-white/10" />
         {(
           [
