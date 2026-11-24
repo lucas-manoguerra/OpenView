@@ -783,259 +783,259 @@ export function ChartCanvas({
         data-testid="chart-surface"
         data-provider-error={error === null ? 'false' : 'true'}
       >
-      <canvas
-        ref={bindCanvas}
-        class="block h-full w-full touch-none"
-        role="img"
-        aria-label={
-          'Gráfico interactivo de velas y volumen para ' +
-          symbol +
-          '. Arrastrar el gráfico para desplazar el tiempo, arrastrar el eje de precios para desplazar los precios, usar la rueda sobre cada área para acercar y hacer doble clic en el eje de precios para autoajustar.'
-        }
-        data-candles-count={renderCandles.length}
-        data-chart-type={chartType}
-        data-indicator-count={renderIndicators.length}
-        data-drawing-count={drawings.length}
-        data-drawing-tool={drawingTool}
-        data-interval={interval}
-      />
-      <span ref={bindDataUpdate} class="hidden" aria-hidden="true" />
-      <span ref={bindIndicatorsUpdate} class="hidden" aria-hidden="true" />
-      <div class="pointer-events-none absolute left-4 top-3 flex items-center gap-2">
-        <span class="text-xs font-semibold text-slate-200">{symbol}</span>
-        <span class="rounded border border-white/10 bg-[#101723]/90 px-2 py-1 text-[10px] text-slate-400">
-          {interval} · Datos históricos
-        </span>
-        <span class="rounded border border-white/10 bg-[#101723]/90 px-2 py-1 text-[10px] text-slate-500">
-          {renderCandles.length} velas
-        </span>
-      </div>
-      <fieldset class="absolute right-3 top-3 z-10 flex flex-wrap items-center justify-end gap-1 rounded-lg border border-white/10 bg-[#101723]/95 p-1 shadow-lg">
-        <legend class="sr-only">Controles del gráfico</legend>
-        <label class="flex items-center gap-1 px-1 text-[10px] text-slate-400">
-          <span class="sr-only">Tipo de gráfico</span>
-          <select
-            value={chartType}
-            aria-label="Tipo de gráfico"
-            data-testid="chart-type-select"
-            onChange={(event) => handleChartTypeChange(event.currentTarget.value as ChartType)}
-            class="max-w-24 rounded bg-transparent px-1 py-1 text-[10px] text-slate-200 outline-none"
-          >
-            <option value="candles">Velas</option>
-            <option value="bars">Barras</option>
-            <option value="line">Línea</option>
-            <option value="area">Área</option>
-          </select>
-        </label>
-        <details class="relative" data-testid="chart-indicators-menu">
-          <summary class="cursor-pointer list-none rounded px-2 py-1 text-[10px] text-slate-300 transition-colors hover:bg-white/5">
-            Indicadores
-          </summary>
-          <div class="absolute left-0 top-full z-20 mt-2 min-w-40 rounded-lg border border-white/10 bg-[#101723] p-2 shadow-xl">
-            <div class="mb-2 px-1 text-[9px] font-semibold uppercase tracking-wider text-slate-500">
-              Medias móviles
+        <canvas
+          ref={bindCanvas}
+          class="block h-full w-full touch-none"
+          role="img"
+          aria-label={
+            'Gráfico interactivo de velas y volumen para ' +
+            symbol +
+            '. Arrastrar el gráfico para desplazar el tiempo, arrastrar el eje de precios para desplazar los precios, usar la rueda sobre cada área para acercar y hacer doble clic en el eje de precios para autoajustar.'
+          }
+          data-candles-count={renderCandles.length}
+          data-chart-type={chartType}
+          data-indicator-count={renderIndicators.length}
+          data-drawing-count={drawings.length}
+          data-drawing-tool={drawingTool}
+          data-interval={interval}
+        />
+        <span ref={bindDataUpdate} class="hidden" aria-hidden="true" />
+        <span ref={bindIndicatorsUpdate} class="hidden" aria-hidden="true" />
+        <div class="pointer-events-none absolute left-4 top-3 flex items-center gap-2">
+          <span class="text-xs font-semibold text-slate-200">{symbol}</span>
+          <span class="rounded border border-white/10 bg-[#101723]/90 px-2 py-1 text-[10px] text-slate-400">
+            {interval} · Datos históricos
+          </span>
+          <span class="rounded border border-white/10 bg-[#101723]/90 px-2 py-1 text-[10px] text-slate-500">
+            {renderCandles.length} velas
+          </span>
+        </div>
+        <fieldset class="absolute right-3 top-3 z-10 flex flex-wrap items-center justify-end gap-1 rounded-lg border border-white/10 bg-[#101723]/95 p-1 shadow-lg">
+          <legend class="sr-only">Controles del gráfico</legend>
+          <label class="flex items-center gap-1 px-1 text-[10px] text-slate-400">
+            <span class="sr-only">Tipo de gráfico</span>
+            <select
+              value={chartType}
+              aria-label="Tipo de gráfico"
+              data-testid="chart-type-select"
+              onChange={(event) => handleChartTypeChange(event.currentTarget.value as ChartType)}
+              class="max-w-24 rounded bg-transparent px-1 py-1 text-[10px] text-slate-200 outline-none"
+            >
+              <option value="candles">Velas</option>
+              <option value="bars">Barras</option>
+              <option value="line">Línea</option>
+              <option value="area">Área</option>
+            </select>
+          </label>
+          <details class="relative" data-testid="chart-indicators-menu">
+            <summary class="cursor-pointer list-none rounded px-2 py-1 text-[10px] text-slate-300 transition-colors hover:bg-white/5">
+              Indicadores
+            </summary>
+            <div class="absolute left-0 top-full z-20 mt-2 min-w-40 rounded-lg border border-white/10 bg-[#101723] p-2 shadow-xl">
+              <div class="mb-2 px-1 text-[9px] font-semibold uppercase tracking-wider text-slate-500">
+                Medias móviles
+              </div>
+              {INDICATOR_OPTIONS.map((indicator) => (
+                <label
+                  key={indicator.id}
+                  class="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-[11px] text-slate-300 hover:bg-white/5"
+                >
+                  <input
+                    type="checkbox"
+                    checked={activeIndicators.includes(indicator.id)}
+                    data-testid={'chart-indicator-' + indicator.id}
+                    onChange={() => handleIndicatorToggle(indicator.id)}
+                    class="accent-blue-400"
+                  />
+                  <span class="size-2 rounded-full" style={{ backgroundColor: indicator.color }} />
+                  {indicator.label}
+                </label>
+              ))}
             </div>
-            {INDICATOR_OPTIONS.map((indicator) => (
-              <label
-                key={indicator.id}
-                class="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-[11px] text-slate-300 hover:bg-white/5"
-              >
-                <input
-                  type="checkbox"
-                  checked={activeIndicators.includes(indicator.id)}
-                  data-testid={'chart-indicator-' + indicator.id}
-                  onChange={() => handleIndicatorToggle(indicator.id)}
-                  class="accent-blue-400"
-                />
-                <span class="size-2 rounded-full" style={{ backgroundColor: indicator.color }} />
-                {indicator.label}
-              </label>
-            ))}
-          </div>
-        </details>
-        <span class="mx-0.5 h-4 w-px bg-white/10" />
-        {(
-          [
-            ['linear', 'Lin'],
-            ['logarithmic', 'Log'],
-            ['percentage', '%'],
-            ['indexed-to-100', '100'],
-          ] as const
-        ).map(([mode, label]) => (
+          </details>
+          <span class="mx-0.5 h-4 w-px bg-white/10" />
+          {(
+            [
+              ['linear', 'Lin'],
+              ['logarithmic', 'Log'],
+              ['percentage', '%'],
+              ['indexed-to-100', '100'],
+            ] as const
+          ).map(([mode, label]) => (
+            <button
+              type="button"
+              disabled={renderCandles.length === 0}
+              aria-label={`Escala ${mode}`}
+              aria-pressed={priceScaleMode === mode}
+              data-testid={`price-scale-${mode}`}
+              onClick={() => handlePriceScaleModeChange(mode)}
+              class={`rounded px-2 py-1 text-[10px] transition-colors ${priceScaleMode === mode ? 'bg-blue-500/20 text-blue-200' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}
+            >
+              {label}
+            </button>
+          ))}
           <button
             type="button"
             disabled={renderCandles.length === 0}
-            aria-label={`Escala ${mode}`}
-            aria-pressed={priceScaleMode === mode}
-            data-testid={`price-scale-${mode}`}
-            onClick={() => handlePriceScaleModeChange(mode)}
-            class={`rounded px-2 py-1 text-[10px] transition-colors ${priceScaleMode === mode ? 'bg-blue-500/20 text-blue-200' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}
+            aria-label="Desplazar hacia el histórico"
+            data-testid="chart-pan-older"
+            onClick={() => runtimeRef.current?.scrollTimeByBars(-20)}
+            class="rounded px-2 py-1 text-[10px] text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200 disabled:opacity-40"
           >
-            {label}
+            ←
           </button>
-        ))}
-        <button
-          type="button"
-          disabled={renderCandles.length === 0}
-          aria-label="Desplazar hacia el histórico"
-          data-testid="chart-pan-older"
-          onClick={() => runtimeRef.current?.scrollTimeByBars(-20)}
-          class="rounded px-2 py-1 text-[10px] text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200 disabled:opacity-40"
-        >
-          ←
-        </button>
-        <button
-          type="button"
-          disabled={renderCandles.length === 0}
-          aria-label="Desplazar hacia el presente"
-          data-testid="chart-pan-newer"
-          onClick={() => runtimeRef.current?.scrollTimeByBars(20)}
-          class="rounded px-2 py-1 text-[10px] text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200 disabled:opacity-40"
-        >
-          →
-        </button>
-        <button
-          type="button"
-          disabled={renderCandles.length === 0}
-          aria-label="Alejar escala temporal"
-          data-testid="chart-time-zoom-out"
-          onClick={() => runtimeRef.current?.zoomTime(0.8)}
-          class="rounded px-2 py-1 text-[10px] text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200 disabled:opacity-40"
-        >
-          −
-        </button>
-        <button
-          type="button"
-          disabled={renderCandles.length === 0}
-          aria-label="Acercar escala temporal"
-          data-testid="chart-time-zoom-in"
-          onClick={() => runtimeRef.current?.zoomTime(1.25)}
-          class="rounded px-2 py-1 text-[10px] text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200 disabled:opacity-40"
-        >
-          +
-        </button>
-        <label class="flex items-center gap-1 px-1 text-[10px] text-slate-400">
-          <span>Margen</span>
-          <input
-            ref={rightOffsetInputRef}
-            type="range"
-            min="0"
-            max="50"
-            step="1"
-            defaultValue="0"
-            aria-label="Margen derecho en velas futuras"
-            data-testid="chart-right-offset"
+          <button
+            type="button"
             disabled={renderCandles.length === 0}
-            onInput={(event) =>
-              runtimeRef.current?.setRightOffset(Number(event.currentTarget.value))
+            aria-label="Desplazar hacia el presente"
+            data-testid="chart-pan-newer"
+            onClick={() => runtimeRef.current?.scrollTimeByBars(20)}
+            class="rounded px-2 py-1 text-[10px] text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200 disabled:opacity-40"
+          >
+            →
+          </button>
+          <button
+            type="button"
+            disabled={renderCandles.length === 0}
+            aria-label="Alejar escala temporal"
+            data-testid="chart-time-zoom-out"
+            onClick={() => runtimeRef.current?.zoomTime(0.8)}
+            class="rounded px-2 py-1 text-[10px] text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200 disabled:opacity-40"
+          >
+            −
+          </button>
+          <button
+            type="button"
+            disabled={renderCandles.length === 0}
+            aria-label="Acercar escala temporal"
+            data-testid="chart-time-zoom-in"
+            onClick={() => runtimeRef.current?.zoomTime(1.25)}
+            class="rounded px-2 py-1 text-[10px] text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200 disabled:opacity-40"
+          >
+            +
+          </button>
+          <label class="flex items-center gap-1 px-1 text-[10px] text-slate-400">
+            <span>Margen</span>
+            <input
+              ref={rightOffsetInputRef}
+              type="range"
+              min="0"
+              max="50"
+              step="1"
+              defaultValue="0"
+              aria-label="Margen derecho en velas futuras"
+              data-testid="chart-right-offset"
+              disabled={renderCandles.length === 0}
+              onInput={(event) =>
+                runtimeRef.current?.setRightOffset(Number(event.currentTarget.value))
+              }
+              class="h-1 w-16 cursor-pointer accent-blue-400 disabled:opacity-40"
+            />
+          </label>
+          <button
+            type="button"
+            disabled={renderCandles.length === 0}
+            data-testid="chart-go-realtime"
+            onClick={() => runtimeRef.current?.scrollToRealtime()}
+            class="rounded px-2 py-1 text-[10px] text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200 disabled:opacity-40"
+          >
+            Ahora
+          </button>
+          <button
+            type="button"
+            disabled={renderCandles.length === 0}
+            aria-pressed={autoScale}
+            data-testid="chart-auto-scale"
+            onClick={handleAutoScaleChange}
+            class={`rounded px-2 py-1 text-[10px] transition-colors ${autoScale ? 'bg-blue-500/20 text-blue-200' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}
+          >
+            Auto
+          </button>
+          <button
+            type="button"
+            disabled={renderCandles.length === 0}
+            aria-pressed={priceScaleLocked}
+            aria-label={
+              priceScaleLocked ? 'Desbloquear escala de precios' : 'Bloquear escala de precios'
             }
-            class="h-1 w-16 cursor-pointer accent-blue-400 disabled:opacity-40"
-          />
-        </label>
-        <button
-          type="button"
-          disabled={renderCandles.length === 0}
-          data-testid="chart-go-realtime"
-          onClick={() => runtimeRef.current?.scrollToRealtime()}
-          class="rounded px-2 py-1 text-[10px] text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200 disabled:opacity-40"
-        >
-          Ahora
-        </button>
-        <button
-          type="button"
-          disabled={renderCandles.length === 0}
-          aria-pressed={autoScale}
-          data-testid="chart-auto-scale"
-          onClick={handleAutoScaleChange}
-          class={`rounded px-2 py-1 text-[10px] transition-colors ${autoScale ? 'bg-blue-500/20 text-blue-200' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}
-        >
-          Auto
-        </button>
-        <button
-          type="button"
-          disabled={renderCandles.length === 0}
-          aria-pressed={priceScaleLocked}
-          aria-label={
-            priceScaleLocked ? 'Desbloquear escala de precios' : 'Bloquear escala de precios'
-          }
-          data-testid="chart-lock-price-scale"
-          onClick={handlePriceScaleLockChange}
-          class={`rounded px-2 py-1 text-[10px] transition-colors ${priceScaleLocked ? 'bg-amber-500/20 text-amber-200' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}
-        >
-          {priceScaleLocked ? 'Bloqueada' : 'Bloquear'}
-        </button>
-        <button
-          type="button"
-          disabled={renderCandles.length === 0}
-          aria-pressed={priceScaleInverted}
-          data-testid="chart-invert-price-scale"
-          onClick={handlePriceScaleInvert}
-          class={`rounded px-2 py-1 text-[10px] transition-colors ${priceScaleInverted ? 'bg-blue-500/20 text-blue-200' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}
-        >
-          Invertir
-        </button>
-        <span class="mx-0.5 h-4 w-px bg-white/10" />
-        <button
-          type="button"
-          disabled={renderCandles.length === 0}
-          data-testid="chart-fit-prices"
-          onClick={() => runtimeRef.current?.fitPriceScale()}
-          class="rounded px-2 py-1 text-[10px] text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200"
-        >
-          Ajustar
-        </button>
-        <button
-          type="button"
-          disabled={renderCandles.length === 0}
-          data-testid="chart-fit-content"
-          onClick={() => runtimeRef.current?.fitContent(priceScaleMode)}
-          class="rounded px-2 py-1 text-[10px] text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200"
-        >
-          Ver todo
-        </button>
-      </fieldset>
-      {loading && (
-        <div class="pointer-events-none absolute inset-0 grid place-items-center bg-[#0b0f17]/70">
-          <span
-            role="status"
-            data-testid="market-data-loading"
-            class="rounded-lg border border-white/10 bg-[#101723] px-4 py-2 text-xs text-slate-300"
+            data-testid="chart-lock-price-scale"
+            onClick={handlePriceScaleLockChange}
+            class={`rounded px-2 py-1 text-[10px] transition-colors ${priceScaleLocked ? 'bg-amber-500/20 text-amber-200' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}
           >
-            Cargando velas históricas…
-          </span>
-        </div>
-      )}
-      {!loading && error !== null && (
-        <div class="pointer-events-none absolute inset-0 grid place-items-center bg-[#0b0f17]/80 p-6">
-          <div
-            role="alert"
-            class="pointer-events-auto max-w-sm rounded-xl border border-rose-400/20 bg-[#101723] p-5 text-center"
+            {priceScaleLocked ? 'Bloqueada' : 'Bloquear'}
+          </button>
+          <button
+            type="button"
+            disabled={renderCandles.length === 0}
+            aria-pressed={priceScaleInverted}
+            data-testid="chart-invert-price-scale"
+            onClick={handlePriceScaleInvert}
+            class={`rounded px-2 py-1 text-[10px] transition-colors ${priceScaleInverted ? 'bg-blue-500/20 text-blue-200' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}
           >
-            <div class="text-sm font-medium text-rose-200">No se pudieron cargar los datos</div>
-            <p class="mt-2 break-words text-xs leading-5 text-slate-400">{error}</p>
-            <button
-              type="button"
-              onClick={onRetry}
-              class="mt-4 rounded-lg border border-white/10 px-3 py-2 text-xs text-slate-200 transition-colors hover:bg-white/5"
+            Invertir
+          </button>
+          <span class="mx-0.5 h-4 w-px bg-white/10" />
+          <button
+            type="button"
+            disabled={renderCandles.length === 0}
+            data-testid="chart-fit-prices"
+            onClick={() => runtimeRef.current?.fitPriceScale()}
+            class="rounded px-2 py-1 text-[10px] text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200"
+          >
+            Ajustar
+          </button>
+          <button
+            type="button"
+            disabled={renderCandles.length === 0}
+            data-testid="chart-fit-content"
+            onClick={() => runtimeRef.current?.fitContent(priceScaleMode)}
+            class="rounded px-2 py-1 text-[10px] text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200"
+          >
+            Ver todo
+          </button>
+        </fieldset>
+        {loading && (
+          <div class="pointer-events-none absolute inset-0 grid place-items-center bg-[#0b0f17]/70">
+            <span
+              role="status"
+              data-testid="market-data-loading"
+              class="rounded-lg border border-white/10 bg-[#101723] px-4 py-2 text-xs text-slate-300"
             >
-              Reintentar
-            </button>
+              Cargando velas históricas…
+            </span>
           </div>
+        )}
+        {!loading && error !== null && (
+          <div class="pointer-events-none absolute inset-0 grid place-items-center bg-[#0b0f17]/80 p-6">
+            <div
+              role="alert"
+              class="pointer-events-auto max-w-sm rounded-xl border border-rose-400/20 bg-[#101723] p-5 text-center"
+            >
+              <div class="text-sm font-medium text-rose-200">No se pudieron cargar los datos</div>
+              <p class="mt-2 break-words text-xs leading-5 text-slate-400">{error}</p>
+              <button
+                type="button"
+                onClick={onRetry}
+                class="mt-4 rounded-lg border border-white/10 px-3 py-2 text-xs text-slate-200 transition-colors hover:bg-white/5"
+              >
+                Reintentar
+              </button>
+            </div>
+          </div>
+        )}
+        {!loading && error === null && renderCandles.length === 0 && (
+          <div class="pointer-events-none absolute inset-0 grid place-items-center">
+            <span
+              role="status"
+              class="rounded-lg border border-white/10 bg-[#101723] px-4 py-2 text-xs text-slate-400"
+            >
+              La fuente no devolvió velas para este rango.
+            </span>
+          </div>
+        )}
+        <div class="pointer-events-none absolute bottom-3 right-4 rounded border border-white/10 bg-[#101723]/90 px-2 py-1 text-[10px] text-slate-500">
+          Drag to pan · Scroll to zoom · Double-click price axis to fit
         </div>
-      )}
-      {!loading && error === null && renderCandles.length === 0 && (
-        <div class="pointer-events-none absolute inset-0 grid place-items-center">
-          <span
-            role="status"
-            class="rounded-lg border border-white/10 bg-[#101723] px-4 py-2 text-xs text-slate-400"
-          >
-            La fuente no devolvió velas para este rango.
-          </span>
-        </div>
-      )}
-      <div class="pointer-events-none absolute bottom-3 right-4 rounded border border-white/10 bg-[#101723]/90 px-2 py-1 text-[10px] text-slate-500">
-        Drag to pan · Scroll to zoom · Double-click price axis to fit
-      </div>
       </div>
     </div>
   );
