@@ -2,11 +2,37 @@ import type { InstrumentDiscoveryFilter, MarketDataProvider, MarketInstrument } 
 import { MarketDataProviderError } from './errors';
 import { MarketDataProviderRegistry } from './registry';
 
+export const DEFAULT_INSTRUMENT_CATALOG_CACHE_TTL_MS = 60_000;
+
+export type MarketInstrumentDiscoveryServiceOptions = Readonly<{
+  cacheTtlMs?: number;
+  now?: () => number;
+}>;
+
+type InstrumentCatalogCacheEntry = Readonly<{
+  expiresAt: number;
+  instruments: readonly MarketInstrument[];
+}>;
+
 export class MarketInstrumentDiscoveryService {
   private readonly registry: MarketDataProviderRegistry;
+  private readonly cacheTtlMs: number;
+  private readonly now: () => number;
+  private readonly cache = new Map<string, InstrumentCatalogCacheEntry>();
 
-  constructor(registry: MarketDataProviderRegistry) {
+  constructor(
+    registry: MarketDataProviderRegistry,
+    options: MarketInstrumentDiscoveryServiceOptions = {},
+  ) {
+    const cacheTtlMs = options.cacheTtlMs ?? DEFAULT_INSTRUMENT_CATALOG_CACHE_TTL_MS;
+
+    if (!Number.isFinite(cacheTtlMs) || cacheTtlMs < 0) {
+      throw new RangeError('Instrument catalog cache TTL must be a finite non-negative number.');
+    }
+
     this.registry = registry;
+    this.cacheTtlMs = cacheTtlMs;
+    this.now = options.now ?? Date.now;
   }
 
   supportsInstrumentDiscovery(providerId: string): boolean {
@@ -27,6 +53,56 @@ export class MarketInstrumentDiscoveryService {
       );
     }
 
-    return listInstruments.call(provider, filter);
+    filter.signal?.throwIfAborted();
+
+    const quoteAsset = filter.quoteAsset?.trim().toUpperCase();
+    const cacheKey = provider.id + ':' + (quoteAsset ?? '*');
+    const currentTime = this.now();
+    const cached = this.cache.get(cacheKey);
+
+    if (cached !== undefined && cached.expiresAt > currentTime) {
+      return Promise.resolve(cached.instruments);
+    }
+
+    if (cached !== undefined) {
+      this.cache.delete(cacheKey);
+    }
+
+    const requestFilter: InstrumentDiscoveryFilter = {
+      ...(quoteAsset === undefined ? {} : { quoteAsset }),
+      ...(filter.signal === undefined ? {} : { signal: filter.signal }),
+    };
+
+    return listInstruments.call(provider, requestFilter).then((instruments) => {
+      filter.signal?.throwIfAborted();
+
+      const snapshot = Object.freeze(
+        instruments.map((instrument) => Object.freeze({ ...instrument })),
+      );
+
+      if (this.cacheTtlMs > 0) {
+        this.cache.set(cacheKey, {
+          expiresAt: this.now() + this.cacheTtlMs,
+          instruments: snapshot,
+        });
+      }
+
+      return snapshot;
+    });
+  }
+
+  clearCache(providerId?: string): void {
+    if (providerId === undefined) {
+      this.cache.clear();
+      return;
+    }
+
+    const prefix = providerId + ':';
+
+    for (const key of this.cache.keys()) {
+      if (key.startsWith(prefix)) {
+        this.cache.delete(key);
+      }
+    }
   }
 }
