@@ -490,7 +490,7 @@ test('searches continuous symbols across all Spot providers and filters by excha
   page,
 }) => {
   await page.goto('/');
-  await page.getByTestId('watchlist-open-search').click();
+  await page.keyboard.press('/');
 
   const modal = page.getByTestId('symbol-search-modal');
   const search = page.getByTestId('watchlist-search');
@@ -499,6 +499,10 @@ test('searches continuous symbols across all Spot providers and filters by excha
   await expect(modal).toBeVisible();
   await search.fill('adausdt');
   await expect(results).toHaveCount(3);
+
+  await search.fill('ADA / USDT');
+  await expect(results).toHaveCount(3);
+  await search.fill('adausdt');
 
   await expect(results.nth(0)).toHaveAttribute('data-provider-id', 'binance-spot');
   await expect(results.nth(1)).toHaveAttribute('data-provider-id', 'bybit-spot');
