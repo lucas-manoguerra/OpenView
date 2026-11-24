@@ -40,6 +40,7 @@ describe('chart render scene updates', () => {
     expect(updated.frame).toBe(frame);
     expect(updated.crosshair).toEqual(crosshair);
     expect(updated.candles).toBe(scene.candles);
+    expect(updated.timeAxisData).toBe(scene.timeAxisData);
   });
 
   it('clears the crosshair without replacing the frame or candle collection', () => {
