@@ -14,7 +14,7 @@ The `MarketInstrumentDiscoveryService` exposes the optional discovery capability
 
 Bybit's Spot instruments endpoint returns the complete Spot list without pagination. The provider therefore makes one request and does not invent or reuse cursor pagination intended for other Bybit categories.
 
-The optional quote-asset filter is applied after provider normalization. Results are deduplicated by normalized instrument ID and sorted by display symbol. Public metadata discovery is read-only and does not imply that historical candles or streaming are supported for every discovered instrument in every provider.
+The optional quote-asset filter is applied after provider normalization. Results are deduplicated by normalized instrument ID and sorted by display symbol. Asset codes outside OpenView's supported identifier format are skipped individually instead of aborting the complete provider catalog; malformed response structures and missing required fields remain errors. Public metadata discovery is read-only and does not imply that historical candles or streaming are supported for every discovered instrument in every provider.
 
 All provider tests use mocked HTTP responses. They verify endpoint parameters, response normalization, active-market filtering and error handling; they do not claim a live availability or uptime test against exchange infrastructure.
 
