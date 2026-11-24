@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 const BINANCE_KLINES_URL = 'https://data-api.binance.vision/api/v3/klines**';
 
@@ -39,7 +39,7 @@ const createKlines = (interval: string, startTime: number, endTime: number): unk
 };
 
 const installBinanceMock = async (
-  page: Parameters<Parameters<typeof test.beforeEach>[0]>[0]['page'],
+  page: Page,
 ): Promise<void> => {
   await page.route(BINANCE_KLINES_URL, async (route) => {
     const url = new URL(route.request().url());
