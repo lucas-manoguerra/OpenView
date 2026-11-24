@@ -161,7 +161,7 @@ describe('Binance Spot market data provider', () => {
       createResponse([
         createKline(START_TIME + MINUTE),
         createKline(START_TIME),
-        createKline(START_TIME + MINUTE, '109'),
+        createKline(START_TIME + MINUTE, '104'),
       ]),
     ]);
     const provider = createProvider({ fetcher });
