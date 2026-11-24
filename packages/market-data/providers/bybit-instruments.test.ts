@@ -65,6 +65,27 @@ describe('Bybit Spot instrument discovery', () => {
     ]);
   });
 
+  it('keeps valid markets when the response contains unsupported asset codes', async () => {
+    const provider = new BybitSpotMarketDataProvider({
+      fetcher: async () =>
+        createResponse({
+          retCode: 0,
+          retMsg: 'OK',
+          result: {
+            list: [
+              { status: 'Trading', baseCoin: 'OLD/TOKEN', quoteCoin: 'USDT' },
+              { status: 'Trading', baseCoin: 'AVAX', quoteCoin: 'USDT' },
+            ],
+          },
+        }),
+      minimumRequestIntervalMs: 0,
+    });
+
+    const instruments = await provider.listInstruments();
+
+    expect(instruments.map((instrument) => instrument.id)).toEqual(['AVAX-USDT']);
+  });
+
   it('filters instruments by quote asset and forwards abort signals', async () => {
     const controller = new AbortController();
     let requestSignal: AbortSignal | null | undefined;

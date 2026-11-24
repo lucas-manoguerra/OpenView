@@ -106,6 +106,13 @@ const installBinanceMock = async (page: Page): Promise<void> => {
           { status: 'TRADING', isSpotTradingAllowed: true, baseAsset: 'SOL', quoteAsset: 'USDT' },
           { status: 'TRADING', isSpotTradingAllowed: true, baseAsset: 'XRP', quoteAsset: 'USDT' },
           { status: 'TRADING', isSpotTradingAllowed: true, baseAsset: 'ETH', quoteAsset: 'BTC' },
+          {
+            status: 'TRADING',
+            isSpotTradingAllowed: true,
+            baseAsset: 'OLD/TOKEN',
+            quoteAsset: 'USDT',
+          },
+          { status: 'TRADING', isSpotTradingAllowed: true, baseAsset: 'AVAX', quoteAsset: 'USDT' },
         ],
       }),
     });
@@ -474,6 +481,28 @@ test('adds, removes and restores watchlist preferences after reload', async ({ p
     'true',
   );
   await expect(page.getByRole('img', { name: /para SOL \/ USDT/ })).toBeVisible();
+});
+
+test('searches valid instruments when the provider catalog contains unsupported asset codes', async ({
+  page,
+}) => {
+  await page.goto('/');
+
+  const watchlist = page.getByTestId('market-watchlist');
+  const search = page.getByTestId('watchlist-search');
+  const addInstrument = page.getByTestId('watchlist-add-instrument');
+
+  await expect(watchlist).toHaveAttribute('data-catalog-status', 'ready');
+  await search.fill('avax');
+
+  await expect(addInstrument).toHaveCount(1);
+  await expect(addInstrument).toContainText('AVAX / USDT');
+  await addInstrument.click();
+
+  await expect(page.getByTestId('watchlist-remove-AVAX-USDT')).toBeVisible();
+  await expect(
+    page.getByTestId('watchlist-instrument').filter({ hasText: 'AVAX / USDT' }),
+  ).toBeVisible();
 });
 
 test('refreshes available instruments when the selected provider changes', async ({ page }) => {

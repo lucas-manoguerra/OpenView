@@ -63,6 +63,25 @@ describe('OKX Spot instrument discovery', () => {
     ]);
   });
 
+  it('keeps valid markets when the response contains unsupported asset codes', async () => {
+    const provider = new OkxSpotMarketDataProvider({
+      fetcher: async () =>
+        createResponse({
+          code: '0',
+          msg: '',
+          data: [
+            { state: 'live', baseCcy: 'OLD/TOKEN', quoteCcy: 'USDT' },
+            { state: 'live', baseCcy: 'AVAX', quoteCcy: 'USDT' },
+          ],
+        }),
+      minimumRequestIntervalMs: 0,
+    });
+
+    const instruments = await provider.listInstruments();
+
+    expect(instruments.map((instrument) => instrument.id)).toEqual(['AVAX-USDT']);
+  });
+
   it('filters instruments by quote asset and forwards abort signals', async () => {
     const controller = new AbortController();
     let requestSignal: AbortSignal | null | undefined;
