@@ -71,12 +71,37 @@ const installBinanceMock = async (page: Page): Promise<void> => {
   });
 };
 
-const webSocketRoutes = new WeakMap<Page, WebSocketRoute>();
+type WebSocketRoutes = Readonly<{
+  binance: WebSocketRoute | null;
+  bybit: WebSocketRoute | null;
+}>;
+
+const webSocketRoutes = new WeakMap<Page, { binance: WebSocketRoute | null; bybit: WebSocketRoute | null }>();
 
 const installWebSocketMock = async (page: Page): Promise<void> => {
+  const routes = { binance: null, bybit: null } as {
+    binance: WebSocketRoute | null;
+    bybit: WebSocketRoute | null;
+  };
+  webSocketRoutes.set(page, routes);
+
   await page.routeWebSocket(/^wss:\/\/stream\.binance\.com:9443\/ws\//, (route) => {
-    webSocketRoutes.set(page, route);
+    routes.binance = route;
   });
+
+  await page.routeWebSocket('wss://stream.bybit.com/v5/public/spot', (route) => {
+    routes.bybit = route;
+  });
+};
+
+const getWebSocketRoute = (page: Page, provider: keyof WebSocketRoutes): WebSocketRoute => {
+  const route = webSocketRoutes.get(page)?.[provider];
+
+  if (route === null || route === undefined) {
+    throw new Error('The ' + provider + ' WebSocket route must be established first.');
+  }
+
+  return route;
 };
 
 test.beforeEach(async ({ page }) => {
@@ -194,13 +219,7 @@ test('streams Binance live candles and updates the current bar without duplicate
   });
 
   const sendEvent = async (close: string): Promise<void> => {
-    const route = webSocketRoutes.get(page);
-
-    if (route === undefined) {
-      throw new Error('The Binance WebSocket route must be established before sending candles.');
-    }
-
-    route.send(JSON.stringify(createStreamEvent(close)));
+    getWebSocketRoute(page, 'binance').send(JSON.stringify(createStreamEvent(close)));
   };
 
   await sendEvent('65050');
