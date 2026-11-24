@@ -525,6 +525,12 @@ export class OkxSpotMarketDataProvider implements MarketDataProvider {
             throw new RangeError('OKX returned a ticker for an unexpected instrument.');
           }
 
+          const mappedInstrumentId = instrumentsById.get(instrument);
+
+          if (mappedInstrumentId === undefined) {
+            return;
+          }
+
           const timestamp = toFiniteNumber(readProperty(item, 'ts'), 'ticker timestamp');
 
           if (!Number.isSafeInteger(timestamp) || timestamp < 0) {
@@ -538,7 +544,7 @@ export class OkxSpotMarketDataProvider implements MarketDataProvider {
               ? ((last - open24h) / open24h) * 100
               : null;
           const quote: QuoteUpdate = Object.freeze({
-            instrumentId: instrumentsById.get(instrument) as InstrumentId,
+            instrumentId: mappedInstrumentId,
             timestamp,
             receivedAt: Date.now(),
             bid: readOptionalNumber(readProperty(item, 'bidPx'), 'best bid price'),
