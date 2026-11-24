@@ -964,7 +964,7 @@ export function MarketChart() {
           <button
             type="button"
             onClick={openSymbolSearch}
-            aria-label="Buscar instrumentos; instrumento actual: "
+            aria-label={'Buscar instrumentos; instrumento actual: ' + selectedInstrument.chartSymbol}
             data-testid="toolbar-symbol-search"
             class="flex h-9 min-w-0 items-center gap-2 rounded-lg border border-white/10 bg-[#0b0f17] px-3 text-left transition-colors hover:border-blue-400/40 hover:bg-[#131e2d]"
           >
