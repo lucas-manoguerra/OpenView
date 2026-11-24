@@ -91,17 +91,19 @@ const installBinanceMock = async (page: Page): Promise<void> => {
 type WebSocketRoutes = Readonly<{
   binance: WebSocketRoute | null;
   bybit: WebSocketRoute | null;
+  okx: WebSocketRoute | null;
 }>;
 
 const webSocketRoutes = new WeakMap<
   Page,
-  { binance: WebSocketRoute | null; bybit: WebSocketRoute | null }
+  { binance: WebSocketRoute | null; bybit: WebSocketRoute | null; okx: WebSocketRoute | null }
 >();
 
 const installWebSocketMock = async (page: Page): Promise<void> => {
-  const routes = { binance: null, bybit: null } as {
+  const routes = { binance: null, bybit: null, okx: null } as {
     binance: WebSocketRoute | null;
     bybit: WebSocketRoute | null;
+    okx: WebSocketRoute | null;
   };
   webSocketRoutes.set(page, routes);
 
@@ -111,6 +113,10 @@ const installWebSocketMock = async (page: Page): Promise<void> => {
 
   await page.routeWebSocket('wss://stream.bybit.com/v5/public/spot', (route) => {
     routes.bybit = route;
+  });
+
+  await page.routeWebSocket('wss://ws.okx.com:8443/ws/v5/business', (route) => {
+    routes.okx = route;
   });
 };
 
@@ -254,7 +260,7 @@ test('streams Binance live candles and updates the current bar without duplicate
   await expect(streamStatus).toHaveText('En vivo');
 });
 
-test('switches providers, streams Bybit candles and recovers history after reconnect', async ({
+test('switches providers, streams Bybit and OKX candles and recovers history after reconnect', async ({
   page,
 }) => {
   let bybitHistoryRequestCount = 0;
@@ -306,6 +312,14 @@ test('switches providers, streams Bybit candles and recovers history after recon
       .filter((row) => Number(row[0]) < after)
       .sort((left, right) => Number(right[0]) - Number(left[0]))
       .slice(0, limit);
+    const latestCandle = rows.reduce<number | null>(
+      (latest, row) => (latest === null ? Number(row[0]) : Math.max(latest, Number(row[0]))),
+      null,
+    );
+
+    if (latestCandle !== null) {
+      latestHistoricalCandleTimestamps.set(page, latestCandle);
+    }
 
     await route.fulfill({
       status: 200,
@@ -381,11 +395,31 @@ test('switches providers, streams Bybit candles and recovers history after recon
 
   await providerSelect.selectOption('okx-spot');
   await expect(providerSelect).toHaveValue('okx-spot');
-  await expect(streamStatus).toHaveAttribute('data-stream-status', 'unsupported');
-  await expect(streamStatus).toHaveText('Solo histórico');
+  await expect(streamStatus).toHaveAttribute('data-stream-status', 'connected');
+  await expect(streamStatus).toHaveText('En vivo');
   await expect
     .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
     .toBeGreaterThan(400);
+
+  const okxTimestamp = getLatestHistoricalCandleTimestamp(page) + 60_000;
+  const sendOkxCandle = (close: string): void => {
+    getWebSocketRoute(page, 'okx').send(
+      JSON.stringify({
+        arg: { channel: 'candle1m', instId: 'BTC-USDT' },
+        data: [[String(okxTimestamp), '65000', '65100', '64900', close, '25', '25', '25', '0']],
+      }),
+    );
+  };
+
+  await expect(streamStatus).toHaveAttribute('data-stream-candle-count', '0');
+  const okxCandleCount = Number(await canvas.getAttribute('data-candles-count'));
+  sendOkxCandle('65050');
+  await expect(streamStatus).toHaveAttribute('data-stream-candle-count', '1');
+  await expect(canvas).toHaveAttribute('data-candles-count', String(okxCandleCount + 1));
+
+  sendOkxCandle('65075');
+  await expect(streamStatus).toHaveAttribute('data-stream-candle-count', '2');
+  await expect(canvas).toHaveAttribute('data-candles-count', String(okxCandleCount + 1));
 });
 
 test('shows a provider error and retries the historical request', async ({ page }) => {
