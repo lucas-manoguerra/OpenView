@@ -37,8 +37,10 @@ describe('market data quote stream service', () => {
   it('routes multiple instruments to the explicitly selected provider', () => {
     const subscription = Object.freeze({ unsubscribe: vi.fn() });
     const subscribeToQuotes = vi.fn(
-      (_instrumentIds: readonly ReturnType<typeof createInstrumentId>[], _handlers: QuoteStreamHandlers) =>
-        subscription,
+      (
+        _instrumentIds: readonly ReturnType<typeof createInstrumentId>[],
+        _handlers: QuoteStreamHandlers,
+      ) => subscription,
     );
     const provider = createProvider({}, subscribeToQuotes);
     const service = new MarketDataStreamService(new MarketDataProviderRegistry([provider]));
@@ -70,11 +72,7 @@ describe('market data quote stream service', () => {
     const service = new MarketDataStreamService(new MarketDataProviderRegistry([provider]));
 
     expect(() =>
-      service.subscribeToQuotes(
-        'binance-spot',
-        [instrumentId, instrumentId],
-        { onQuote: vi.fn() },
-      ),
+      service.subscribeToQuotes('binance-spot', [instrumentId, instrumentId], { onQuote: vi.fn() }),
     ).toThrow('cannot contain duplicate instruments');
   });
 
