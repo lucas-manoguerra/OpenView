@@ -108,7 +108,7 @@ describe('canvas pointer event adapter', () => {
     );
     const adapter = attachCanvasPointerEvents(canvas, controller);
 
-    expect(listenerCount()).toBe(7);
+    expect(listenerCount()).toBe(8);
 
     adapter.destroy();
 
@@ -284,9 +284,33 @@ describe('canvas pointer event adapter', () => {
     const frame = createChartFrame(900, 500, { min: 90, max: 120 }, 2);
     const controller = createChartInteractionController(frame);
     const candles: readonly ChartRenderCandle[] = [
-      { logicalIndex: 0, timestamp: 1_700_000_000_000, open: 100, high: 110, low: 95, close: 105, volume: 10 },
-      { logicalIndex: 1, timestamp: 1_700_000_060_000, open: 105, high: 112, low: 100, close: 108, volume: 20 },
-      { logicalIndex: 2, timestamp: 1_700_000_120_000, open: 108, high: 114, low: 105, close: 110, volume: 30 },
+      {
+        logicalIndex: 0,
+        timestamp: 1_700_000_000_000,
+        open: 100,
+        high: 110,
+        low: 95,
+        close: 105,
+        volume: 10,
+      },
+      {
+        logicalIndex: 1,
+        timestamp: 1_700_000_060_000,
+        open: 105,
+        high: 112,
+        low: 100,
+        close: 108,
+        volume: 20,
+      },
+      {
+        logicalIndex: 2,
+        timestamp: 1_700_000_120_000,
+        open: 108,
+        high: 114,
+        low: 105,
+        close: 110,
+        volume: 30,
+      },
     ];
     const drawing: ChartRenderDrawing = {
       id: 'trend-1',
@@ -307,14 +331,8 @@ describe('canvas pointer event adapter', () => {
     const start = dataPointToChartCoordinate({ logicalIndex: 0, price: 100 }, frame);
     const moved = dataPointToChartCoordinate({ logicalIndex: 0.5, price: 103 }, frame);
 
-    dispatch(
-      'pointerdown',
-      createPointerEvent({ clientX: 100 + start.x, clientY: 50 + start.y }),
-    );
-    dispatch(
-      'pointerup',
-      createPointerEvent({ clientX: 100 + moved.x, clientY: 50 + moved.y }),
-    );
+    dispatch('pointerdown', createPointerEvent({ clientX: 100 + start.x, clientY: 50 + start.y }));
+    dispatch('pointerup', createPointerEvent({ clientX: 100 + moved.x, clientY: 50 + moved.y }));
 
     expect(selections).toEqual(['trend-1']);
     expect(edits).toHaveLength(1);
@@ -332,9 +350,33 @@ describe('canvas pointer event adapter', () => {
     const frame = createChartFrame(900, 500, { min: 90, max: 120 }, 2);
     const controller = createChartInteractionController(frame);
     const candles: readonly ChartRenderCandle[] = [
-      { logicalIndex: 0, timestamp: 1_700_000_000_000, open: 100, high: 110, low: 95, close: 105, volume: 10 },
-      { logicalIndex: 1, timestamp: 1_700_000_060_000, open: 105, high: 112, low: 100, close: 108, volume: 20 },
-      { logicalIndex: 2, timestamp: 1_700_000_120_000, open: 108, high: 114, low: 105, close: 110, volume: 30 },
+      {
+        logicalIndex: 0,
+        timestamp: 1_700_000_000_000,
+        open: 100,
+        high: 110,
+        low: 95,
+        close: 105,
+        volume: 10,
+      },
+      {
+        logicalIndex: 1,
+        timestamp: 1_700_000_060_000,
+        open: 105,
+        high: 112,
+        low: 100,
+        close: 108,
+        volume: 20,
+      },
+      {
+        logicalIndex: 2,
+        timestamp: 1_700_000_120_000,
+        open: 108,
+        high: 114,
+        low: 105,
+        close: 110,
+        volume: 30,
+      },
     ];
     const drawing: ChartRenderDrawing = {
       id: 'trend-1',
@@ -367,14 +409,18 @@ describe('canvas pointer event adapter', () => {
     const deleted: string[] = [];
     const selections: (string | null)[] = [];
     let selectedId: string | null = 'trend-1';
-    attachCanvasPointerEvents(canvas, createChartInteractionController(createChartFrame(900, 500, { min: 90, max: 120 }, 2)), {
-      getSelectedDrawingId: () => selectedId,
-      onDrawingDelete: (drawingId) => deleted.push(drawingId),
-      onDrawingSelect: (drawingId) => {
-        selections.push(drawingId);
-        selectedId = drawingId;
+    attachCanvasPointerEvents(
+      canvas,
+      createChartInteractionController(createChartFrame(900, 500, { min: 90, max: 120 }, 2)),
+      {
+        getSelectedDrawingId: () => selectedId,
+        onDrawingDelete: (drawingId) => deleted.push(drawingId),
+        onDrawingSelect: (drawingId) => {
+          selections.push(drawingId);
+          selectedId = drawingId;
+        },
       },
-    });
+    );
 
     dispatch('keydown', { key: 'Delete', preventDefault: vi.fn() } as unknown as KeyboardEvent);
     dispatch('keydown', { key: 'Escape', preventDefault: vi.fn() } as unknown as KeyboardEvent);
@@ -525,7 +571,7 @@ describe('canvas pointer event adapter', () => {
     );
     const adapter = attachCanvasPointerEvents(canvas, controller);
 
-    expect(listenerCount()).toBe(7);
+    expect(listenerCount()).toBe(8);
 
     dispatch('pointerdown', createPointerEvent());
     adapter.destroy();
