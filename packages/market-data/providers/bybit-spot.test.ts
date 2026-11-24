@@ -511,12 +511,7 @@ describe('Bybit Spot quote stream', () => {
     expect(connection?.sent).toEqual([
       JSON.stringify({
         op: 'subscribe',
-        args: [
-          'tickers.BTCUSDT',
-          'orderbook.1.BTCUSDT',
-          'tickers.ETHUSDT',
-          'orderbook.1.ETHUSDT',
-        ],
+        args: ['tickers.BTCUSDT', 'orderbook.1.BTCUSDT', 'tickers.ETHUSDT', 'orderbook.1.ETHUSDT'],
       }),
     ]);
 
