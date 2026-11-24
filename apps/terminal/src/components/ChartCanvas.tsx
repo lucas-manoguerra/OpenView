@@ -440,9 +440,7 @@ export function ChartCanvas({
             );
           },
           onDrawingDelete: (drawingId: string): void => {
-            const nextDrawings = drawingsRef.current.filter(
-              (drawing) => drawing.id !== drawingId,
-            );
+            const nextDrawings = drawingsRef.current.filter((drawing) => drawing.id !== drawingId);
 
             if (nextDrawings.length === drawingsRef.current.length) {
               return;
@@ -731,9 +729,7 @@ export function ChartCanvas({
       return;
     }
 
-    commitDrawingsRef.current(
-      drawingsRef.current.filter((drawing) => drawing.id !== selectedId),
-    );
+    commitDrawingsRef.current(drawingsRef.current.filter((drawing) => drawing.id !== selectedId));
     selectedDrawingIdRef.current = null;
     setSelectedDrawingId(null);
     runtimeRef.current?.setSelectedDrawingId(null);
