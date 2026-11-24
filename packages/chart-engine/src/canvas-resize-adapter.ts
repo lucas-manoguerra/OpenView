@@ -68,9 +68,9 @@ export const attachCanvasResizeObserver = (
     emitMeasuredSize();
   };
 
+  emitMeasuredSize();
   observer.observe(canvas);
   windowTarget.addEventListener('resize', handleWindowResize);
-  emitMeasuredSize();
 
   return Object.freeze({
     destroy: (): void => {
