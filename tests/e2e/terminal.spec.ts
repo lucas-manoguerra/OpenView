@@ -476,6 +476,36 @@ test('adds, removes and restores watchlist preferences after reload', async ({ p
   await expect(page.getByRole('img', { name: /para SOL \/ USDT/ })).toBeVisible();
 });
 
+test('refreshes available instruments when the selected provider changes', async ({ page }) => {
+  await page.goto('/');
+
+  const watchlist = page.getByTestId('market-watchlist');
+  const search = page.getByTestId('watchlist-search');
+  const providerSelect = page.getByTestId('provider-select');
+
+  await expect(watchlist).toHaveAttribute('data-catalog-status', 'ready');
+
+  await search.fill('XRP');
+  await page.getByTestId('watchlist-add-instrument').click();
+  await expect(page.getByTestId('watchlist-remove-XRP-USDT')).toBeVisible();
+
+  await providerSelect.selectOption('bybit-spot');
+  await expect(watchlist).toHaveAttribute('data-catalog-status', 'ready');
+
+  const unavailableInstrument = page.getByTestId('watchlist-instrument').filter({
+    hasText: 'XRP / USDT',
+  });
+
+  await expect(unavailableInstrument).toBeDisabled();
+  await expect(unavailableInstrument).toHaveAttribute('aria-disabled', 'true');
+  await search.fill('XRP');
+  await expect(page.getByText('No hay instrumentos disponibles para esta búsqueda.')).toBeVisible();
+
+  await page.getByTestId('watchlist-remove-XRP-USDT').click();
+  await expect(page.getByTestId('watchlist-remove-XRP-USDT')).toHaveCount(0);
+  await expect(page.getByTestId('watchlist-instrument')).toHaveCount(3);
+});
+
 test('displays normalized live quotes and refreshes them across Spot providers', async ({
   page,
 }) => {
