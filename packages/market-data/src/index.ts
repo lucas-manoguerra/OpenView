@@ -9,6 +9,7 @@ export type {
   MarketDataProvider,
   MarketDataStreamState,
   MarketDataSubscription,
+  QuoteStreamHandlers,
   QuoteUpdate,
 } from './contracts';
 
