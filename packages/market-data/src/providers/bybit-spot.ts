@@ -14,10 +14,7 @@ import type {
   QuoteUpdate,
 } from '../contracts';
 import { MarketDataProviderError } from '../errors';
-import {
-  createMarketInstrument,
-  normalizeMarketInstruments,
-} from '../instrument-catalog';
+import { createMarketInstrument, normalizeMarketInstruments } from '../instrument-catalog';
 import { MarketDataRequestScheduler, type RequestWaiter } from '../request-scheduler';
 import {
   createReconnectingWebSocketSubscription,
