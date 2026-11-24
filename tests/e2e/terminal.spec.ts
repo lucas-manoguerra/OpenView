@@ -379,6 +379,35 @@ test('supports price axis drag, anchored zoom and double-click auto fit', async 
     .not.toBe(imageBeforeAutoFit);
 });
 
+test('changes price scale modes and restores the full chart viewport', async ({ page }) => {
+  await page.goto('/');
+
+  const canvas = page.locator('canvas[data-candles-count]');
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+
+  const logarithmicScale = page.getByTestId('price-scale-logarithmic');
+  const initialImage = await canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL());
+
+  await logarithmicScale.click();
+
+  await expect(logarithmicScale).toHaveAttribute('aria-pressed', 'true');
+  await expect
+    .poll(() => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL()))
+    .not.toBe(initialImage);
+
+  const percentageScale = page.getByTestId('price-scale-percentage');
+  await percentageScale.click();
+  await expect(percentageScale).toHaveAttribute('aria-pressed', 'true');
+
+  await page.getByTestId('chart-fit-prices').click();
+  await page.getByTestId('chart-fit-content').click();
+
+  await expect(canvas).toHaveAttribute('data-chart-ready', 'true');
+  await expect(canvas).toHaveAttribute('data-candles-count', '500');
+});
+
 test('renders timestamp based time labels instead of logical bar indices', async ({ page }) => {
   await page.addInitScript(() => {
     const labels: string[] = [];
