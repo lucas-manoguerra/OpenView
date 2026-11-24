@@ -24,6 +24,19 @@ export type ChartIndicatorSeries = Readonly<{
   points: readonly MovingAveragePoint[];
 }>;
 
+export type ChartDrawingPoint = Readonly<{
+  timestamp: number;
+  price: number;
+}>;
+
+export type ChartRenderDrawing = Readonly<{
+  id: string;
+  type: 'trend-line' | 'horizontal-line';
+  start: ChartDrawingPoint;
+  end: ChartDrawingPoint | null;
+  color: string;
+}>;
+
 export type ChartRenderScene = Readonly<{
   frame: ChartFrame;
   candles: readonly ChartRenderCandle[];
@@ -31,6 +44,7 @@ export type ChartRenderScene = Readonly<{
   crosshair: ChartCoordinate | null;
   chartType: ChartType;
   indicators: readonly ChartIndicatorSeries[];
+  drawings: readonly ChartRenderDrawing[];
 }>;
 
 export type ChartRenderTheme = Readonly<{
@@ -100,12 +114,51 @@ const normalizeChartIndicators = (
     }),
   );
 
+const normalizeChartDrawings = (
+  drawings: readonly ChartRenderDrawing[],
+): readonly ChartRenderDrawing[] => {
+  const ids = new Set<string>();
+
+  return Object.freeze(
+    drawings.map((drawing) => {
+      if (drawing.id.length === 0 || drawing.color.length === 0 || ids.has(drawing.id)) {
+        throw new RangeError('Chart drawings must have unique ids and a color.');
+      }
+
+      if (
+        !Number.isFinite(drawing.start.timestamp) ||
+        !Number.isFinite(drawing.start.price) ||
+        (drawing.type === 'trend-line' && drawing.end === null)
+      ) {
+        throw new RangeError('Chart drawings must contain finite anchored points.');
+      }
+
+      if (
+        drawing.end !== null &&
+        (!Number.isFinite(drawing.end.timestamp) || !Number.isFinite(drawing.end.price))
+      ) {
+        throw new RangeError('Chart drawing end points must be finite.');
+      }
+
+      ids.add(drawing.id);
+      return Object.freeze({
+        id: drawing.id,
+        type: drawing.type,
+        start: Object.freeze({ ...drawing.start }),
+        end: drawing.end === null ? null : Object.freeze({ ...drawing.end }),
+        color: drawing.color,
+      });
+    }),
+  );
+};
+
 export const createChartRenderScene = (
   frame: ChartFrame,
   candles: readonly ChartRenderCandle[],
   crosshair: ChartCoordinate | null = null,
   chartType: ChartType = 'candles',
   indicators: readonly ChartIndicatorSeries[] = [],
+  drawings: readonly ChartRenderDrawing[] = [],
 ): ChartRenderScene => {
   let previousLogicalIndex = Number.NEGATIVE_INFINITY;
   const normalizedCandles: ChartRenderCandle[] = [];
@@ -133,6 +186,7 @@ export const createChartRenderScene = (
 
   const frozenCandles = Object.freeze(normalizedCandles);
   const frozenIndicators = normalizeChartIndicators(indicators);
+  const frozenDrawings = normalizeChartDrawings(drawings);
 
   return Object.freeze({
     frame,
@@ -141,6 +195,7 @@ export const createChartRenderScene = (
     crosshair: crosshair === null ? null : Object.freeze({ ...crosshair }),
     chartType,
     indicators: frozenIndicators,
+    drawings: frozenDrawings,
   });
 };
 
@@ -149,6 +204,7 @@ export type ChartRenderSceneUpdate = Readonly<{
   crosshair?: ChartCoordinate | null;
   chartType?: ChartType;
   indicators?: readonly ChartIndicatorSeries[];
+  drawings?: readonly ChartRenderDrawing[];
 }>;
 
 export const updateChartRenderScene = (
@@ -162,6 +218,8 @@ export const updateChartRenderScene = (
     update.indicators === undefined
       ? scene.indicators
       : normalizeChartIndicators(update.indicators);
+  const drawings =
+    update.drawings === undefined ? scene.drawings : normalizeChartDrawings(update.drawings);
 
   if (crosshair !== null && (!Number.isFinite(crosshair.x) || !Number.isFinite(crosshair.y))) {
     throw new RangeError('Crosshair coordinates must be finite numbers.');
@@ -172,7 +230,8 @@ export const updateChartRenderScene = (
     crosshair?.x === scene.crosshair?.x &&
     crosshair?.y === scene.crosshair?.y &&
     chartType === scene.chartType &&
-    indicators === scene.indicators
+    indicators === scene.indicators &&
+    drawings === scene.drawings
   ) {
     return scene;
   }
@@ -184,6 +243,7 @@ export const updateChartRenderScene = (
     crosshair: crosshair === null ? null : Object.freeze({ ...crosshair }),
     chartType,
     indicators,
+    drawings,
   });
 };
 
@@ -624,6 +684,123 @@ const drawIndicators = (context: CanvasRenderingContext2D, scene: ChartRenderSce
   context.restore();
 };
 
+const getLogicalIndexAtTimestamp = (
+  timestamp: number,
+  candles: readonly ChartRenderCandle[],
+): number | null => {
+  if (candles.length === 0 || !Number.isFinite(timestamp)) {
+    return null;
+  }
+
+  if (candles.length === 1) {
+    return candles[0]?.logicalIndex ?? null;
+  }
+
+  const first = candles[0];
+  const last = candles[candles.length - 1];
+
+  if (first === undefined || last === undefined) {
+    return null;
+  }
+
+  let left: ChartRenderCandle;
+  let right: ChartRenderCandle;
+
+  if (timestamp <= first.timestamp) {
+    left = first;
+    right = candles[1] ?? first;
+  } else if (timestamp >= last.timestamp) {
+    left = candles[candles.length - 2] ?? last;
+    right = last;
+  } else {
+    let lower = 0;
+    let upper = candles.length - 1;
+
+    while (lower <= upper) {
+      const middle = Math.floor((lower + upper) / 2);
+      const candle = candles[middle];
+
+      if (candle === undefined) {
+        return null;
+      }
+
+      if (candle.timestamp === timestamp) {
+        return candle.logicalIndex;
+      }
+
+      if (candle.timestamp < timestamp) {
+        lower = middle + 1;
+      } else {
+        upper = middle - 1;
+      }
+    }
+
+    left = candles[upper] ?? first;
+    right = candles[lower] ?? last;
+  }
+
+  const duration = right.timestamp - left.timestamp;
+
+  if (duration <= 0) {
+    return left.logicalIndex;
+  }
+
+  const progress = (timestamp - left.timestamp) / duration;
+  return left.logicalIndex + (right.logicalIndex - left.logicalIndex) * progress;
+};
+
+const drawDrawings = (
+  context: CanvasRenderingContext2D,
+  scene: ChartRenderScene,
+): void => {
+  if (scene.drawings.length === 0 || scene.candles.length === 0) {
+    return;
+  }
+
+  const { frame } = scene;
+  const { plotArea } = frame.layout;
+
+  context.save();
+  context.beginPath();
+  context.rect(plotArea.x, plotArea.y, plotArea.width, plotArea.height);
+  context.clip();
+
+  for (const drawing of scene.drawings) {
+    const startY = plotArea.y + priceToCoordinate(drawing.start.price, frame.priceScale);
+
+    if (drawing.type === 'horizontal-line') {
+      context.beginPath();
+      context.moveTo(plotArea.x, startY);
+      context.lineTo(plotArea.x + plotArea.width, startY);
+    } else if (drawing.end !== null) {
+      const startIndex = getLogicalIndexAtTimestamp(drawing.start.timestamp, scene.candles);
+      const endIndex = getLogicalIndexAtTimestamp(drawing.end.timestamp, scene.candles);
+
+      if (startIndex === null || endIndex === null) {
+        continue;
+      }
+
+      context.beginPath();
+      context.moveTo(
+        plotArea.x + logicalIndexToCoordinate(startIndex, frame.timeScale),
+        startY,
+      );
+      context.lineTo(
+        plotArea.x + logicalIndexToCoordinate(endIndex, frame.timeScale),
+        plotArea.y + priceToCoordinate(drawing.end.price, frame.priceScale),
+      );
+    } else {
+      continue;
+    }
+
+    context.strokeStyle = drawing.color;
+    context.lineWidth = 1.5;
+    context.stroke();
+  }
+
+  context.restore();
+};
+
 const drawCrosshair = (
   context: CanvasRenderingContext2D,
   scene: ChartRenderScene,
@@ -686,6 +863,7 @@ export const drawChartScene = (
   }
   drawVolumeBars(context, scene, theme);
   drawIndicators(context, scene);
+  drawDrawings(context, scene);
   drawCrosshair(context, scene, theme);
   context.restore();
 };
