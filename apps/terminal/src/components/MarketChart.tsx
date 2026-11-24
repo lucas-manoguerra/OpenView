@@ -878,9 +878,7 @@ export function MarketChart() {
     nextInstrument: WatchlistInstrument,
     nextProviderId: string,
   ): Promise<void> => {
-    const alreadyInWatchlist = watchlist.some(
-      (instrument) => instrument.id === nextInstrument.id,
-    );
+    const alreadyInWatchlist = watchlist.some((instrument) => instrument.id === nextInstrument.id);
 
     if (!alreadyInWatchlist && watchlist.length >= MAX_WATCHLIST_INSTRUMENTS) {
       return;
