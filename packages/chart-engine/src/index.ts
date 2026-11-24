@@ -58,6 +58,7 @@ export {
 } from './price-scale';
 export {
   coordinateToLogicalIndex,
+  countAppendedBars,
   createTimeScale,
   generateTimeTicks,
   getRightOffsetAfterDataUpdate,
