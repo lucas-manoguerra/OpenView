@@ -2,10 +2,16 @@ import { chartCoordinateToDataPoint, type ChartDataPoint } from './chart-frame';
 import type { ChartInteractionController } from './chart-interaction';
 import type { NumericRange } from './viewport';
 
-export type CanvasDrawingTool = 'cursor' | 'trend-line' | 'horizontal-line';
+export type CanvasDrawingTool =
+  | 'cursor'
+  | 'trend-line'
+  | 'ray'
+  | 'horizontal-line'
+  | 'vertical-line'
+  | 'rectangle';
 
 export type CanvasDrawingGesture = Readonly<{
-  type: 'trend-line' | 'horizontal-line';
+  type: Exclude<CanvasDrawingTool, 'cursor'>;
   start: ChartDataPoint;
   end: ChartDataPoint | null;
 }>;
@@ -119,10 +125,12 @@ export const attachCanvasPointerEvents = (
       });
       const end = chartCoordinateToDataPoint(boundedPosition, controller.snapshot.frame);
 
+      const clickTool =
+        activeDrawingTool === 'horizontal-line' || activeDrawingTool === 'vertical-line';
       options.onDrawingComplete?.({
         type: activeDrawingTool,
         start: drawingStart,
-        end: activeDrawingTool === 'horizontal-line' ? null : end,
+        end: clickTool ? null : end,
       });
       drawingStart = null;
       activeDrawingTool = null;
