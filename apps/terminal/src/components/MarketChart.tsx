@@ -14,7 +14,11 @@ import {
   type MarketDataSubscription,
   type QuoteUpdate,
 } from '@openview/market-data';
-import { MarketWatchlist } from './MarketWatchlist';
+import {
+  MarketWatchlist,
+  type ProviderInstrumentSearchResult,
+  type SearchCatalogFailure,
+} from './MarketWatchlist';
 import {
   DEFAULT_WATCHLIST,
   MAX_WATCHLIST_INSTRUMENTS,
@@ -125,6 +129,13 @@ export function MarketChart() {
     'loading',
   );
   const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [searchResults, setSearchResults] = useState<readonly ProviderInstrumentSearchResult[]>([]);
+  const [searchCatalogStatus, setSearchCatalogStatus] = useState<
+    'idle' | 'loading' | 'ready' | 'partial' | 'unavailable'
+  >('idle');
+  const [searchCatalogFailures, setSearchCatalogFailures] = useState<
+    readonly SearchCatalogFailure[]
+  >([]);
   const [selectedInstrumentId, setSelectedInstrumentId] =
     useState<InstrumentId>(DEFAULT_INSTRUMENT_ID);
   const [candles, setCandles] = useState<
@@ -147,6 +158,8 @@ export function MarketChart() {
   const quoteRequestIdRef = useRef(0);
   const catalogRequestIdRef = useRef(0);
   const catalogAbortControllerRef = useRef<AbortController | null>(null);
+  const searchCatalogRequestIdRef = useRef(0);
+  const searchCatalogAbortControllerRef = useRef<AbortController | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const olderAbortControllerRef = useRef<AbortController | null>(null);
   const recoveryAbortControllerRef = useRef<AbortController | null>(null);
@@ -267,6 +280,65 @@ export function MarketChart() {
     },
     [],
   );
+
+  const loadSearchCatalog = useCallback(async (): Promise<void> => {
+    const requestId = searchCatalogRequestIdRef.current + 1;
+    searchCatalogRequestIdRef.current = requestId;
+    searchCatalogAbortControllerRef.current?.abort();
+
+    const controller = new AbortController();
+    searchCatalogAbortControllerRef.current = controller;
+    setSearchCatalogStatus('loading');
+    setSearchCatalogFailures([]);
+
+    try {
+      const batch = await instrumentDiscoveryService.listInstrumentsFromAllProviders({
+        signal: controller.signal,
+      });
+
+      if (controller.signal.aborted || requestId !== searchCatalogRequestIdRef.current) {
+        return;
+      }
+
+      const results = batch.catalogs.flatMap((catalog) =>
+        catalog.instruments.map((instrument) => ({
+          instrument: createWatchlistInstrument(instrument),
+          providerId: catalog.providerId,
+          providerName: catalog.providerName,
+        })),
+      );
+      setSearchResults(results);
+      setSearchCatalogFailures(batch.failures);
+      setSearchCatalogStatus(
+        batch.catalogs.length === 0 && batch.failures.length > 0
+          ? 'unavailable'
+          : batch.failures.length > 0
+            ? 'partial'
+            : 'ready',
+      );
+    } catch (cause) {
+      if (controller.signal.aborted || requestId !== searchCatalogRequestIdRef.current) {
+        return;
+      }
+
+      setSearchResults([]);
+      setSearchCatalogFailures([
+        {
+          providerId: 'all',
+          providerName: 'Proveedores',
+          message:
+            cause instanceof Error
+              ? cause.message
+              : 'No se pudieron consultar los catálogos de instrumentos.',
+        },
+      ]);
+      setSearchCatalogStatus('unavailable');
+    } finally {
+      if (requestId === searchCatalogRequestIdRef.current) {
+        searchCatalogAbortControllerRef.current = null;
+      }
+    }
+  }, []);
 
   const loadQuotes = useCallback(
     (
@@ -572,6 +644,9 @@ export function MarketChart() {
         catalogRequestIdRef.current += 1;
         catalogAbortControllerRef.current?.abort();
         catalogAbortControllerRef.current = null;
+        searchCatalogRequestIdRef.current += 1;
+        searchCatalogAbortControllerRef.current?.abort();
+        searchCatalogAbortControllerRef.current = null;
         streamSubscriptionRef.current?.unsubscribe();
         streamSubscriptionRef.current = null;
         quoteRequestIdRef.current += 1;
@@ -676,7 +751,11 @@ export function MarketChart() {
           ? 'Conectando'
           : 'Desconectado';
 
-  const handleProviderChange = async (nextProviderId: string): Promise<void> => {
+  const handleProviderChange = async (
+    nextProviderId: string,
+    nextWatchlist: readonly WatchlistInstrument[] = watchlist,
+    preferredInstrumentId: string | null = null,
+  ): Promise<void> => {
     const nextSource = dataSources.find((source) => source.id === nextProviderId);
 
     if (nextSource === undefined) {
@@ -719,17 +798,24 @@ export function MarketChart() {
       return;
     }
 
-    loadQuotes(nextProviderId, watchlist, catalog);
+    loadQuotes(nextProviderId, nextWatchlist, catalog);
 
     if (catalog === null) {
-      void loadCandles(nextProviderId, nextInterval, selectedInstrumentId);
+      const fallbackInstrumentId = createInstrumentId(
+        preferredInstrumentId ?? selectedInstrumentId,
+      );
+      setSelectedInstrumentId(fallbackInstrumentId);
+      void loadCandles(nextProviderId, nextInterval, fallbackInstrumentId);
       return;
     }
 
-    const supportedInstruments = watchlist.filter((instrument) =>
+    const supportedInstruments = nextWatchlist.filter((instrument) =>
       catalog.some((available) => available.id === instrument.id),
     );
     const nextSelectedInstrument =
+      (preferredInstrumentId === null
+        ? undefined
+        : supportedInstruments.find((instrument) => instrument.id === preferredInstrumentId)) ??
       supportedInstruments.find((instrument) => instrument.id === selectedInstrumentId) ??
       supportedInstruments[0];
 
@@ -748,7 +834,7 @@ export function MarketChart() {
 
     if (nextSelectedInstrumentId !== selectedInstrumentId) {
       saveBrowserWatchlistPreferences({
-        instruments: watchlist,
+        instruments: nextWatchlist,
         selectedInstrumentId: nextSelectedInstrumentId,
       });
     }
@@ -788,33 +874,31 @@ export function MarketChart() {
     void loadCandles(providerId, interval, nextSelectedInstrumentId);
   };
 
-  const handleInstrumentAdd = (nextInstrument: WatchlistInstrument): void => {
-    if (
-      watchlist.some((instrument) => instrument.id === nextInstrument.id) ||
-      watchlist.length >= MAX_WATCHLIST_INSTRUMENTS
-    ) {
+  const handleInstrumentAdd = async (
+    nextInstrument: WatchlistInstrument,
+    nextProviderId: string,
+  ): Promise<void> => {
+    const alreadyInWatchlist = watchlist.some(
+      (instrument) => instrument.id === nextInstrument.id,
+    );
+
+    if (!alreadyInWatchlist && watchlist.length >= MAX_WATCHLIST_INSTRUMENTS) {
       return;
     }
 
-    const nextWatchlist = [...watchlist, nextInstrument];
-    const shouldSelectAddedInstrument =
-      catalogStatus === 'ready' &&
-      !availableInstruments.some((instrument) => instrument.id === selectedInstrumentId);
-    const nextSelectedInstrumentId = shouldSelectAddedInstrument
-      ? createInstrumentId(nextInstrument.id)
-      : selectedInstrumentId;
+    const nextWatchlist = alreadyInWatchlist ? watchlist : [...watchlist, nextInstrument];
+    const nextSelectedInstrumentId = createInstrumentId(nextInstrument.id);
 
-    setWatchlist(nextWatchlist);
+    if (!alreadyInWatchlist) {
+      setWatchlist(nextWatchlist);
+    }
+
     setSelectedInstrumentId(nextSelectedInstrumentId);
     saveBrowserWatchlistPreferences({
       instruments: nextWatchlist,
       selectedInstrumentId: nextSelectedInstrumentId,
     });
-    loadQuotes(providerId, nextWatchlist, catalogStatus === 'ready' ? availableInstruments : null);
-
-    if (shouldSelectAddedInstrument) {
-      void loadCandles(providerId, interval, nextSelectedInstrumentId);
-    }
+    await handleProviderChange(nextProviderId, nextWatchlist, nextInstrument.id);
   };
 
   const handleInstrumentRemove = (instrumentId: string): void => {
@@ -930,6 +1014,10 @@ export function MarketChart() {
       </div>
       <MarketWatchlist
         instruments={watchlist}
+        searchResults={searchResults}
+        searchCatalogStatus={searchCatalogStatus}
+        searchCatalogFailures={searchCatalogFailures}
+        onOpenSearch={() => void loadSearchCatalog()}
         availableInstruments={availableInstruments}
         availableInstrumentIds={availableInstruments.map((instrument) => instrument.id)}
         catalogStatus={catalogStatus}
@@ -938,7 +1026,9 @@ export function MarketChart() {
         selectedInstrumentId={selectedInstrumentId}
         quotes={quotes}
         onSelect={handleInstrumentSelect}
-        onAdd={handleInstrumentAdd}
+        onAdd={(instrument, sourceProviderId) =>
+          void handleInstrumentAdd(instrument, sourceProviderId)
+        }
         onRemove={handleInstrumentRemove}
       />
       <section
