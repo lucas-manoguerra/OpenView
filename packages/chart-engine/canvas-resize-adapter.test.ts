@@ -164,7 +164,7 @@ describe('canvas resize observer adapter', () => {
       }),
     ).toThrow(RangeError);
 
-    expect(windowTarget.listenerCount()).toBe(1);
+    expect(windowTarget.listenerCount()).toBe(0);
   });
 
   it('does not emit entries belonging to other elements', () => {
