@@ -1,4 +1,5 @@
 ---
+
 description: Run the OpenView verification harness and diagnose failures without weakening checks.
 agent: orchestrator
 ---

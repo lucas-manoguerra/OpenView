@@ -1,13 +1,16 @@
 ---
+
 description: Implementa el motor de gráficos independiente, sus escalas, layout, entrada y rendering.
 mode: subagent
 permissions:
-  - action: edit
-    resource: "*"
-    effect: deny
-  - action: edit
-    resource: "packages/chart-engine/**"
-    effect: allow
+
+- action: edit
+  resource: "*"
+  effect: deny
+- action: edit
+  resource: "packages/chart-engine/**"
+  effect: allow
+
 ---
 
 # Especialista del motor de gráficos

@@ -1,13 +1,16 @@
 ---
+
 description: Diseña entidades, valores e invariantes financieros puros del dominio de mercado.
 mode: subagent
 permissions:
-  - action: edit
-    resource: "*"
-    effect: deny
-  - action: edit
-    resource: "packages/market-domain/**"
-    effect: allow
+
+- action: edit
+  resource: "*"
+  effect: deny
+- action: edit
+  resource: "packages/market-domain/**"
+  effect: allow
+
 ---
 
 # Especialista del dominio de mercado

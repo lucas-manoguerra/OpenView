@@ -1,31 +1,34 @@
 ---
+
 description: Mantiene tests, harnesses, automatizaciones y verificaciones de calidad del repositorio.
 mode: subagent
 permissions:
-  - action: edit
-    resource: "*"
-    effect: deny
-  - action: edit
-    resource: "tests/**"
-    effect: allow
-  - action: edit
-    resource: "scripts/**"
-    effect: allow
-  - action: edit
-    resource: "packages/**/*.test.ts"
-    effect: allow
-  - action: edit
-    resource: ".github/workflows/**"
-    effect: allow
-  - action: edit
-    resource: "vitest.config.ts"
-    effect: allow
-  - action: edit
-    resource: "playwright.config.ts"
-    effect: allow
-  - action: edit
-    resource: "biome.json"
-    effect: allow
+
+- action: edit
+  resource: "*"
+  effect: deny
+- action: edit
+  resource: "tests/**"
+  effect: allow
+- action: edit
+  resource: "scripts/**"
+  effect: allow
+- action: edit
+  resource: "packages/**/*.test.ts"
+  effect: allow
+- action: edit
+  resource: ".github/workflows/**"
+  effect: allow
+- action: edit
+  resource: "vitest.config.ts"
+  effect: allow
+- action: edit
+  resource: "playwright.config.ts"
+  effect: allow
+- action: edit
+  resource: "biome.json"
+  effect: allow
+
 ---
 
 # Especialista de harness y calidad

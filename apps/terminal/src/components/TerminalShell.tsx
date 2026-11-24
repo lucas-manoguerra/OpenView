@@ -110,7 +110,13 @@ export function TerminalShell() {
                 <div class="max-w-md text-center">
                   <div class="mx-auto mb-5 grid size-14 place-items-center rounded-2xl border border-blue-400/20 bg-blue-400/5 text-blue-300">
                     <svg viewBox="0 0 24 24" fill="none" class="size-7" aria-hidden="true">
-                      <path d="M4 19V5m0 14h16M7 15l4-4 3 2 5-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+                      <path
+                        d="M4 19V5m0 14h16M7 15l4-4 3 2 5-7"
+                        stroke="currentColor"
+                        stroke-width="1.6"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
                     </svg>
                   </div>
                   <h2 class="text-base font-semibold text-white">El motor comienza aquí</h2>

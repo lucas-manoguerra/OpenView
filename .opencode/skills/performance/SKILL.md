@@ -1,4 +1,5 @@
 ---
+
 name: Performance
 description: Evaluate rendering cost, frame latency, memory ownership, bundle size, and interaction responsiveness.
 ---

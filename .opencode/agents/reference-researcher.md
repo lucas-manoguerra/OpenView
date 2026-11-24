@@ -1,13 +1,16 @@
 ---
+
 description: Investiga comportamientos observables de herramientas de referencia y los convierte en criterios verificables para OpenView.
 mode: subagent
 permissions:
-  - action: edit
-    resource: "*"
-    effect: deny
-  - action: shell
-    resource: "*"
-    effect: deny
+
+- action: edit
+  resource: "*"
+  effect: deny
+- action: shell
+  resource: "*"
+  effect: deny
+
 ---
 
 # Investigador de referencia funcional

@@ -1,11 +1,4 @@
-export type AssetClass =
-  | 'equity'
-  | 'future'
-  | 'forex'
-  | 'crypto'
-  | 'index'
-  | 'commodity'
-  | 'bond';
+export type AssetClass = 'equity' | 'future' | 'forex' | 'crypto' | 'index' | 'commodity' | 'bond';
 
 export type InstrumentId = string & Readonly<{ __brand: 'InstrumentId' }>;
 

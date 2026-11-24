@@ -190,9 +190,7 @@ for (const root of sourceRoots) {
 
 if (failures.length > 0) {
   for (const failure of failures) {
-    process.stderr.write(
-      `${failure.filePath} [${failure.rule}] ${failure.detail}\n`,
-    );
+    process.stderr.write(`${failure.filePath} [${failure.rule}] ${failure.detail}\n`);
   }
 
   process.exitCode = 1;

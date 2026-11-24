@@ -1,10 +1,13 @@
 ---
+
 description: Coordina el desarrollo de OpenView, asigna trabajo a especialistas y valida la integración.
 mode: primary
 permissions:
-  - action: subagent
-    resource: "*"
-    effect: allow
+
+- action: subagent
+  resource: "*"
+  effect: allow
+
 ---
 
 # Orquestador de OpenView

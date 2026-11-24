@@ -1,13 +1,16 @@
 ---
+
 description: Revisa seguridad de dependencias, autenticación, secretos, almacenamiento y fuentes externas sin editar archivos.
 mode: subagent
 permissions:
-  - action: edit
-    resource: "*"
-    effect: deny
-  - action: shell
-    resource: "*"
-    effect: deny
+
+- action: edit
+  resource: "*"
+  effect: deny
+- action: shell
+  resource: "*"
+  effect: deny
+
 ---
 
 # Revisor de seguridad

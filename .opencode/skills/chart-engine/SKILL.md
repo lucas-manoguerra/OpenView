@@ -1,4 +1,5 @@
 ---
+
 name: Chart Engine
 description: Design and implement OpenView chart rendering, scales, viewport, layout, and input without UI framework coupling.
 ---

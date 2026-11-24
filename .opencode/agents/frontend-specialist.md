@@ -1,13 +1,16 @@
 ---
+
 description: Construye la aplicación Astro y las islas Preact con foco en claridad, accesibilidad y bajo coste de hidratación.
 mode: subagent
 permissions:
-  - action: edit
-    resource: "*"
-    effect: deny
-  - action: edit
-    resource: "apps/terminal/**"
-    effect: allow
+
+- action: edit
+  resource: "*"
+  effect: deny
+- action: edit
+  resource: "apps/terminal/**"
+  effect: allow
+
 ---
 
 # Especialista de frontend

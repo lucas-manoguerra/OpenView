@@ -27,8 +27,6 @@ describe('chart viewport transformations', () => {
   });
 
   it('rejects a collapsed scale range', () => {
-    expect(() => timeToHorizontalCoordinate(50, { min: 10, max: 10 }, 800)).toThrow(
-      RangeError,
-    );
+    expect(() => timeToHorizontalCoordinate(50, { min: 10, max: 10 }, 800)).toThrow(RangeError);
   });
 });

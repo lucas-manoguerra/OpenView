@@ -1,13 +1,16 @@
 ---
+
 description: Revisa límites entre módulos, dirección de dependencias y cumplimiento de los ADR sin modificar archivos.
 mode: subagent
 permissions:
-  - action: edit
-    resource: "*"
-    effect: deny
-  - action: shell
-    resource: "*"
-    effect: deny
+
+- action: edit
+  resource: "*"
+  effect: deny
+- action: shell
+  resource: "*"
+  effect: deny
+
 ---
 
 # Guardián de arquitectura

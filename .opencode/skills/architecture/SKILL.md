@@ -1,4 +1,5 @@
 ---
+
 name: Architecture
 description: Apply OpenView module ownership, dependency direction, ADRs, and API design rules.
 ---

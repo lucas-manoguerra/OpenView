@@ -1,4 +1,5 @@
 ---
+
 name: Market Data
 description: Build provider adapters, normalized market data contracts, streaming subscriptions, and compliance metadata.
 ---

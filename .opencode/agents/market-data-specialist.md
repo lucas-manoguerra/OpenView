@@ -1,13 +1,16 @@
 ---
+
 description: Diseña contratos de proveedores, normalización, streaming, caché y manejo de límites.
 mode: subagent
 permissions:
-  - action: edit
-    resource: "*"
-    effect: deny
-  - action: edit
-    resource: "packages/market-data/**"
-    effect: allow
+
+- action: edit
+  resource: "*"
+  effect: deny
+- action: edit
+  resource: "packages/market-data/**"
+  effect: allow
+
 ---
 
 # Especialista de datos de mercado

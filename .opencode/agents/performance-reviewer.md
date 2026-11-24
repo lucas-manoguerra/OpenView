@@ -1,13 +1,16 @@
 ---
+
 description: Revisa rendering, memoria, coste de interacción y rendimiento sin modificar archivos.
 mode: subagent
 permissions:
-  - action: edit
-    resource: "*"
-    effect: deny
-  - action: shell
-    resource: "*"
-    effect: deny
+
+- action: edit
+  resource: "*"
+  effect: deny
+- action: shell
+  resource: "*"
+  effect: deny
+
 ---
 
 # Revisor de rendimiento

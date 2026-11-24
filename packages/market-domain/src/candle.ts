@@ -18,17 +18,8 @@ export type CandleValidationError =
   | 'invalid-price-range'
   | 'invalid-ohlc-range';
 
-export const createCandle = (
-  input: CandleInput,
-): Result<Candle, CandleValidationError> => {
-  const values = [
-    input.timestamp,
-    input.open,
-    input.high,
-    input.low,
-    input.close,
-    input.volume,
-  ];
+export const createCandle = (input: CandleInput): Result<Candle, CandleValidationError> => {
+  const values = [input.timestamp, input.open, input.high, input.low, input.close, input.volume];
 
   if (!values.every(Number.isFinite)) {
     return failure('non-finite-value');

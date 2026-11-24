@@ -1,4 +1,5 @@
 ---
+
 description: Compare a requested chart behavior with public reference documentation and define independent acceptance criteria.
 agent: reference-researcher
 ---
