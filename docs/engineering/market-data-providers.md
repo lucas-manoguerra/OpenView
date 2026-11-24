@@ -8,6 +8,8 @@ Los rangos históricos utilizan timestamps Unix en milisegundos y la semántica 
 
 `MarketDataProviderRegistry` registra proveedores por un identificador estable, rechaza IDs duplicados y permite obtener el proveedor elegido por el usuario. Las credenciales privadas no forman parte del contrato de datos públicos.
 
+`MarketDataStreamService` enruta streams de velas y cotizaciones hacia el proveedor seleccionado. `subscribeToQuotes(providerId, instrumentIds, handlers)` valida que la lista no esté vacía, que no contenga instrumentos duplicados y que el proveedor anuncie `streamingQuotes`. Las suscripciones admiten varios instrumentos en una misma conexión cuando el exchange lo permite. Cada `QuoteUpdate` incluye el timestamp del evento, `receivedAt` local, bid, ask, último precio, volumen de 24 horas y variación porcentual de 24 horas. Los campos no disponibles se representan como `null`; el estado de conexión y los errores utilizan los mismos handlers que el stream de velas.
+
 ## Servicio de histórico
 
 `HistoricalCandleService` consume el registro y ofrece una entrada común para la aplicación:
@@ -60,7 +62,7 @@ El cálculo del próximo timestamp utiliza duraciones fijas para intervalos intr
 - La conexión WebSocket Spot tiene una duración máxima esperada de 24 horas; el cliente debe tolerar la desconexión y volver a suscribirse.
 - El cliente usa el ciclo de vida WebSocket compartido por `market-data`, con backoff de 1 a 30 segundos, cancelación de temporizadores y cierre anticipado ante el evento `serverShutdown`.
 - El navegador responde a los frames de control Ping del protocolo WebSocket; no se envían mensajes JSON de heartbeat a Binance.
-- Las cotizaciones bid/ask no están implementadas en este adaptador; `streamingQuotes` continúa en `false`.
+- Cotizaciones públicas Spot: el stream combinado `@ticker` publica `24hrTicker` para varios símbolos sobre una conexión. El adaptador normaliza `E` como timestamp del evento, `b/a` como mejor bid/ask, `c` como último precio, `v` como volumen base de 24 horas y `P` como variación porcentual de 24 horas. `receivedAt` registra la hora local de recepción. `streamingQuotes` está habilitado.
 
 ### Bybit Spot
 
@@ -78,7 +80,7 @@ El cálculo del próximo timestamp utiliza duraciones fijas para intervalos intr
 - El payload `data` se normaliza desde `start/open/high/low/close/volume`; `confirm` indica si la vela quedó cerrada.
 - El cliente envía `{"op":"ping"}` cada 20 segundos, contesta los mensajes de ping de aplicación y vuelve a suscribirse al reconectar.
 - La reconexión usa el ciclo de vida WebSocket compartido, con backoff de 1 a 30 segundos y cancelación de heartbeat al cerrar la suscripción.
-- Las cotizaciones bid/ask no están implementadas en este adaptador; `streamingQuotes` continúa en `false`.
+- Cotizaciones públicas Spot: una conexión puede suscribirse a los temas `tickers.<symbol>` y `orderbook.1.<symbol>` para varios instrumentos. El ticker aporta `lastPrice`, `volume24h` y `price24hPcnt`; este último llega como fracción y se multiplica por 100 para normalizarlo a porcentaje. El canal `orderbook.1` aporta los mejores niveles bid/ask; el precio se considera ausente cuando el tamaño del nivel es cero. `receivedAt` registra la hora local de recepción. `streamingQuotes` está habilitado.
 
 ### OKX Spot
 
@@ -92,12 +94,12 @@ El cálculo del próximo timestamp utiliza duraciones fijas para intervalos intr
 - Para velas diarias, semanales y mensuales se utilizan las variantes UTC (`1Dutc`, `1Wutc`, `1Mutc`); el intervalo 1s tiene un histórico documentado de solo tres meses.
 - El planificador serializa peticiones por instancia y aplica 110 ms entre peticiones, conservando margen frente al límite documentado de 20 peticiones cada dos segundos.
 - Los códigos de error de la API y los errores HTTP se convierten en `MarketDataProviderError`; no hay reintentos automáticos.
-- Stream público de velas: `wss://ws.okx.com:8443/ws/v5/business`; los canales Kline son públicos y no requieren API key.
+- Stream público de velas: `wss://ws.okx.com/ws/v5/business`; los canales Kline son públicos y no requieren API key. El puerto 8443 dejó de estar disponible para WebSocket público el 31 de octubre de 2026; el endpoint predeterminado utiliza el puerto 443.
 - La suscripción usa `candle<interval>` y respeta los sufijos UTC de los intervalos diarios, semanales y mensuales (`candle1Dutc`, `candle1Wutc`, `candle1Mutc`).
 - Cada fila del stream contiene timestamp, OHLCV, volúmenes de cotización y confirmación; el adaptador normaliza el timestamp de apertura y el volumen base, y traduce `confirm=0/1` a vela parcial/cerrada.
 - El heartbeat sigue la guía del exchange: tras 25 segundos sin mensajes envía el texto `ping`, espera el texto `pong` y cierra/reconecta si no llega en 5 segundos.
 - La reconexión usa el ciclo WebSocket compartido, con backoff de 1 a 30 segundos; la suscripción se repite al reabrir.
-- Las cotizaciones bid/ask no están implementadas en este adaptador; `streamingQuotes` continúa en `false`.
+- Cotizaciones públicas Spot: `wss://ws.okx.com/ws/v5/public` utiliza el canal `tickers` y admite varias suscripciones de instrumentos. `last`, `bidPx`, `askPx` y `vol24h` se normalizan como último precio, mejores puntas y volumen base de 24 horas. La variación porcentual se calcula a partir de `last` y `open24h`; `receivedAt` registra la hora local de recepción. Los precios o volúmenes vacíos se representan como `null`. `streamingQuotes` está habilitado.
 - La redistribución se clasifica como `unknown`; la aplicación no debe asumir que los datos pueden redistribuirse comercialmente.
 
 La documentación oficial de Binance mantiene un endpoint específico de solo datos de mercado, sin credenciales, y documenta el endpoint de klines, el orden de resultados y los límites de peticiones:
@@ -142,6 +144,12 @@ Estos proveedores se mantienen como adaptadores independientes. Que el endpoint 
 - [OKX API v5 — Historical Candlesticks](https://www.okx.com/docs-v5/en/#rest-api-market-data-get-candlesticks-history)
 - [OKX API v5 — WebSocket Candlesticks channel](https://www.okx.com/docs-v5/en/#websocket-api-public-channel-candlesticks-channel)
 - [OKX API v5 — WebSocket heartbeat](https://www.okx.com/docs-v5/en/#websocket-connect)
+
+- [Binance Spot WebSocket — Individual symbol ticker streams](https://github.com/binance/binance-spot-api-docs/blob/master/web-socket-streams.md#individual-symbol-ticker-streams)
+- [Bybit WebSocket — Tickers](https://bybit-exchange.github.io/docs/v5/websocket/public/ticker)
+- [Bybit WebSocket — Orderbook](https://bybit-exchange.github.io/docs/v5/websocket/public/orderbook)
+- [OKX API v5 — WebSocket Tickers channel](https://www.okx.com/docs-v5/en/#websocket-api-public-channel-tickers-channel)
+- [OKX API v5 changelog — WebSocket port migration](https://www.okx.com/docs-v5/log_en/#2026-10-31)
 - [BingX Open API](https://bingxservice.zendesk.com/hc/en-us)
 - [Bitunix Open API](https://www.bitunix.com/api-docs/)
 - [Kraken API rate limits](https://support.kraken.com/articles/206548367-what-are-the-api-rate-limits-)
