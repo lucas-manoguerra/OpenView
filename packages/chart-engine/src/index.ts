@@ -11,8 +11,10 @@ export {
   createChartRenderScene,
   DEFAULT_CHART_THEME,
   drawChartScene,
+  updateChartRenderScene,
   type ChartRenderCandle,
   type ChartRenderScene,
+  type ChartRenderSceneUpdate,
   type ChartRenderTheme,
 } from './canvas-painter';
 export {
@@ -26,6 +28,13 @@ export {
   attachCanvasPointerEvents,
   type CanvasPointerAdapter,
 } from './canvas-pointer-adapter';
+export {
+  attachCanvasResizeObserver,
+  type CanvasResize,
+  type CanvasResizeAdapter,
+  type CanvasResizeAdapterOptions,
+  type CanvasResizeObserverHandle,
+} from './canvas-resize-adapter';
 export {
   CanvasRenderer,
   createCanvasRenderer,
