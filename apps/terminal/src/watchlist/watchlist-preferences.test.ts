@@ -76,7 +76,7 @@ describe('watchlist preferences', () => {
     }
   });
 
-  it('limits restored watchlists to the supported maximum', () => {
+  it('restores all supported instruments from the catalogue', () => {
     const preferences = restoreWatchlistPreferences(
       JSON.stringify({
         version: 1,
@@ -85,7 +85,7 @@ describe('watchlist preferences', () => {
       }),
     );
 
-    expect(preferences.instruments).toHaveLength(25);
+    expect(preferences.instruments).toHaveLength(WATCHLIST_CATALOG.length);
   });
 
   it('persists and reloads watchlist order and selection', () => {
