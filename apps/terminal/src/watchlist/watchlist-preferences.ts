@@ -93,7 +93,7 @@ const STORAGE_VERSION = 1;
 const createDefaultPreferences = (): WatchlistPreferences =>
   Object.freeze({
     instruments: DEFAULT_WATCHLIST,
-    selectedInstrumentId: DEFAULT_WATCHLIST[0].id,
+    selectedInstrumentId: DEFAULT_WATCHLIST[0]?.id ?? 'BTC-USDT',
   });
 
 export const restoreWatchlistPreferences = (serialized: string | null): WatchlistPreferences => {
@@ -117,9 +117,11 @@ export const restoreWatchlistPreferences = (serialized: string | null): Watchlis
     }
 
     const knownIds = new Set(WATCHLIST_CATALOG.map((instrument) => instrument.id));
-    const normalizedIds = [...new Set(
-      instrumentIds.filter((id): id is string => typeof id === 'string' && knownIds.has(id)),
-    )].slice(0, MAX_WATCHLIST_INSTRUMENTS);
+    const normalizedIds = [
+      ...new Set(
+        instrumentIds.filter((id): id is string => typeof id === 'string' && knownIds.has(id)),
+      ),
+    ].slice(0, MAX_WATCHLIST_INSTRUMENTS);
 
     if (normalizedIds.length === 0) {
       return createDefaultPreferences();
@@ -133,7 +135,7 @@ export const restoreWatchlistPreferences = (serialized: string | null): Watchlis
       typeof selectedInstrumentId === 'string' &&
       instruments.some((instrument) => instrument.id === selectedInstrumentId)
         ? selectedInstrumentId
-        : instruments[0].id;
+        : (instruments[0]?.id ?? DEFAULT_WATCHLIST[0]?.id ?? 'BTC-USDT');
 
     return Object.freeze({
       instruments: Object.freeze(instruments),
