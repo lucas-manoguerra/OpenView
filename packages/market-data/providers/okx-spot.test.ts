@@ -89,7 +89,7 @@ describe('OKX Spot market data provider', () => {
     expect(provider.id).toBe('okx-spot');
     expect(provider.displayName).toBe('OKX Spot');
     expect(provider.capabilities.historicalCandles).toBe(true);
-    expect(provider.capabilities.streamingQuotes).toBe(false);
+    expect(provider.capabilities.streamingQuotes).toBe(true);
     expect(provider.capabilities.streamingCandles).toBe(true);
     expect(provider.capabilities.supportedIntervals).toContain('1s');
     expect(provider.capabilities.supportedIntervals).toContain('1M');
@@ -568,5 +568,138 @@ describe('OKX Spot candle stream', () => {
       () => new OkxSpotMarketDataProvider({ streamBaseUrl: 'ws://stream.example.test' }),
     ).toThrow('must use WSS');
     expect(connections).toHaveLength(0);
+  });
+});
+
+describe('OKX Spot quote stream', () => {
+  it('uses the public tickers channel and normalizes quotes for multiple instruments', () => {
+    const connections: FakeOkxWebSocket[] = [];
+    const provider = createStreamProvider(connections);
+    const updates: unknown[] = [];
+    const states: string[] = [];
+    const errors: Error[] = [];
+    const subscription = provider.subscribeToQuotes(
+      [createInstrumentId('OKX:BTC-USDT'), createInstrumentId('ETH-USDT')],
+      {
+        onQuote: (quote) => updates.push(quote),
+        onStatus: (state) => states.push(state),
+        onError: (error) => errors.push(error),
+      },
+    );
+    const connection = getItem(connections, 0);
+
+    expect(connection.url).toBe('wss://ws.okx.com/ws/v5/public');
+    connection.open();
+    expect(connection.sent).toEqual([
+      JSON.stringify({
+        op: 'subscribe',
+        args: [
+          { channel: 'tickers', instId: 'BTC-USDT' },
+          { channel: 'tickers', instId: 'ETH-USDT' },
+        ],
+      }),
+    ]);
+
+    connection.emit({
+      arg: { channel: 'tickers', instId: 'BTC-USDT' },
+      data: [
+        {
+          instId: 'BTC-USDT',
+          last: '102',
+          bidPx: '101.9',
+          askPx: '102.1',
+          open24h: '100',
+          vol24h: '321.5',
+          ts: String(START_TIME + 1_000),
+        },
+      ],
+    });
+    connection.emit({
+      arg: { channel: 'tickers', instId: 'ETH-USDT' },
+      data: [
+        {
+          instId: 'ETH-USDT',
+          last: '19',
+          bidPx: '',
+          askPx: '19.1',
+          open24h: '20',
+          vol24h: '654.3',
+          ts: String(START_TIME + 1_001),
+        },
+      ],
+    });
+
+    expect(states).toEqual(['connecting', 'connected']);
+    expect(errors).toEqual([]);
+    expect(updates).toMatchObject([
+      {
+        instrumentId: 'OKX:BTC-USDT',
+        timestamp: START_TIME + 1_000,
+        bid: 101.9,
+        ask: 102.1,
+        last: 102,
+        volume24h: 321.5,
+        changePercent24h: 2,
+      },
+      {
+        instrumentId: 'ETH-USDT',
+        timestamp: START_TIME + 1_001,
+        bid: null,
+        ask: 19.1,
+        last: 19,
+        volume24h: 654.3,
+        changePercent24h: -5,
+      },
+    ]);
+    expect((updates[0] as { receivedAt: number }).receivedAt).toBeGreaterThan(0);
+
+    subscription.unsubscribe();
+    expect(connection.closeCalls).toBe(1);
+    expect(states.at(-1)).toBe('disconnected');
+  });
+
+  it('responds to server pings and rejects duplicate normalized instruments', () => {
+    const connections: FakeOkxWebSocket[] = [];
+    const provider = createStreamProvider(connections);
+    const subscription = provider.subscribeToQuotes(
+      [createInstrumentId('BTC-USDT')],
+      { onQuote: () => undefined },
+    );
+    const connection = getItem(connections, 0);
+
+    connection.open();
+    connection.emit('ping');
+    expect(connection.sent.at(-1)).toBe('pong');
+
+    expect(() =>
+      provider.subscribeToQuotes(
+        [createInstrumentId('BTC-USDT'), createInstrumentId('OKX:BTC/USDT')],
+        { onQuote: () => undefined },
+      ),
+    ).toThrow('cannot contain duplicate instruments');
+    expect(connections).toHaveLength(1);
+
+    subscription.unsubscribe();
+  });
+
+  it('reports rejected ticker subscriptions through the shared error handler', () => {
+    const connections: FakeOkxWebSocket[] = [];
+    const provider = createStreamProvider(connections);
+    const errors: Error[] = [];
+    const subscription = provider.subscribeToQuotes(
+      [createInstrumentId('BTC-USDT')],
+      { onQuote: () => undefined, onError: (error) => errors.push(error) },
+    );
+    const connection = getItem(connections, 0);
+
+    connection.open();
+    connection.emit({ event: 'error', code: '60012', msg: 'Invalid channel' });
+
+    expect(errors.at(-1)?.message).toContain(
+      'OKX Spot quote subscription failed (code 60012)',
+    );
+    expect(connection.closeCalls).toBe(1);
+
+    subscription.unsubscribe();
   });
 });
