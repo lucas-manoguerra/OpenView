@@ -108,3 +108,11 @@ export {
   type MovingAverageInput,
   type MovingAveragePoint,
 } from './indicators';
+
+export {
+  getLogicalIndexAtTimestamp,
+  getTimestampAtLogicalIndex,
+  hitTestChartDrawing,
+  updateChartDrawing,
+  type ChartDrawingHit,
+} from './drawing-geometry';
