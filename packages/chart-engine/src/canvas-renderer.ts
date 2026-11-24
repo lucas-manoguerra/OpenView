@@ -79,7 +79,9 @@ export class CanvasRenderer {
       height < 0 ||
       devicePixelRatio <= 0
     ) {
-      throw new RangeError('Canvas size must be finite and non-negative with a positive pixel ratio.');
+      throw new RangeError(
+        'Canvas size must be finite and non-negative with a positive pixel ratio.',
+      );
     }
 
     if (
