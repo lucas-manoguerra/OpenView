@@ -260,7 +260,7 @@ const hitDrawingBody = (
   frame: ChartFrame,
   tolerance: number,
 ): boolean => {
-  const { plotArea } = frame;
+  const { plotArea } = frame.layout;
   const plotRight = plotArea.x + plotArea.width;
 
   if (drawing.type === 'horizontal-line') {
