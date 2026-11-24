@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { createInstrumentId } from '@openview/market-domain';
-import { createMarketInstrument, normalizeMarketInstruments } from './src/instrument-catalog';
+import {
+  createMarketInstrument,
+  normalizeMarketInstruments,
+  tryCreateMarketInstrument,
+} from './src/instrument-catalog';
 
 describe('normalized market instrument catalog', () => {
   it('normalizes asset codes and creates provider-independent identifiers', () => {
@@ -10,6 +14,14 @@ describe('normalized market instrument catalog', () => {
       baseAsset: 'BTC',
       quoteAsset: 'USDT',
     });
+  });
+
+  it('skips unsupported provider asset codes without invalidating valid instruments', () => {
+    expect(tryCreateMarketInstrument('AVAX', 'USDT')).toEqual(
+      createMarketInstrument('AVAX', 'USDT'),
+    );
+    expect(tryCreateMarketInstrument('TOKEN/LEGACY', 'USDT')).toBeNull();
+    expect(tryCreateMarketInstrument('AVAX', 'USDT!')).toBeNull();
   });
 
   it('filters by quote asset, sorts and removes duplicate instrument identifiers', () => {
