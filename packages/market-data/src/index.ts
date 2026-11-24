@@ -21,7 +21,10 @@ export { MarketDataProviderRegistry } from './registry';
 export {
   DEFAULT_INSTRUMENT_CATALOG_CACHE_TTL_MS,
   MarketInstrumentDiscoveryService,
+  type MarketInstrumentDiscoveryBatch,
   type MarketInstrumentDiscoveryServiceOptions,
+  type MarketInstrumentProviderCatalog,
+  type MarketInstrumentProviderFailure,
 } from './instrument-service';
 export { MarketDataStreamService } from './stream-service';
 export {

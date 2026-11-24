@@ -106,6 +106,7 @@ const installBinanceMock = async (page: Page): Promise<void> => {
           { status: 'TRADING', isSpotTradingAllowed: true, baseAsset: 'SOL', quoteAsset: 'USDT' },
           { status: 'TRADING', isSpotTradingAllowed: true, baseAsset: 'XRP', quoteAsset: 'USDT' },
           { status: 'TRADING', isSpotTradingAllowed: true, baseAsset: 'ETH', quoteAsset: 'BTC' },
+          { status: 'TRADING', isSpotTradingAllowed: true, baseAsset: 'ADA', quoteAsset: 'USDT' },
           {
             status: 'TRADING',
             isSpotTradingAllowed: true,
@@ -212,6 +213,7 @@ const installWebSocketMock = async (page: Page): Promise<void> => {
           list: [
             { status: 'Trading', baseCoin: 'BTC', quoteCoin: 'USDT' },
             { status: 'Trading', baseCoin: 'ETH', quoteCoin: 'USDT' },
+            { status: 'Trading', baseCoin: 'ADA', quoteCoin: 'USDT' },
             { status: 'Trading', baseCoin: 'SOL', quoteCoin: 'USDT' },
             { status: 'Trading', baseCoin: 'ETH', quoteCoin: 'BTC' },
           ],
@@ -230,6 +232,7 @@ const installWebSocketMock = async (page: Page): Promise<void> => {
         data: [
           { state: 'live', baseCcy: 'BTC', quoteCcy: 'USDT' },
           { state: 'live', baseCcy: 'ETH', quoteCcy: 'USDT' },
+          { state: 'live', baseCcy: 'ADA', quoteCcy: 'USDT' },
           { state: 'live', baseCcy: 'SOL', quoteCcy: 'USDT' },
           { state: 'live', baseCcy: 'ETH', quoteCcy: 'BTC' },
         ],
@@ -445,17 +448,20 @@ test('adds, removes and restores watchlist preferences after reload', async ({ p
   await page.goto('/');
 
   const watchlist = page.getByTestId('market-watchlist');
-  const search = page.getByTestId('watchlist-search');
 
+  await expect(watchlist).toHaveAttribute('data-catalog-status', 'ready');
   await expect(page.getByTestId('watchlist-instrument')).toHaveCount(3);
+  await page.getByTestId('watchlist-open-search').click();
+  await expect(page.getByTestId('symbol-search-modal')).toBeVisible();
 
+  const search = page.getByTestId('watchlist-search');
   await search.fill('XRP');
-  await page.getByTestId('watchlist-add-instrument').click();
+  const searchResult = page.getByTestId('watchlist-search-result').first();
+  await expect(searchResult).toContainText('XRPUSDT');
+  await searchResult.click();
 
   await expect(page.getByTestId('watchlist-instrument')).toHaveCount(4);
-  await expect(
-    page.getByTestId('watchlist-instrument').filter({ hasText: 'XRP / USDT' }),
-  ).toBeVisible();
+  await expect(page.getByTestId('watchlist-remove-XRP-USDT')).toBeVisible();
 
   await page.getByRole('button', { name: 'Ethereum ETH / USDT' }).click();
   await page.getByTestId('watchlist-remove-ETH-USDT').click();
@@ -472,9 +478,7 @@ test('adds, removes and restores watchlist preferences after reload', async ({ p
 
   await expect(watchlist).toBeVisible();
   await expect(page.getByTestId('watchlist-instrument')).toHaveCount(3);
-  await expect(
-    page.getByTestId('watchlist-instrument').filter({ hasText: 'XRP / USDT' }),
-  ).toBeVisible();
+  await expect(page.getByTestId('watchlist-remove-XRP-USDT')).toBeVisible();
   await expect(page.getByTestId('watchlist-remove-ETH-USDT')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Solana SOL / USDT' })).toHaveAttribute(
     'aria-pressed',
@@ -483,21 +487,85 @@ test('adds, removes and restores watchlist preferences after reload', async ({ p
   await expect(page.getByRole('img', { name: /para SOL \/ USDT/ })).toBeVisible();
 });
 
+test('searches continuous symbols across all Spot providers and filters by exchange', async ({
+  page,
+}) => {
+  await page.route('https://api.bybit.com/v5/market/kline**', async (route) => {
+    const url = new URL(route.request().url());
+    const interval = url.searchParams.get('interval') === '5' ? '5m' : '1m';
+    const startTime = Number(url.searchParams.get('start') ?? 0);
+    const endTime = Number(url.searchParams.get('end') ?? Date.now());
+    const candles = createBybitRows(interval, startTime, endTime);
+    const latestCandle = candles.at(-1);
+
+    if (latestCandle !== undefined) {
+      updateLatestHistoricalCandleTimestamp(page, Number(latestCandle[0]));
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        retCode: 0,
+        retMsg: 'OK',
+        result: { category: 'spot', symbol: 'ADAUSDT', list: candles },
+      }),
+    });
+  });
+
+  await page.goto('/');
+  await expect(page.getByTestId('market-watchlist')).toHaveAttribute(
+    'data-catalog-status',
+    'ready',
+  );
+  await page.keyboard.press('/');
+
+  const modal = page.getByTestId('symbol-search-modal');
+  const search = page.getByTestId('watchlist-search');
+  const results = page.getByTestId('watchlist-search-result');
+
+  await expect(modal).toBeVisible();
+  await search.fill('adausdt');
+  await expect(results).toHaveCount(3);
+
+  await search.fill('ADA / USDT');
+  await expect(results).toHaveCount(3);
+  await search.fill('adausdt');
+
+  await expect(results.nth(0)).toHaveAttribute('data-provider-id', 'binance-spot');
+  await expect(results.nth(1)).toHaveAttribute('data-provider-id', 'bybit-spot');
+  await expect(results.nth(2)).toHaveAttribute('data-provider-id', 'okx-spot');
+
+  await page.getByRole('button', { name: 'Bybit Spot' }).click();
+  await expect(results).toHaveCount(1);
+  await expect(results.first()).toHaveAttribute('data-provider-id', 'bybit-spot');
+
+  await search.press('Enter');
+  await expect(modal).toHaveCount(0);
+  await expect(page.getByTestId('provider-select')).toHaveValue('bybit-spot');
+  await expect(page.getByTestId('watchlist-remove-ADA-USDT')).toBeVisible();
+  await expect(
+    page.getByTestId('watchlist-instrument').filter({ hasText: 'ADA / USDT' }),
+  ).toBeVisible();
+  await expect(page.getByRole('img', { name: /para ADA \/ USDT/ })).toBeVisible();
+});
+
 test('searches valid instruments when the provider catalog contains unsupported asset codes', async ({
   page,
 }) => {
   await page.goto('/');
 
   const watchlist = page.getByTestId('market-watchlist');
-  const search = page.getByTestId('watchlist-search');
-  const addInstrument = page.getByTestId('watchlist-add-instrument');
-
   await expect(watchlist).toHaveAttribute('data-catalog-status', 'ready');
-  await search.fill('avax');
 
-  await expect(addInstrument).toHaveCount(1);
-  await expect(addInstrument).toContainText('AVAX / USDT');
-  await addInstrument.click();
+  await page.getByTestId('watchlist-open-search').click();
+  const search = page.getByTestId('watchlist-search');
+  await search.fill('avaxusdt');
+
+  const result = page.getByTestId('watchlist-search-result');
+  await expect(result).toHaveCount(1);
+  await expect(result).toContainText('AVAXUSDT');
+  await result.click();
 
   await expect(page.getByTestId('watchlist-remove-AVAX-USDT')).toBeVisible();
   await expect(
@@ -505,17 +573,19 @@ test('searches valid instruments when the provider catalog contains unsupported 
   ).toBeVisible();
 });
 
-test('refreshes available instruments when the selected provider changes', async ({ page }) => {
+test('keeps watchlist entries visible when switching to a provider without that market', async ({
+  page,
+}) => {
   await page.goto('/');
 
   const watchlist = page.getByTestId('market-watchlist');
-  const search = page.getByTestId('watchlist-search');
   const providerSelect = page.getByTestId('provider-select');
 
   await expect(watchlist).toHaveAttribute('data-catalog-status', 'ready');
-
-  await search.fill('XRP');
-  await page.getByTestId('watchlist-add-instrument').click();
+  await page.getByTestId('watchlist-open-search').click();
+  await page.getByTestId('watchlist-search').fill('XRP');
+  await expect(page.getByTestId('watchlist-search-result')).toHaveCount(1);
+  await page.getByTestId('watchlist-search-result').click();
   await expect(page.getByTestId('watchlist-remove-XRP-USDT')).toBeVisible();
 
   await providerSelect.selectOption('bybit-spot');
@@ -527,8 +597,15 @@ test('refreshes available instruments when the selected provider changes', async
 
   await expect(unavailableInstrument).toBeDisabled();
   await expect(unavailableInstrument).toHaveAttribute('aria-disabled', 'true');
-  await search.fill('XRP');
-  await expect(page.getByText('No hay instrumentos disponibles para esta búsqueda.')).toBeVisible();
+
+  await page.getByTestId('watchlist-open-search').click();
+  await page.getByTestId('watchlist-search').fill('XRPUSDT');
+  await expect(page.getByTestId('watchlist-search-result')).toHaveCount(1);
+  await expect(page.getByTestId('watchlist-search-result')).toHaveAttribute(
+    'data-provider-id',
+    'binance-spot',
+  );
+  await page.keyboard.press('Escape');
 
   await page.getByTestId('watchlist-remove-XRP-USDT').click();
   await expect(page.getByTestId('watchlist-remove-XRP-USDT')).toHaveCount(0);

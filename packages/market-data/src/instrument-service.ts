@@ -9,6 +9,23 @@ export type MarketInstrumentDiscoveryServiceOptions = Readonly<{
   now?: () => number;
 }>;
 
+export type MarketInstrumentProviderCatalog = Readonly<{
+  providerId: string;
+  providerName: string;
+  instruments: readonly MarketInstrument[];
+}>;
+
+export type MarketInstrumentProviderFailure = Readonly<{
+  providerId: string;
+  providerName: string;
+  message: string;
+}>;
+
+export type MarketInstrumentDiscoveryBatch = Readonly<{
+  catalogs: readonly MarketInstrumentProviderCatalog[];
+  failures: readonly MarketInstrumentProviderFailure[];
+}>;
+
 type InstrumentCatalogCacheEntry = Readonly<{
   expiresAt: number;
   instruments: readonly MarketInstrument[];
@@ -99,6 +116,57 @@ export class MarketInstrumentDiscoveryService {
       }
 
       return snapshot;
+    });
+  }
+
+  async listInstrumentsFromAllProviders(
+    filter: InstrumentDiscoveryFilter = {},
+  ): Promise<MarketInstrumentDiscoveryBatch> {
+    const providers = this.registry
+      .list()
+      .filter((provider) => provider.listInstruments !== undefined);
+    const results = await Promise.all(
+      providers.map(async (provider) => {
+        try {
+          const instruments = await this.listInstruments(provider.id, filter);
+
+          return {
+            catalog: Object.freeze({
+              providerId: provider.id,
+              providerName: provider.displayName,
+              instruments,
+            }),
+            failure: null,
+          };
+        } catch (cause) {
+          if (filter.signal?.aborted) {
+            throw cause;
+          }
+
+          return {
+            catalog: null,
+            failure: Object.freeze({
+              providerId: provider.id,
+              providerName: provider.displayName,
+              message:
+                cause instanceof Error
+                  ? cause.message
+                  : 'No se pudo consultar el catálogo del proveedor.',
+            }),
+          };
+        }
+      }),
+    );
+
+    filter.signal?.throwIfAborted();
+
+    return Object.freeze({
+      catalogs: Object.freeze(
+        results.flatMap((result) => (result.catalog === null ? [] : [result.catalog])),
+      ),
+      failures: Object.freeze(
+        results.flatMap((result) => (result.failure === null ? [] : [result.failure])),
+      ),
     });
   }
 
