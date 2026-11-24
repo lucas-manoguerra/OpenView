@@ -448,6 +448,7 @@ export function ChartCanvas({
           currentCandles,
           controller.snapshot.crosshair,
           chartTypeRef.current,
+          indicatorsRef.current,
         );
         controller.setFrame(frame);
         renderer.setScene(scene);
