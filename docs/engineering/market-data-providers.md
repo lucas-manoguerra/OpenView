@@ -18,6 +18,21 @@ Los rangos históricos utilizan timestamps Unix en milisegundos y la semántica 
 
 La selección del proveedor es siempre explícita. El servicio no cambia automáticamente de exchange ni reinterpreta símbolos: un fallback silencioso podría mostrar otro mercado. Conserva el `AbortSignal` y los errores del adaptador, no agrega caché y no modifica las velas devueltas.
 
+## Integración en la terminal
+
+La terminal utiliza `HistoricalCandleService` desde el componente `MarketChart` y entrega las velas normalizadas a `ChartCanvas`. El componente visual no conoce endpoints ni formatos de exchanges.
+
+- La fuente inicial es `binance-spot`, con el instrumento `BTC-USDT` y temporalidad `1m`.
+- El selector de fuente ofrece Binance Spot, Bybit Spot y OKX Spot. El selector de temporalidad se construye a partir de `supportedIntervals` de la fuente elegida.
+- Cada consulta solicita hasta 500 períodos recientes y utiliza timestamps Unix en milisegundos con rango final exclusivo.
+- Para `1M`, el inicio del rango se calcula usando límites de mes calendario UTC; no se aproxima como 30 días por mes.
+- Al iniciar una consulta, se cancela la anterior. Un identificador de solicitud evita que una respuesta antigua reemplace datos más recientes.
+- Los errores del proveedor se muestran con una acción de reintento; una respuesta vacía se distingue de un error.
+- Los cambios de datos actualizan la escena Canvas sin reconstruir el renderer ni el controlador de interacción. Se mantienen el espaciado de velas, el desplazamiento temporal, el modo de escala, el zoom vertical y el desplazamiento vertical relativo.
+- Las pruebas de navegador interceptan los endpoints públicos con respuestas sintéticas deterministas. No realizan consultas a Internet ni necesitan API keys durante CI.
+
+Streaming, cotizaciones en vivo y Replay permanecen fuera de este flujo. Tampoco se cambia automáticamente de proveedor ante un error.
+
 ## Adaptador implementado
 
 ### Binance Spot
