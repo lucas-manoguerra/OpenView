@@ -10,7 +10,10 @@ import {
 } from './src/time-axis';
 
 const MINUTE = 60_000;
-const createPoints = (count: number, startTimestamp = Date.UTC(2024, 0, 1)): readonly TimeAxisPoint[] =>
+const createPoints = (
+  count: number,
+  startTimestamp = Date.UTC(2024, 0, 1),
+): readonly TimeAxisPoint[] =>
   Object.freeze(
     Array.from({ length: count }, (_, logicalIndex) =>
       Object.freeze({
@@ -123,7 +126,7 @@ describe('timestamp based time axis', () => {
       { logicalIndex: 3, timestamp: Date.UTC(2024, 0, 1, 12) },
       { logicalIndex: 4, timestamp: Date.UTC(2024, 0, 1, 12, 1) },
     ];
-    const scale = createTimeScale(500, 4, { barSpacing: 100 });
+    const scale = createTimeScale(500, 4, { barSpacing: 100, maxBarSpacing: 100 });
     const ticks = generateTimeAxisTicks(scale, points, { targetTickCount: 4 });
 
     expect(ticks.length).toBe(2);
@@ -140,12 +143,7 @@ describe('timestamp based time axis', () => {
       { logicalIndex: 2, timestamp: 2, coordinate: 110, label: 'overlap' },
       { logicalIndex: 3, timestamp: 3, coordinate: 170, label: 'last' },
     ];
-    const selected = selectNonOverlappingTimeAxisTicks(
-      ticks,
-      (label) => label.length * 6,
-      200,
-      8,
-    );
+    const selected = selectNonOverlappingTimeAxisTicks(ticks, (label) => label.length * 6, 200, 8);
 
     expect(selected.map((tick) => tick.label)).toEqual(['middle', 'last']);
   });
