@@ -2,8 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 const BINANCE_KLINES_URL = 'https://data-api.binance.vision/api/v3/klines**';
 
-const getIntervalDuration = (interval: string): number =>
-  interval === '5m' ? 300_000 : 60_000;
+const getIntervalDuration = (interval: string): number => (interval === '5m' ? 300_000 : 60_000);
 
 const createKlines = (interval: string, startTime: number, endTime: number): unknown[][] => {
   const duration = getIntervalDuration(interval);
@@ -38,9 +37,7 @@ const createKlines = (interval: string, startTime: number, endTime: number): unk
   });
 };
 
-const installBinanceMock = async (
-  page: Page,
-): Promise<void> => {
+const installBinanceMock = async (page: Page): Promise<void> => {
   await page.route(BINANCE_KLINES_URL, async (route) => {
     const url = new URL(route.request().url());
     const interval = url.searchParams.get('interval') ?? '1m';
@@ -93,14 +90,18 @@ test('loads Binance Spot history and changes candle interval', async ({ page }) 
   const canvas = page.locator('canvas[data-candles-count]');
 
   await expect(canvas).toHaveAttribute('data-chart-ready', 'true');
-  await expect.poll(async () => Number(await canvas.getAttribute('data-candles-count'))).toBeGreaterThan(400);
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
   await expect(page.getByTestId('provider-select')).toHaveValue('binance-spot');
   await expect(page.getByTestId('interval-select')).toHaveValue('1m');
 
   await page.getByTestId('interval-select').selectOption('5m');
 
   await expect(canvas).toHaveAttribute('data-interval', '5m');
-  await expect.poll(async () => Number(await canvas.getAttribute('data-candles-count'))).toBeGreaterThan(400);
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
   expect(requestedIntervals).toContain('1m');
   expect(requestedIntervals).toContain('5m');
 });
@@ -138,7 +139,9 @@ test('shows a provider error and retries the historical request', async ({ page 
   await page.getByRole('button', { name: 'Reintentar' }).click();
 
   const canvas = page.locator('canvas[data-candles-count]');
-  await expect.poll(async () => Number(await canvas.getAttribute('data-candles-count'))).toBeGreaterThan(400);
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
   expect(requestCount).toBe(2);
 });
 
