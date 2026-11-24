@@ -205,7 +205,7 @@ test('streams Binance live candles and updates the current bar without duplicate
   await expect(streamStatus).toHaveAttribute('data-stream-status', 'connected');
   await expect(streamStatus).toHaveText('En vivo');
 
-  const timestamp = Math.floor(Date.now() / 60_000) * 60_000 + 60_000;
+  const timestamp = Date.UTC(2099, 0, 1);
   const createStreamEvent = (close: string) => ({
     e: 'kline',
     s: 'BTCUSDT',
