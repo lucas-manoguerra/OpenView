@@ -135,3 +135,43 @@ test('supports price axis drag, anchored zoom and double-click auto fit', async 
     .poll(() => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL()))
     .not.toBe(imageBeforeAutoFit);
 });
+
+test('renders timestamp based time labels instead of logical bar indices', async ({ page }) => {
+  await page.addInitScript(() => {
+    const labels: string[] = [];
+    Object.defineProperty(window, '__openViewCanvasLabels', { value: labels });
+    const originalFillText = CanvasRenderingContext2D.prototype.fillText;
+
+    CanvasRenderingContext2D.prototype.fillText = function (
+      text: string,
+      x: number,
+      y: number,
+      maxWidth?: number,
+    ): void {
+      labels.push(String(text));
+      if (maxWidth === undefined) {
+        originalFillText.call(this, text, x, y);
+      } else {
+        originalFillText.call(this, text, x, y, maxWidth);
+      }
+    };
+  });
+
+  await page.goto('/');
+
+  const canvas = page.getByRole('img', {
+    name: /Gráfico interactivo de velas y volumen para BTC USDT/,
+  });
+
+  await expect(canvas).toHaveAttribute('data-chart-ready', 'true');
+
+  const labels = await page.evaluate(
+    () =>
+      (window as Window & { __openViewCanvasLabels?: string[] }).__openViewCanvasLabels ?? [],
+  );
+
+  expect(labels.some((label) => /\d{2}:\d{2}/.test(label))).toBe(true);
+  expect(labels).not.toContain('0');
+  expect(labels).not.toContain('1');
+  expect(labels).not.toContain('2');
+});
