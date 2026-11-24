@@ -134,17 +134,18 @@ export const formatTimeAxisLabel = (
 
   const locale = options.locale ?? 'en-US';
   const timeZone = options.timeZone;
+  const includeSeconds = interval < MINUTE;
+  const timeFields: Intl.DateTimeFormatOptions = {
+    hour: '2-digit',
+    minute: '2-digit',
+    ...(includeSeconds ? { second: '2-digit' } : {}),
+    hourCycle: 'h23',
+  };
   const formatOptions: Intl.DateTimeFormatOptions =
     interval < DAY
       ? visibleSpan >= DAY
-        ? {
-            day: '2-digit',
-            month: 'short',
-            hour: '2-digit',
-            minute: '2-digit',
-            hourCycle: 'h23',
-          }
-        : { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }
+        ? { day: '2-digit', month: 'short', ...timeFields }
+        : timeFields
       : interval < 30 * DAY
         ? { day: '2-digit', month: 'short' }
         : interval < YEAR
