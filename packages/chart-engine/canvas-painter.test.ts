@@ -336,7 +336,14 @@ describe('canvas chart painter', () => {
         color: '#60a5fa',
       },
     ];
-    const normalScene = createChartRenderScene(frame, createCandles(), null, 'candles', [], drawings);
+    const normalScene = createChartRenderScene(
+      frame,
+      createCandles(),
+      null,
+      'candles',
+      [],
+      drawings,
+    );
     const selectedScene = createChartRenderScene(
       frame,
       createCandles(),
