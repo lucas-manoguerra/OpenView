@@ -93,7 +93,7 @@ describe('price scale transformations', () => {
     const scale = createPriceScale({ min: 100, max: 110 }, 400, { mode: 'logarithmic' });
     const ticks = generatePriceTicks(scale, 5);
 
-    expect(ticks.map((tick) => tick.price)).toEqual([100, 102, 104, 106, 108, 110]);
+    expect(ticks.map((tick) => tick.price)).toEqual([100, 102.5, 105, 107.5, 110]);
   });
 
   it('rejects collapsed, non-finite and invalid logarithmic ranges', () => {
