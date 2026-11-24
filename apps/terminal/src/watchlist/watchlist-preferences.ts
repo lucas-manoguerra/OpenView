@@ -129,9 +129,11 @@ export const restoreWatchlistPreferences = (serialized: string | null): Watchlis
       const instrument = WATCHLIST_CATALOG.find((item) => item.id === id);
       return instrument === undefined ? [] : [instrument];
     });
-    const selectedId = instruments.some((instrument) => instrument.id === selectedInstrumentId)
-      ? selectedInstrumentId
-      : instruments[0].id;
+    const selectedId =
+      typeof selectedInstrumentId === 'string' &&
+      instruments.some((instrument) => instrument.id === selectedInstrumentId)
+        ? selectedInstrumentId
+        : instruments[0].id;
 
     return Object.freeze({
       instruments: Object.freeze(instruments),
