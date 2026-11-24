@@ -18,7 +18,7 @@ export class MarketInstrumentDiscoveryService {
   private readonly registry: MarketDataProviderRegistry;
   private readonly cacheTtlMs: number;
   private readonly now: () => number;
-  private readonly cache = new Map<string, InstrumentCatalogCacheEntry>();
+  private readonly cache = new Map<string, Map<string, InstrumentCatalogCacheEntry>>();
 
   constructor(
     registry: MarketDataProviderRegistry,
@@ -56,16 +56,21 @@ export class MarketInstrumentDiscoveryService {
     filter.signal?.throwIfAborted();
 
     const quoteAsset = filter.quoteAsset?.trim().toUpperCase();
-    const cacheKey = provider.id + ':' + (quoteAsset ?? '*');
+    const cacheKey = quoteAsset ?? '*';
     const currentTime = this.now();
-    const cached = this.cache.get(cacheKey);
+    const providerCache = this.cache.get(provider.id);
+    const cached = providerCache?.get(cacheKey);
 
     if (cached !== undefined && cached.expiresAt > currentTime) {
       return Promise.resolve(cached.instruments);
     }
 
     if (cached !== undefined) {
-      this.cache.delete(cacheKey);
+      providerCache?.delete(cacheKey);
+
+      if (providerCache?.size === 0) {
+        this.cache.delete(provider.id);
+      }
     }
 
     const requestFilter: InstrumentDiscoveryFilter = {
@@ -81,10 +86,12 @@ export class MarketInstrumentDiscoveryService {
       );
 
       if (this.cacheTtlMs > 0) {
-        this.cache.set(cacheKey, {
+        const providerEntries = this.cache.get(provider.id) ?? new Map();
+        providerEntries.set(cacheKey, {
           expiresAt: this.now() + this.cacheTtlMs,
           instruments: snapshot,
         });
+        this.cache.set(provider.id, providerEntries);
       }
 
       return snapshot;
@@ -97,12 +104,6 @@ export class MarketInstrumentDiscoveryService {
       return;
     }
 
-    const prefix = providerId + ':';
-
-    for (const key of this.cache.keys()) {
-      if (key.startsWith(prefix)) {
-        this.cache.delete(key);
-      }
-    }
+    this.cache.delete(providerId);
   }
 }
