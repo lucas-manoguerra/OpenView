@@ -336,6 +336,22 @@ describe('chart interaction controller', () => {
     );
   });
 
+  it('sets a future right margin without changing the visible zoom level', () => {
+    const frame = createFrame();
+    const controller = createChartInteractionController(frame);
+    const latestLogicalIndex = frame.timeScale.rightmostLogicalIndex;
+    const initialX = logicalIndexToCoordinate(latestLogicalIndex, frame.timeScale);
+
+    expect(controller.setRightOffset(12)).toBe(true);
+
+    const nextScale = controller.snapshot.frame.timeScale;
+    expect(nextScale.rightOffset).toBe(12);
+    expect(nextScale.barSpacing).toBe(frame.timeScale.barSpacing);
+    expect(logicalIndexToCoordinate(latestLogicalIndex, nextScale)).toBeLessThan(initialX);
+    expect(controller.setRightOffset(12)).toBe(false);
+    expect(() => controller.setRightOffset(Number.NaN)).toThrow(RangeError);
+  });
+
   it('returns to the realtime edge without changing the current zoom level', () => {
     const frame = createFrame();
     const controller = createChartInteractionController(frame);
