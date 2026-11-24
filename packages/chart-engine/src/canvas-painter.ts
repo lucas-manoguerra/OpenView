@@ -8,6 +8,7 @@ import {
   type TimeAxisData,
 } from './time-axis';
 import type { ChartCoordinate, ChartFrame } from './chart-frame';
+import type { MovingAveragePoint } from './indicators';
 
 export type ChartRenderCandle = Candle &
   Readonly<{
@@ -16,12 +17,20 @@ export type ChartRenderCandle = Candle &
 
 export type ChartType = 'candles' | 'bars' | 'line' | 'area';
 
+export type ChartIndicatorSeries = Readonly<{
+  id: string;
+  label: string;
+  color: string;
+  points: readonly MovingAveragePoint[];
+}>;
+
 export type ChartRenderScene = Readonly<{
   frame: ChartFrame;
   candles: readonly ChartRenderCandle[];
   timeAxisData: TimeAxisData;
   crosshair: ChartCoordinate | null;
   chartType: ChartType;
+  indicators: readonly ChartIndicatorSeries[];
 }>;
 
 export type ChartRenderTheme = Readonly<{
@@ -53,11 +62,44 @@ export const DEFAULT_CHART_THEME: ChartRenderTheme = Object.freeze({
   crosshair: '#aab4c4',
 });
 
+const normalizeChartIndicators = (
+  indicators: readonly ChartIndicatorSeries[],
+): readonly ChartIndicatorSeries[] =>
+  Object.freeze(
+    indicators.map((indicator) => {
+      if (indicator.id.length === 0 || indicator.label.length === 0 || indicator.color.length === 0) {
+        throw new RangeError('Chart indicators must include an id, label and color.');
+      }
+
+      let previousLogicalIndex = Number.NEGATIVE_INFINITY;
+      const points = indicator.points.map((point) => {
+        if (
+          !Number.isFinite(point.logicalIndex) ||
+          point.logicalIndex <= previousLogicalIndex ||
+          !Number.isFinite(point.value)
+        ) {
+          throw new RangeError('Chart indicator points must have finite values and ascending indices.');
+        }
+
+        previousLogicalIndex = point.logicalIndex;
+        return Object.freeze({ ...point });
+      });
+
+      return Object.freeze({
+        id: indicator.id,
+        label: indicator.label,
+        color: indicator.color,
+        points: Object.freeze(points),
+      });
+    }),
+  );
+
 export const createChartRenderScene = (
   frame: ChartFrame,
   candles: readonly ChartRenderCandle[],
   crosshair: ChartCoordinate | null = null,
   chartType: ChartType = 'candles',
+  indicators: readonly ChartIndicatorSeries[] = [],
 ): ChartRenderScene => {
   let previousLogicalIndex = Number.NEGATIVE_INFINITY;
   const normalizedCandles: ChartRenderCandle[] = [];
@@ -84,6 +126,7 @@ export const createChartRenderScene = (
   }
 
   const frozenCandles = Object.freeze(normalizedCandles);
+  const frozenIndicators = normalizeChartIndicators(indicators);
 
   return Object.freeze({
     frame,
@@ -91,6 +134,7 @@ export const createChartRenderScene = (
     timeAxisData: createTimeAxisData(frozenCandles),
     crosshair: crosshair === null ? null : Object.freeze({ ...crosshair }),
     chartType,
+    indicators: frozenIndicators,
   });
 };
 
@@ -98,6 +142,7 @@ export type ChartRenderSceneUpdate = Readonly<{
   frame?: ChartFrame;
   crosshair?: ChartCoordinate | null;
   chartType?: ChartType;
+  indicators?: readonly ChartIndicatorSeries[];
 }>;
 
 export const updateChartRenderScene = (
@@ -107,6 +152,8 @@ export const updateChartRenderScene = (
   const frame = update.frame ?? scene.frame;
   const crosshair = update.crosshair === undefined ? scene.crosshair : update.crosshair;
   const chartType = update.chartType ?? scene.chartType;
+  const indicators =
+    update.indicators === undefined ? scene.indicators : normalizeChartIndicators(update.indicators);
 
   if (crosshair !== null && (!Number.isFinite(crosshair.x) || !Number.isFinite(crosshair.y))) {
     throw new RangeError('Crosshair coordinates must be finite numbers.');
@@ -116,7 +163,8 @@ export const updateChartRenderScene = (
     frame === scene.frame &&
     crosshair?.x === scene.crosshair?.x &&
     crosshair?.y === scene.crosshair?.y &&
-    chartType === scene.chartType
+    chartType === scene.chartType &&
+    indicators === scene.indicators
   ) {
     return scene;
   }
@@ -127,6 +175,7 @@ export const updateChartRenderScene = (
     timeAxisData: scene.timeAxisData,
     crosshair: crosshair === null ? null : Object.freeze({ ...crosshair }),
     chartType,
+    indicators,
   });
 };
 
@@ -526,6 +575,50 @@ const drawVolumeBars = (
   context.restore();
 };
 
+const drawIndicators = (
+  context: CanvasRenderingContext2D,
+  scene: ChartRenderScene,
+): void => {
+  if (scene.indicators.length === 0) {
+    return;
+  }
+
+  const { frame } = scene;
+  const { plotArea } = frame.layout;
+
+  context.save();
+  context.beginPath();
+  context.rect(plotArea.x, plotArea.y, plotArea.width, plotArea.height);
+  context.clip();
+
+  for (const indicator of scene.indicators) {
+    const firstPoint = indicator.points[0];
+
+    if (firstPoint === undefined) {
+      continue;
+    }
+
+    context.beginPath();
+    context.moveTo(
+      plotArea.x + logicalIndexToCoordinate(firstPoint.logicalIndex, frame.timeScale),
+      plotArea.y + priceToCoordinate(firstPoint.value, frame.priceScale),
+    );
+
+    for (const point of indicator.points.slice(1)) {
+      context.lineTo(
+        plotArea.x + logicalIndexToCoordinate(point.logicalIndex, frame.timeScale),
+        plotArea.y + priceToCoordinate(point.value, frame.priceScale),
+      );
+    }
+
+    context.strokeStyle = indicator.color;
+    context.lineWidth = 1.5;
+    context.stroke();
+  }
+
+  context.restore();
+};
+
 const drawCrosshair = (
   context: CanvasRenderingContext2D,
   scene: ChartRenderScene,
@@ -587,6 +680,7 @@ export const drawChartScene = (
     drawCloseSeries(context, scene, theme, scene.chartType === 'area');
   }
   drawVolumeBars(context, scene, theme);
+  drawIndicators(context, scene);
   drawCrosshair(context, scene, theme);
   context.restore();
 };
