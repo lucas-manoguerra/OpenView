@@ -20,6 +20,33 @@ Los rangos históricos utilizan timestamps Unix en milisegundos y la semántica 
 - Los timestamps de apertura se conservan en milisegundos; el volumen normalizado es el volumen del activo base.
 - El adaptador no reintenta automáticamente ante HTTP 429/418. Expone el status y el valor `Retry-After` mediante `MarketDataProviderError` para que una política superior pueda aplicar backoff.
 - Streaming todavía no está implementado.
+
+### Bybit Spot
+
+- ID: `bybit-spot`
+- Endpoint histórico: `GET /v5/market/kline` con `category=spot`
+- Host por defecto: `https://api.bybit.com`
+- Los datos públicos de mercado no requieren API key.
+- Cada página admite hasta 1.000 velas; el máximo predeterminado es de 100 páginas por llamada.
+- El endpoint devuelve las velas en orden descendente; el adaptador pagina hacia atrás, deduplica por timestamp y devuelve orden cronológico.
+- Los intervalos comunes se traducen a la codificación V5; no se anuncian intervalos que Bybit no ofrece (por ejemplo, 1s y 8h).
+- El planificador serializa las peticiones por instancia y aplica 100 ms de intervalo mínimo por defecto.
+- Los errores HTTP y los códigos V5 se convierten en `MarketDataProviderError`; se propaga `Retry-After` cuando existe y no se realizan reintentos automáticos.
+- Streaming todavía no está implementado.
+
+### OKX Spot
+
+- ID: `okx-spot`
+- Endpoint histórico: `GET /api/v5/market/history-candles`
+- Host por defecto: `https://www.okx.com`
+- No requiere API key para datos públicos de mercado.
+- Cada página admite hasta 100 velas; el máximo predeterminado es de 100 páginas por llamada.
+- Usa el cursor `after` para recorrer páginas hacia timestamps anteriores y devuelve el resultado ordenado cronológicamente.
+- El volumen se normaliza con `vol`, expresado en unidades del activo base para Spot.
+- Para velas diarias, semanales y mensuales se utilizan las variantes UTC (`1Dutc`, `1Wutc`, `1Mutc`); el intervalo 1s tiene un histórico documentado de solo tres meses.
+- El planificador serializa peticiones por instancia y aplica 110 ms entre peticiones, conservando margen frente al límite documentado de 20 peticiones cada dos segundos.
+- Los códigos de error de la API y los errores HTTP se convierten en `MarketDataProviderError`; no hay reintentos automáticos.
+- Streaming todavía no está implementado.
 - La redistribución se clasifica como `unknown`; la aplicación no debe asumir que los datos pueden redistribuirse comercialmente.
 
 La documentación oficial de Binance mantiene un endpoint específico de solo datos de mercado, sin credenciales, y documenta el endpoint de klines, el orden de resultados y los límites de peticiones:
@@ -32,8 +59,8 @@ La documentación oficial de Binance mantiene un endpoint específico de solo da
 
 Estos proveedores se mantienen como adaptadores independientes. Que el endpoint sea público no implica que todos los intervalos, mercados, profundidades históricas ni derechos de redistribución sean equivalentes.
 
-- **Bybit:** Spot y Linear OHLCV. Pendiente.
-- **OKX:** Spot y Swap OHLCV. Pendiente.
+- **Bybit:** Spot OHLCV implementado; Linear pendiente.
+- **OKX:** Spot OHLCV implementado; Swap pendiente.
 - **BingX:** Spot y Perpetual OHLCV. Pendiente.
 - **Bitunix:** Spot y Futures OHLCV. Pendiente.
 - **Kraken:** Spot OHLCV. Pendiente.
@@ -56,7 +83,9 @@ Estos proveedores se mantienen como adaptadores independientes. Que el endpoint 
 ## Fuentes de referencia para los candidatos
 
 - [Bybit V5 Get Kline](https://bybit-exchange.github.io/docs/v5/market/kline)
-- [OKX API v5](https://www.okx.com/docs-v5/en/)
+- [Bybit rate limit rules](https://bybit-exchange.github.io/docs/v5/rate-limit)
+- [OKX API v5 — Candlesticks](https://www.okx.com/docs-v5/en/#rest-api-market-data-get-candlesticks)
+- [OKX API v5 — Historical Candlesticks](https://www.okx.com/docs-v5/en/#rest-api-market-data-get-candlesticks-history)
 - [BingX Open API](https://bingxservice.zendesk.com/hc/en-us)
 - [Bitunix Open API](https://www.bitunix.com/api-docs/)
 - [Kraken API rate limits](https://support.kraken.com/articles/206548367-what-are-the-api-rate-limits-)
