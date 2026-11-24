@@ -1,9 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createInstrumentId } from '@openview/market-domain';
-import {
-  OkxSpotMarketDataProvider,
-  type OkxWebSocketConnection,
-} from '../src/providers/okx-spot';
+import { OkxSpotMarketDataProvider, type OkxWebSocketConnection } from '../src/providers/okx-spot';
 
 const MINUTE = 60_000;
 const START_TIME = Date.UTC(2024, 0, 1);
@@ -281,7 +278,6 @@ describe('OKX Spot market data provider', () => {
     expect(() => new OkxSpotMarketDataProvider({ maxPages: 0 })).toThrow(RangeError);
   });
 });
-
 
 class FakeOkxWebSocket extends EventTarget {
   readonly url: string;
