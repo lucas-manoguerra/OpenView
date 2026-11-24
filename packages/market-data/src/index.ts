@@ -13,6 +13,7 @@ export type {
 } from './contracts';
 
 export { MarketDataProviderError } from './errors';
+export { getNextCandleTimestamp } from './candle-continuity';
 export { MarketDataProviderRegistry } from './registry';
 export { MarketDataStreamService } from './stream-service';
 export {
@@ -29,6 +30,8 @@ export {
 export {
   BybitSpotMarketDataProvider,
   type BybitSpotProviderOptions,
+  type BybitWebSocketConnection,
+  type BybitWebSocketFactory,
 } from './providers/bybit-spot';
 export {
   OkxSpotMarketDataProvider,

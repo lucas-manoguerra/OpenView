@@ -1,18 +1,31 @@
 import { createCandle, type Candle } from '@openview/market-domain';
 import type {
   CandleInterval,
+  CandleStreamHandlers,
+  CandleSubscriptionRequest,
+  CandleUpdate,
   HistoricalCandleRequest,
   MarketDataCapabilities,
   MarketDataProvider,
+  MarketDataSubscription,
 } from '../contracts';
 import { MarketDataProviderError } from '../errors';
 import { MarketDataRequestScheduler, type RequestWaiter } from '../request-scheduler';
+import {
+  createReconnectingWebSocketSubscription,
+  type MarketDataWebSocketConnection,
+  type MarketDataWebSocketFactory,
+} from '../reconnecting-websocket';
 
 const PROVIDER_ID = 'bybit-spot';
 const DEFAULT_BASE_URL = 'https://api.bybit.com';
 const DEFAULT_PAGE_SIZE = 1_000;
 const DEFAULT_MAX_PAGES = 100;
 const DEFAULT_REQUEST_INTERVAL_MS = 100;
+const DEFAULT_STREAM_BASE_URL = 'wss://stream.bybit.com/v5/public/spot';
+const DEFAULT_RECONNECT_DELAY_MS = 1_000;
+const DEFAULT_MAX_RECONNECT_DELAY_MS = 30_000;
+const DEFAULT_HEARTBEAT_INTERVAL_MS = 20_000;
 
 const INTERVALS: ReadonlyMap<CandleInterval, string> = new Map([
   ['1m', '1'],
@@ -49,6 +62,7 @@ const SUPPORTED_INTERVALS: readonly CandleInterval[] = Object.freeze([
 const CAPABILITIES: MarketDataCapabilities = Object.freeze({
   historicalCandles: true,
   streamingQuotes: false,
+  streamingCandles: true,
   supportedIntervals: SUPPORTED_INTERVALS,
   redistribution: 'unknown',
   attributionRequired: false,
@@ -56,12 +70,20 @@ const CAPABILITIES: MarketDataCapabilities = Object.freeze({
 
 export type BybitSpotProviderOptions = Readonly<{
   baseUrl?: string;
+  streamBaseUrl?: string;
   fetcher?: typeof fetch;
+  webSocketFactory?: MarketDataWebSocketFactory;
   pageSize?: number;
   maxPages?: number;
   minimumRequestIntervalMs?: number;
+  reconnectDelayMs?: number;
+  maxReconnectDelayMs?: number;
+  heartbeatIntervalMs?: number;
   waiter?: RequestWaiter;
 }>;
+
+export type BybitWebSocketConnection = MarketDataWebSocketConnection;
+export type BybitWebSocketFactory = MarketDataWebSocketFactory;
 
 const isRecord = (value: unknown): value is object =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -132,6 +154,71 @@ const normalizeSymbol = (instrumentId: string): string => {
   return symbol;
 };
 
+const parseStreamCandles = (
+  value: unknown,
+  request: CandleSubscriptionRequest,
+  symbol: string,
+  interval: string,
+): readonly CandleUpdate[] => {
+  const topic = readProperty(value, 'topic');
+
+  if (topic !== 'kline.' + interval + '.' + symbol) {
+    return Object.freeze([]);
+  }
+
+  const data = readProperty(value, 'data');
+
+  if (!Array.isArray(data)) {
+    throw new RangeError('Bybit returned a malformed WebSocket kline payload.');
+  }
+
+  return Object.freeze(
+    data.map((item) => {
+      if (!isRecord(item)) {
+        throw new RangeError('Bybit returned a malformed streamed candle.');
+      }
+
+      if (readProperty(item, 'interval') !== interval) {
+        throw new RangeError('Bybit returned a streamed candle for an unexpected interval.');
+      }
+
+      const timestamp = toFiniteNumber(readProperty(item, 'start'), 'streamed open time');
+
+      if (!Number.isSafeInteger(timestamp) || timestamp < 0) {
+        throw new RangeError('Bybit returned an invalid streamed candle open time.');
+      }
+
+      const result = createCandle({
+        timestamp,
+        open: toFiniteNumber(readProperty(item, 'open'), 'streamed open price'),
+        high: toFiniteNumber(readProperty(item, 'high'), 'streamed high price'),
+        low: toFiniteNumber(readProperty(item, 'low'), 'streamed low price'),
+        close: toFiniteNumber(readProperty(item, 'close'), 'streamed close price'),
+        volume: toFiniteNumber(readProperty(item, 'volume'), 'streamed base volume'),
+      });
+
+      if (!result.ok) {
+        throw new RangeError(
+          'Bybit returned an invalid streamed OHLCV candle: ' + result.error + '.',
+        );
+      }
+
+      const isFinal = readProperty(item, 'confirm');
+
+      if (typeof isFinal !== 'boolean') {
+        throw new RangeError('Bybit returned an invalid streamed candle confirmation flag.');
+      }
+
+      return Object.freeze({
+        instrumentId: request.instrumentId,
+        interval: request.interval,
+        candle: result.value,
+        isFinal,
+      });
+    }),
+  );
+};
+
 const validateRequest = (request: HistoricalCandleRequest): string => {
   if (
     !Number.isSafeInteger(request.startTime) ||
@@ -186,9 +273,14 @@ export class BybitSpotMarketDataProvider implements MarketDataProvider {
   readonly capabilities = CAPABILITIES;
 
   private readonly baseUrl: string;
+  private readonly streamBaseUrl: string;
   private readonly fetcher: typeof fetch;
+  private readonly webSocketFactory: MarketDataWebSocketFactory;
   private readonly pageSize: number;
   private readonly maxPages: number;
+  private readonly reconnectDelayMs: number;
+  private readonly maxReconnectDelayMs: number;
+  private readonly heartbeatIntervalMs: number;
   private readonly scheduler: MarketDataRequestScheduler;
 
   constructor(options: BybitSpotProviderOptions = {}) {
@@ -198,9 +290,14 @@ export class BybitSpotMarketDataProvider implements MarketDataProvider {
       throw new RangeError('Bybit Spot provider base URLs must use HTTPS.');
     }
 
+    const streamBaseUrl = new URL(options.streamBaseUrl ?? DEFAULT_STREAM_BASE_URL);
     const fetcher = options.fetcher ?? globalThis.fetch.bind(globalThis);
+    const webSocketFactory = options.webSocketFactory ?? ((url: string) => new WebSocket(url));
     const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE;
     const maxPages = options.maxPages ?? DEFAULT_MAX_PAGES;
+    const reconnectDelayMs = options.reconnectDelayMs ?? DEFAULT_RECONNECT_DELAY_MS;
+    const maxReconnectDelayMs = options.maxReconnectDelayMs ?? DEFAULT_MAX_RECONNECT_DELAY_MS;
+    const heartbeatIntervalMs = options.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS;
 
     if (typeof fetcher !== 'function') {
       throw new Error('A Fetch API implementation is required for the Bybit Spot provider.');
@@ -214,13 +311,105 @@ export class BybitSpotMarketDataProvider implements MarketDataProvider {
       throw new RangeError('Bybit Spot maximum pages must be an integer between 1 and 1000.');
     }
 
+    if (streamBaseUrl.protocol !== 'wss:') {
+      throw new RangeError('Bybit Spot stream URLs must use WSS.');
+    }
+
+    if (typeof webSocketFactory !== 'function') {
+      throw new Error('A WebSocket factory is required for the Bybit Spot provider.');
+    }
+
+    if (!Number.isInteger(reconnectDelayMs) || reconnectDelayMs < 1) {
+      throw new RangeError('Bybit Spot reconnect delay must be a positive integer.');
+    }
+
+    if (!Number.isInteger(maxReconnectDelayMs) || maxReconnectDelayMs < reconnectDelayMs) {
+      throw new RangeError(
+        'Bybit Spot maximum reconnect delay must be at least the initial delay.',
+      );
+    }
+
+    if (!Number.isInteger(heartbeatIntervalMs) || heartbeatIntervalMs < 1) {
+      throw new RangeError('Bybit Spot heartbeat interval must be a positive integer.');
+    }
+
     this.baseUrl = parsedBaseUrl.toString().replace(/\/$/, '');
+    this.streamBaseUrl = streamBaseUrl.toString().replace(/\/$/, '');
     this.fetcher = fetcher;
+    this.webSocketFactory = webSocketFactory;
     this.pageSize = pageSize;
     this.maxPages = maxPages;
+    this.reconnectDelayMs = reconnectDelayMs;
+    this.maxReconnectDelayMs = maxReconnectDelayMs;
+    this.heartbeatIntervalMs = heartbeatIntervalMs;
     this.scheduler = new MarketDataRequestScheduler({
       minimumIntervalMs: options.minimumRequestIntervalMs ?? DEFAULT_REQUEST_INTERVAL_MS,
       ...(options.waiter === undefined ? {} : { waiter: options.waiter }),
+    });
+  }
+
+  subscribeToCandles(
+    request: CandleSubscriptionRequest,
+    handlers: CandleStreamHandlers,
+  ): MarketDataSubscription {
+    const interval = INTERVALS.get(request.interval);
+
+    if (
+      interval === undefined ||
+      !this.capabilities.supportedIntervals.includes(request.interval)
+    ) {
+      throw new RangeError(
+        'Bybit Spot does not support the ' + request.interval + ' candle interval.',
+      );
+    }
+
+    const symbol = normalizeSymbol(request.instrumentId);
+    const topic = 'kline.' + interval + '.' + symbol;
+
+    return createReconnectingWebSocketSubscription({
+      url: this.streamBaseUrl,
+      webSocketFactory: this.webSocketFactory,
+      reconnectDelayMs: this.reconnectDelayMs,
+      maxReconnectDelayMs: this.maxReconnectDelayMs,
+      heartbeatIntervalMs: this.heartbeatIntervalMs,
+      ...(handlers.onStatus === undefined ? {} : { onStatus: handlers.onStatus }),
+      ...(handlers.onError === undefined ? {} : { onError: handlers.onError }),
+      onOpen: (connection) => {
+        if (connection.send === undefined) {
+          throw new Error('Bybit Spot WebSocket connection cannot send subscription messages.');
+        }
+
+        connection.send(JSON.stringify({ op: 'subscribe', args: [topic] }));
+      },
+      onMessage: (message, connection) => {
+        const payload: unknown = JSON.parse(message);
+        const operation = readProperty(payload, 'op');
+
+        if (operation === 'ping') {
+          if (connection.send === undefined) {
+            throw new Error('Bybit Spot WebSocket connection cannot send pong messages.');
+          }
+
+          connection.send(JSON.stringify({ op: 'pong' }));
+          return;
+        }
+
+        const success = readProperty(payload, 'success');
+
+        if (success === false && operation === 'subscribe') {
+          connection.close();
+          const reason = readProperty(payload, 'ret_msg');
+          throw new Error(
+            typeof reason === 'string'
+              ? 'Bybit Spot subscription failed: ' + reason
+              : 'Bybit Spot subscription was rejected.',
+          );
+        }
+
+        for (const update of parseStreamCandles(payload, request, symbol, interval)) {
+          handlers.onCandle(update);
+        }
+      },
     });
   }
 

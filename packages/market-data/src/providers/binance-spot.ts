@@ -10,6 +10,11 @@ import type {
   MarketDataSubscription,
 } from '../contracts';
 import { MarketDataProviderError } from '../errors';
+import {
+  createReconnectingWebSocketSubscription,
+  type MarketDataWebSocketConnection,
+  type MarketDataWebSocketFactory,
+} from '../reconnecting-websocket';
 
 const PROVIDER_ID = 'binance-spot';
 const DEFAULT_BASE_URL = 'https://data-api.binance.vision';
@@ -46,12 +51,8 @@ const CAPABILITIES: MarketDataCapabilities = Object.freeze({
   attributionRequired: false,
 });
 
-export type BinanceWebSocketConnection = EventTarget &
-  Readonly<{
-    close: (code?: number, reason?: string) => void;
-  }>;
-
-export type BinanceWebSocketFactory = (url: string) => BinanceWebSocketConnection;
+export type BinanceWebSocketConnection = MarketDataWebSocketConnection;
+export type BinanceWebSocketFactory = MarketDataWebSocketFactory;
 
 export type BinanceSpotProviderOptions = Readonly<{
   baseUrl?: string;
@@ -308,142 +309,31 @@ export class BinanceSpotMarketDataProvider implements MarketDataProvider {
       '/ws/' + symbol.toLowerCase() + '@kline_' + request.interval,
       this.streamBaseUrl,
     );
-    let active = true;
-    let reconnectAttempt = 0;
-    let socket: BinanceWebSocketConnection | null = null;
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const emitError = (cause: unknown): void => {
-      handlers.onError?.(
-        cause instanceof Error ? cause : new Error('Binance Spot stream failed unexpectedly.'),
-      );
-    };
+    return createReconnectingWebSocketSubscription({
+      url: url.toString(),
+      webSocketFactory: this.webSocketFactory,
+      reconnectDelayMs: this.reconnectDelayMs,
+      maxReconnectDelayMs: this.maxReconnectDelayMs,
+      ...(handlers.onStatus === undefined ? {} : { onStatus: handlers.onStatus }),
+      ...(handlers.onError === undefined ? {} : { onError: handlers.onError }),
+      onMessage: (message, connection) => {
+        const payload: unknown = JSON.parse(message);
 
-    const clearReconnectTimer = (): void => {
-      if (reconnectTimer !== null) {
-        clearTimeout(reconnectTimer);
-        reconnectTimer = null;
-      }
-    };
-
-    const scheduleReconnect = (): void => {
-      if (!active || reconnectTimer !== null) {
-        return;
-      }
-
-      reconnectAttempt += 1;
-      handlers.onStatus?.('reconnecting');
-      const exponent = Math.min(reconnectAttempt - 1, 20);
-      const delay = Math.min(this.maxReconnectDelayMs, this.reconnectDelayMs * 2 ** exponent);
-      reconnectTimer = setTimeout(() => {
-        reconnectTimer = null;
-        connect();
-      }, delay);
-    };
-
-    const connect = (): void => {
-      if (!active) {
-        return;
-      }
-
-      if (reconnectAttempt === 0) {
-        handlers.onStatus?.('connecting');
-      }
-
-      let connection: BinanceWebSocketConnection;
-
-      try {
-        connection = this.webSocketFactory(url.toString());
-      } catch (cause) {
-        emitError(cause);
-        scheduleReconnect();
-        return;
-      }
-
-      socket = connection;
-
-      const handleOpen = (): void => {
-        if (!active || socket !== connection) {
+        if (isRecord(payload) && Reflect.get(payload, 'e') === 'serverShutdown') {
+          connection.close();
           return;
         }
 
-        reconnectAttempt = 0;
-        handlers.onStatus?.('connected');
-      };
+        const update = parseStreamCandle(payload, request, symbol);
 
-      const handleMessage = (event: Event): void => {
-        if (!active || socket !== connection) {
-          return;
+        if (update !== null) {
+          handlers.onCandle(update);
         }
-
-        const messageData = Reflect.get(event, 'data');
-
-        if (typeof messageData !== 'string') {
-          emitError(new RangeError('Binance returned a WebSocket message without text data.'));
-          return;
-        }
-
-        try {
-          const payload: unknown = JSON.parse(messageData);
-          const update = parseStreamCandle(payload, request, symbol);
-
-          if (update !== null) {
-            handlers.onCandle(update);
-          }
-        } catch (cause) {
-          emitError(cause);
-        }
-      };
-
-      const handleError = (): void => {
-        if (!active || socket !== connection) {
-          return;
-        }
-
-        emitError(new Error('Binance Spot WebSocket connection reported an error.'));
-        connection.close();
-        scheduleReconnect();
-      };
-
-      const handleClose = (): void => {
-        if (socket !== connection) {
-          return;
-        }
-
-        socket = null;
-
-        if (active) {
-          scheduleReconnect();
-        }
-      };
-
-      connection.addEventListener('open', handleOpen);
-      connection.addEventListener('message', handleMessage);
-      connection.addEventListener('error', handleError);
-      connection.addEventListener('close', handleClose);
-    };
-
-    connect();
-
-    return Object.freeze({
-      unsubscribe: (): void => {
-        if (!active) {
-          return;
-        }
-
-        active = false;
-        clearReconnectTimer();
-        const currentSocket = socket;
-        socket = null;
-
-        if (currentSocket !== null) {
-          currentSocket.close(1000, 'Subscription closed');
-        }
-
-        handlers.onStatus?.('disconnected');
       },
     });
   }
+
   async getHistoricalCandles(request: HistoricalCandleRequest): Promise<readonly Candle[]> {
     validateRequest(request);
 

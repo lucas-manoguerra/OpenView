@@ -35,7 +35,11 @@ La terminal utiliza `HistoricalCandleService` desde el componente `MarketChart` 
 - Los cambios de datos actualizan la escena Canvas sin reconstruir el renderer ni el controlador de interacción. Se mantienen el espaciado de velas, el desplazamiento temporal, el modo de escala, el zoom vertical y el desplazamiento vertical relativo.
 - Las pruebas de navegador interceptan los endpoints públicos con respuestas sintéticas deterministas. No realizan consultas a Internet ni necesitan API keys durante CI.
 
-El histórico inicial se complementa con el stream de velas cuando el proveedor declara `streamingCandles`. La conexión se cancela al cambiar proveedor o temporalidad y al desmontar la terminal. Las actualizaciones parciales reemplazan la vela con el mismo timestamp de apertura; una vela nueva se inserta ordenada y no duplica la anterior. La interfaz distingue conexión, reconexión y proveedores que solo ofrecen histórico. Replay permanece fuera de este flujo. Tampoco se cambia automáticamente de proveedor ante un error.
+El histórico inicial se complementa con el stream de velas cuando el proveedor declara `streamingCandles`. La conexión se cancela al cambiar proveedor o temporalidad y al desmontar la terminal. Las actualizaciones parciales reemplazan la vela con el mismo timestamp de apertura; una vela nueva se inserta ordenada y no duplica la anterior.
+
+Cuando el stream vuelve a conectarse después de una interrupción, la terminal consulta el histórico desde la última vela conocida hasta el momento actual. También compara cada nueva vela con el siguiente timestamp esperado y consulta los intervalos ausentes si detecta un salto. Los resultados históricos se combinan con los datos vivos dando prioridad a la última actualización recibida en tiempo real. Las consultas de recuperación tienen control de concurrencia, cancelación por cambio de fuente/temporalidad y no reconstruyen el renderer.
+
+El cálculo del próximo timestamp utiliza duraciones fijas para intervalos intradiarios y límites de calendario UTC para velas mensuales. La interfaz distingue conexión, reconexión, sincronización del histórico y proveedores que solo ofrecen histórico. Replay permanece fuera de este flujo. Tampoco se cambia automáticamente de proveedor ante un error.
 
 ## Adaptador implementado
 
@@ -54,6 +58,8 @@ El histórico inicial se complementa con el stream de velas cuando el proveedor 
 - La reconexión utiliza espera exponencial desde 1 segundo hasta 30 segundos. El stream se vuelve a suscribir tras los cierres de conexión, incluidos los cortes periódicos del servicio.
 - Binance documenta actualizaciones de klines cada 1 segundo para `1s` y cada 2 segundos para los demás intervalos. Los intervalos disponibles siguen limitados a los declarados por el adaptador.
 - La conexión WebSocket Spot tiene una duración máxima esperada de 24 horas; el cliente debe tolerar la desconexión y volver a suscribirse.
+- El cliente usa el ciclo de vida WebSocket compartido por `market-data`, con backoff de 1 a 30 segundos, cancelación de temporizadores y cierre anticipado ante el evento `serverShutdown`.
+- El navegador responde a los frames de control Ping del protocolo WebSocket; no se envían mensajes JSON de heartbeat a Binance.
 - Las cotizaciones bid/ask no están implementadas en este adaptador; `streamingQuotes` continúa en `false`.
 
 ### Bybit Spot
@@ -67,7 +73,12 @@ El histórico inicial se complementa con el stream de velas cuando el proveedor 
 - Los intervalos comunes se traducen a la codificación V5; no se anuncian intervalos que Bybit no ofrece (por ejemplo, 1s y 8h).
 - El planificador serializa las peticiones por instancia y aplica 100 ms de intervalo mínimo por defecto.
 - Los errores HTTP y los códigos V5 se convierten en `MarketDataProviderError`; se propaga `Retry-After` cuando existe y no se realizan reintentos automáticos.
-- Streaming todavía no está implementado.
+- Stream público Spot: `wss://stream.bybit.com/v5/public/spot`; no requiere API key para datos de mercado públicos.
+- La suscripción usa el tema `kline.<interval>.<symbol>`, con la codificación V5 compartida por el endpoint histórico.
+- El payload `data` se normaliza desde `start/open/high/low/close/volume`; `confirm` indica si la vela quedó cerrada.
+- El cliente envía `{"op":"ping"}` cada 20 segundos, contesta los mensajes de ping de aplicación y vuelve a suscribirse al reconectar.
+- La reconexión usa el ciclo de vida WebSocket compartido, con backoff de 1 a 30 segundos y cancelación de heartbeat al cerrar la suscripción.
+- Las cotizaciones bid/ask no están implementadas en este adaptador; `streamingQuotes` continúa en `false`.
 
 ### OKX Spot
 
@@ -119,6 +130,9 @@ Estos proveedores se mantienen como adaptadores independientes. Que el endpoint 
 
 - [Bybit V5 Get Kline](https://bybit-exchange.github.io/docs/v5/market/kline)
 - [Bybit rate limit rules](https://bybit-exchange.github.io/docs/v5/rate-limit)
+- [Bybit WebSocket Kline](https://bybit-exchange.github.io/docs/v5/websocket/public/kline)
+- [Bybit WebSocket Connect and heartbeat](https://bybit-exchange.github.io/docs/v5/ws/connect)
+- [Binance Spot WebSocket Streams](https://github.com/binance/binance-spot-api-docs/blob/master/web-socket-streams.md)
 - [OKX API v5 — Candlesticks](https://www.okx.com/docs-v5/en/#rest-api-market-data-get-candlesticks)
 - [OKX API v5 — Historical Candlesticks](https://www.okx.com/docs-v5/en/#rest-api-market-data-get-candlesticks-history)
 - [BingX Open API](https://bingxservice.zendesk.com/hc/en-us)

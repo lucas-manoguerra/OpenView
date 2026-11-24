@@ -1,6 +1,9 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createInstrumentId } from '@openview/market-domain';
-import { BybitSpotMarketDataProvider } from '../src/providers/bybit-spot';
+import {
+  BybitSpotMarketDataProvider,
+  type BybitWebSocketConnection,
+} from '../src/providers/bybit-spot';
 
 const MINUTE = 60_000;
 const START_TIME = Date.UTC(2024, 0, 1);
@@ -272,5 +275,216 @@ describe('Bybit Spot market data provider', () => {
     );
     expect(() => new BybitSpotMarketDataProvider({ pageSize: 1_001 })).toThrow(RangeError);
     expect(() => new BybitSpotMarketDataProvider({ maxPages: 0 })).toThrow(RangeError);
+  });
+});
+
+class FakeBybitWebSocket extends EventTarget {
+  readonly url: string;
+  readonly sent: string[] = [];
+  closeCalls = 0;
+
+  constructor(url: string) {
+    super();
+    this.url = url;
+  }
+
+  send(payload: string): void {
+    this.sent.push(payload);
+  }
+
+  close(): void {
+    this.closeCalls += 1;
+    this.dispatchEvent(new Event('close'));
+  }
+
+  open(): void {
+    this.dispatchEvent(new Event('open'));
+  }
+
+  emit(payload: unknown): void {
+    this.dispatchEvent(new MessageEvent('message', { data: JSON.stringify(payload) }));
+  }
+}
+
+const createStreamProvider = (
+  connections: FakeBybitWebSocket[],
+  options: Readonly<{ reconnectDelayMs?: number; heartbeatIntervalMs?: number }> = {},
+) =>
+  new BybitSpotMarketDataProvider({
+    webSocketFactory: (url: string): BybitWebSocketConnection => {
+      const connection = new FakeBybitWebSocket(url);
+      connections.push(connection);
+      return connection;
+    },
+    reconnectDelayMs: options.reconnectDelayMs ?? 1_000,
+    maxReconnectDelayMs: 4_000,
+    heartbeatIntervalMs: options.heartbeatIntervalMs ?? 20_000,
+  });
+
+describe('Bybit Spot candle stream', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('subscribes to the selected spot topic and normalizes partial and final klines', () => {
+    const connections: FakeBybitWebSocket[] = [];
+    const provider = createStreamProvider(connections);
+    const updates: unknown[] = [];
+    const states: string[] = [];
+    const errors: Error[] = [];
+    const subscription = provider.subscribeToCandles(
+      { instrumentId: createInstrumentId('BYBIT:BTC/USDT'), interval: '1m' },
+      {
+        onCandle: (update) => updates.push(update),
+        onStatus: (state) => states.push(state),
+        onError: (error) => errors.push(error),
+      },
+    );
+    const connection = connections[0];
+
+    expect(connection?.url).toBe('wss://stream.bybit.com/v5/public/spot');
+    connection?.open();
+
+    expect(connection?.sent).toEqual(['{"op":"subscribe","args":["kline.1.BTCUSDT"]}']);
+
+    connection?.emit({
+      topic: 'kline.1.BTCUSDT',
+      type: 'snapshot',
+      data: [
+        {
+          start: START_TIME,
+          end: START_TIME + MINUTE - 1,
+          interval: '1',
+          open: '100',
+          high: '105',
+          low: '98',
+          close: '103.5',
+          volume: '12.5',
+          confirm: false,
+        },
+      ],
+    });
+    connection?.emit({
+      topic: 'kline.1.BTCUSDT',
+      type: 'snapshot',
+      data: [
+        {
+          start: START_TIME,
+          end: START_TIME + MINUTE - 1,
+          interval: '1',
+          open: '100',
+          high: '105',
+          low: '98',
+          close: '104',
+          volume: '13',
+          confirm: true,
+        },
+      ],
+    });
+
+    expect(states).toEqual(['connecting', 'connected']);
+    expect(errors).toEqual([]);
+    expect(updates).toMatchObject([
+      {
+        instrumentId: 'BYBIT:BTC/USDT',
+        interval: '1m',
+        candle: { timestamp: START_TIME, close: 103.5, volume: 12.5 },
+        isFinal: false,
+      },
+      {
+        instrumentId: 'BYBIT:BTC/USDT',
+        interval: '1m',
+        candle: { timestamp: START_TIME, close: 104, volume: 13 },
+        isFinal: true,
+      },
+    ]);
+
+    subscription.unsubscribe();
+    expect(connection?.closeCalls).toBe(1);
+    expect(states.at(-1)).toBe('disconnected');
+  });
+
+  it('sends Bybit heartbeat packets and responds to server ping messages', () => {
+    vi.useFakeTimers();
+    const connections: FakeBybitWebSocket[] = [];
+    const provider = createStreamProvider(connections);
+    const subscription = provider.subscribeToCandles(
+      { instrumentId: createInstrumentId('BTC-USDT'), interval: '1m' },
+      { onCandle: () => undefined },
+    );
+    const connection = connections[0];
+
+    connection?.open();
+    connection?.emit({ op: 'ping' });
+    expect(connection?.sent.at(-1)).toBe('{"op":"pong"}');
+
+    vi.advanceTimersByTime(20_000);
+    expect(connection?.sent.at(-1)).toBe('{"op":"ping"}');
+
+    subscription.unsubscribe();
+    vi.advanceTimersByTime(40_000);
+    expect(connection?.sent).toHaveLength(3);
+  });
+
+  it('reconnects with backoff and resubscribes after the connection is restored', () => {
+    vi.useFakeTimers();
+    const connections: FakeBybitWebSocket[] = [];
+    const provider = createStreamProvider(connections, { reconnectDelayMs: 500 });
+    const states: string[] = [];
+    const subscription = provider.subscribeToCandles(
+      { instrumentId: createInstrumentId('BTC-USDT'), interval: '5m' },
+      { onCandle: () => undefined, onStatus: (state) => states.push(state) },
+    );
+
+    connections[0]?.open();
+    connections[0]?.close();
+    vi.advanceTimersByTime(499);
+    expect(connections).toHaveLength(1);
+
+    vi.advanceTimersByTime(1);
+    expect(connections).toHaveLength(2);
+    connections[1]?.open();
+    expect(connections[1]?.sent).toEqual(['{"op":"subscribe","args":["kline.5.BTCUSDT"]}']);
+    expect(states).toEqual(['connecting', 'connected', 'reconnecting', 'connected']);
+
+    subscription.unsubscribe();
+  });
+
+  it('rejects malformed streamed candles and unsupported intervals', () => {
+    const connections: FakeBybitWebSocket[] = [];
+    const provider = createStreamProvider(connections);
+    const errors: Error[] = [];
+    const subscription = provider.subscribeToCandles(
+      { instrumentId: createInstrumentId('BTC-USDT'), interval: '1m' },
+      { onCandle: () => undefined, onError: (error) => errors.push(error) },
+    );
+
+    connections[0]?.open();
+    connections[0]?.emit({
+      topic: 'kline.1.BTCUSDT',
+      data: [
+        {
+          start: START_TIME,
+          interval: '1',
+          open: '100',
+          high: '90',
+          low: '95',
+          close: '101',
+          volume: '1',
+          confirm: false,
+        },
+      ],
+    });
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.message).toContain('invalid streamed OHLCV candle');
+    expect(() =>
+      provider.subscribeToCandles(
+        { instrumentId: createInstrumentId('BTC-USDT'), interval: '8h' },
+        { onCandle: () => undefined },
+      ),
+    ).toThrow('does not support the 8h');
+
+    subscription.unsubscribe();
   });
 });

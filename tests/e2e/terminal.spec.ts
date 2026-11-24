@@ -55,6 +55,18 @@ const createOkxRows = (interval: string, startTime: number, endTime: number): un
     '1',
   ]);
 
+const latestHistoricalCandleTimestamps = new WeakMap<Page, number>();
+
+const getLatestHistoricalCandleTimestamp = (page: Page): number => {
+  const timestamp = latestHistoricalCandleTimestamps.get(page);
+
+  if (timestamp === undefined) {
+    throw new Error('The mocked historical response must contain a candle timestamp.');
+  }
+
+  return timestamp;
+};
+
 const installBinanceMock = async (page: Page): Promise<void> => {
   await page.route(BINANCE_KLINES_URL, async (route) => {
     const url = new URL(route.request().url());
@@ -62,6 +74,11 @@ const installBinanceMock = async (page: Page): Promise<void> => {
     const startTime = Number(url.searchParams.get('startTime') ?? 0);
     const endTime = Number(url.searchParams.get('endTime') ?? Date.now());
     const candles = createKlines(interval, startTime, endTime);
+    const latestCandle = candles.at(-1);
+
+    if (latestCandle !== undefined) {
+      latestHistoricalCandleTimestamps.set(page, Number(latestCandle[0]));
+    }
 
     await route.fulfill({
       status: 200,
@@ -71,12 +88,40 @@ const installBinanceMock = async (page: Page): Promise<void> => {
   });
 };
 
-const webSocketRoutes = new WeakMap<Page, WebSocketRoute>();
+type WebSocketRoutes = Readonly<{
+  binance: WebSocketRoute | null;
+  bybit: WebSocketRoute | null;
+}>;
+
+const webSocketRoutes = new WeakMap<
+  Page,
+  { binance: WebSocketRoute | null; bybit: WebSocketRoute | null }
+>();
 
 const installWebSocketMock = async (page: Page): Promise<void> => {
+  const routes = { binance: null, bybit: null } as {
+    binance: WebSocketRoute | null;
+    bybit: WebSocketRoute | null;
+  };
+  webSocketRoutes.set(page, routes);
+
   await page.routeWebSocket(/^wss:\/\/stream\.binance\.com:9443\/ws\//, (route) => {
-    webSocketRoutes.set(page, route);
+    routes.binance = route;
   });
+
+  await page.routeWebSocket('wss://stream.bybit.com/v5/public/spot', (route) => {
+    routes.bybit = route;
+  });
+};
+
+const getWebSocketRoute = (page: Page, provider: keyof WebSocketRoutes): WebSocketRoute => {
+  const route = webSocketRoutes.get(page)?.[provider];
+
+  if (route === null || route === undefined) {
+    throw new Error('The ' + provider + ' WebSocket route must be established first.');
+  }
+
+  return route;
 };
 
 test.beforeEach(async ({ page }) => {
@@ -175,7 +220,7 @@ test('streams Binance live candles and updates the current bar without duplicate
   await expect(streamStatus).toHaveAttribute('data-stream-status', 'connected');
   await expect(streamStatus).toHaveText('En vivo');
 
-  const timestamp = Date.UTC(2099, 0, 1);
+  const timestamp = getLatestHistoricalCandleTimestamp(page) + 60_000;
   const createStreamEvent = (close: string) => ({
     e: 'kline',
     s: 'BTCUSDT',
@@ -194,13 +239,7 @@ test('streams Binance live candles and updates the current bar without duplicate
   });
 
   const sendEvent = async (close: string): Promise<void> => {
-    const route = webSocketRoutes.get(page);
-
-    if (route === undefined) {
-      throw new Error('The Binance WebSocket route must be established before sending candles.');
-    }
-
-    route.send(JSON.stringify(createStreamEvent(close)));
+    getWebSocketRoute(page, 'binance').send(JSON.stringify(createStreamEvent(close)));
   };
 
   await sendEvent('65050');
@@ -215,12 +254,31 @@ test('streams Binance live candles and updates the current bar without duplicate
   await expect(streamStatus).toHaveText('En vivo');
 });
 
-test('switches historical data between Binance, Bybit and OKX Spot', async ({ page }) => {
+test('switches providers, streams Bybit candles and recovers history after reconnect', async ({
+  page,
+}) => {
+  let bybitHistoryRequestCount = 0;
+
   await page.route('https://api.bybit.com/v5/market/kline**', async (route) => {
+    bybitHistoryRequestCount += 1;
+
+    if (bybitHistoryRequestCount > 1) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
     const url = new URL(route.request().url());
     const interval = url.searchParams.get('interval') === '5' ? '5m' : '1m';
     const startTime = Number(url.searchParams.get('start') ?? 0);
-    const endTime = Number(url.searchParams.get('end') ?? Date.now()) + 1;
+    const endTime = Number(url.searchParams.get('end') ?? Date.now());
+    const candles = createBybitRows(interval, startTime, endTime);
+    const latestCandle = candles.reduce<number | null>(
+      (latest, row) => (latest === null ? Number(row[0]) : Math.max(latest, Number(row[0]))),
+      null,
+    );
+
+    if (latestCandle !== null) {
+      latestHistoricalCandleTimestamps.set(page, latestCandle);
+    }
 
     await route.fulfill({
       status: 200,
@@ -231,7 +289,7 @@ test('switches historical data between Binance, Bybit and OKX Spot', async ({ pa
         result: {
           category: 'spot',
           symbol: 'BTCUSDT',
-          list: createBybitRows(interval, startTime, endTime),
+          list: candles,
         },
       }),
     });
@@ -260,6 +318,7 @@ test('switches historical data between Binance, Bybit and OKX Spot', async ({ pa
 
   const canvas = page.locator('canvas[data-candles-count]');
   const providerSelect = page.getByTestId('provider-select');
+  const streamStatus = page.getByTestId('market-stream-status');
 
   await expect
     .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
@@ -267,22 +326,63 @@ test('switches historical data between Binance, Bybit and OKX Spot', async ({ pa
 
   await providerSelect.selectOption('bybit-spot');
   await expect(providerSelect).toHaveValue('bybit-spot');
-  await expect(page.getByTestId('market-stream-status')).toHaveAttribute(
-    'data-stream-status',
-    'unsupported',
-  );
-  await expect(page.getByTestId('market-stream-status')).toHaveText('Solo histórico');
+  await expect(streamStatus).toHaveAttribute('data-stream-status', 'connected');
+  await expect(streamStatus).toHaveText('En vivo');
   await expect
     .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
     .toBeGreaterThan(400);
+  expect(bybitHistoryRequestCount).toBe(1);
+
+  await getWebSocketRoute(page, 'bybit').close();
+  await expect(streamStatus).toHaveText('Reconectando');
+  await expect.poll(() => bybitHistoryRequestCount).toBeGreaterThan(1);
+  await expect(streamStatus).toHaveText('En vivo');
+  await expect
+    .poll(async () => Number(await streamStatus.getAttribute('data-history-recovery-count')))
+    .toBe(1);
+  await page.waitForTimeout(100);
+  const baselineCandleCount = Number(await canvas.getAttribute('data-candles-count'));
+
+  const timestamp = getLatestHistoricalCandleTimestamp(page) + 60_000;
+  const sendBybitCandle = (close: string, candleTimestamp = timestamp): void => {
+    getWebSocketRoute(page, 'bybit').send(
+      JSON.stringify({
+        topic: 'kline.1.BTCUSDT',
+        type: 'snapshot',
+        data: [
+          {
+            start: candleTimestamp,
+            end: candleTimestamp + 59_999,
+            interval: '1',
+            open: '65000',
+            high: '65100',
+            low: '64900',
+            close,
+            volume: '25',
+            confirm: false,
+          },
+        ],
+      }),
+    );
+  };
+
+  sendBybitCandle('65050');
+  await expect(canvas).toHaveAttribute('data-candles-count', String(baselineCandleCount + 1));
+  sendBybitCandle('65075');
+  await expect(canvas).toHaveAttribute('data-candles-count', String(baselineCandleCount + 1));
+
+  sendBybitCandle('65100', timestamp + 2 * 60_000);
+  await expect.poll(() => bybitHistoryRequestCount).toBeGreaterThan(2);
+  await expect
+    .poll(async () => Number(await streamStatus.getAttribute('data-history-recovery-count')))
+    .toBe(2);
+  await page.waitForTimeout(100);
+  await expect(canvas).toHaveAttribute('data-candles-count', String(baselineCandleCount + 3));
 
   await providerSelect.selectOption('okx-spot');
   await expect(providerSelect).toHaveValue('okx-spot');
-  await expect(page.getByTestId('market-stream-status')).toHaveAttribute(
-    'data-stream-status',
-    'unsupported',
-  );
-  await expect(page.getByTestId('market-stream-status')).toHaveText('Solo histórico');
+  await expect(streamStatus).toHaveAttribute('data-stream-status', 'unsupported');
+  await expect(streamStatus).toHaveText('Solo histórico');
   await expect
     .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
     .toBeGreaterThan(400);
