@@ -128,7 +128,9 @@ const normalizeChartDrawings = (
       if (
         !Number.isFinite(drawing.start.timestamp) ||
         !Number.isFinite(drawing.start.price) ||
-        (drawing.type !== 'horizontal-line' && drawing.type !== 'vertical-line' && drawing.end === null)
+        (drawing.type !== 'horizontal-line' &&
+          drawing.type !== 'vertical-line' &&
+          drawing.end === null)
       ) {
         throw new RangeError('Chart drawings must contain finite anchored points.');
       }
@@ -763,12 +765,7 @@ const drawDrawings = (context: CanvasRenderingContext2D, scene: ChartRenderScene
 
   context.save();
   context.beginPath();
-  context.rect(
-    plotArea.x,
-    plotArea.y,
-    plotArea.width,
-    plotArea.height + volumeArea.height,
-  );
+  context.rect(plotArea.x, plotArea.y, plotArea.width, plotArea.height + volumeArea.height);
   context.clip();
 
   for (const drawing of scene.drawings) {
