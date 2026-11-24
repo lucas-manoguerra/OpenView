@@ -69,7 +69,7 @@ export function MarketWatchlist({
           />
         </label>
         {normalizedSearch.length > 0 && (
-          <div class="mt-2 space-y-1" aria-label="Resultados de instrumentos">
+          <div class="mt-2 space-y-1" role="group" aria-label="Resultados de instrumentos">
             {searchResults.length === 0 ? (
               <div class="px-2 py-2 text-xs text-slate-500" role="status">
                 No hay instrumentos disponibles en el catálogo para esta búsqueda.
