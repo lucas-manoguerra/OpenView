@@ -194,6 +194,26 @@ describe('canvas renderer lifecycle', () => {
     expect(calls.some((call) => call.name === 'clearRect')).toBe(true);
   });
 
+  it('clears the current scene when null is supplied', () => {
+    const { context, calls } = createMockContext();
+    const scheduler = createScheduler();
+    const renderer = createCanvasRenderer(createSurface(context), {
+      scheduler: scheduler.scheduler,
+    });
+    const frame = createChartFrame(320, 180, { min: 90, max: 120 }, 20);
+
+    renderer.resize(320, 180);
+    renderer.setScene(createChartRenderScene(frame, createCandles()));
+    scheduler.flush();
+    calls.length = 0;
+
+    renderer.setScene(null);
+    scheduler.flush();
+
+    expect(calls.some((call) => call.name === 'clearRect')).toBe(true);
+    expect(calls.some((call) => call.name === 'fillText')).toBe(false);
+  });
+
   it('does not schedule redundant work for an unchanged size', () => {
     const { context } = createMockContext();
     const scheduler = createScheduler();
