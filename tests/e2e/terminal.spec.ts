@@ -337,9 +337,9 @@ test('switches providers, streams Bybit candles and recovers history after recon
   await expect(streamStatus).toHaveText('Reconectando');
   await expect.poll(() => bybitHistoryRequestCount).toBeGreaterThan(1);
   await expect(streamStatus).toHaveText('En vivo');
-  const recoveryStatus = page.getByTestId('market-stream-recovery');
-  await expect(recoveryStatus).toBeVisible();
-  await expect(recoveryStatus).toHaveCount(0);
+  await expect
+    .poll(async () => Number(await streamStatus.getAttribute('data-history-recovery-count')))
+    .toBe(1);
   const baselineCandleCount = Number(await canvas.getAttribute('data-candles-count'));
 
   const timestamp = getLatestHistoricalCandleTimestamp(page) + 60_000;
@@ -372,8 +372,9 @@ test('switches providers, streams Bybit candles and recovers history after recon
 
   sendBybitCandle('65100', timestamp + 3 * 60_000);
   await expect.poll(() => bybitHistoryRequestCount).toBeGreaterThan(2);
-  await expect(recoveryStatus).toBeVisible();
-  await expect(recoveryStatus).toHaveCount(0);
+  await expect
+    .poll(async () => Number(await streamStatus.getAttribute('data-history-recovery-count')))
+    .toBe(2);
   await expect(canvas).toHaveAttribute('data-candles-count', String(baselineCandleCount + 3));
 
   await providerSelect.selectOption('okx-spot');
