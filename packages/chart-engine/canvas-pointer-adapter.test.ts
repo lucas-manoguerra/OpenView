@@ -318,8 +318,8 @@ describe('canvas pointer event adapter', () => {
     expect(edits[0]).toMatchObject({
       drawingId: 'trend-1',
       target: 'start',
-      origin: { logicalIndex: 0, price: 100 },
-      current: { logicalIndex: 0.5, price: 103 },
+      origin: chartCoordinateToDataPoint(start, frame),
+      current: chartCoordinateToDataPoint(moved, frame),
     });
     expect(capturedPointers.has(7)).toBe(false);
   });
