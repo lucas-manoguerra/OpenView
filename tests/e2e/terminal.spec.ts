@@ -256,6 +256,8 @@ test('loads older historical candles when panning to the left boundary', async (
   const canvas = page.locator('canvas[data-candles-count]');
   await expect.poll(async () => Number(await canvas.getAttribute('data-candles-count'))).toBe(500);
 
+  await canvas.scrollIntoViewIfNeeded();
+
   const bounds = await canvas.boundingBox();
 
   expect(bounds).not.toBeNull();
@@ -316,6 +318,67 @@ test('streams Binance live candles and updates the current bar without duplicate
   await expect(streamStatus).toHaveAttribute('data-stream-candle-count', '2');
   await expect(canvas).toHaveAttribute('data-candles-count', '501');
   await expect(streamStatus).toHaveText('En vivo');
+});
+
+test('tracks multiple instruments and changes the selected chart market', async ({ page }) => {
+  const requestedSymbols: string[] = [];
+
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+
+    if (url.pathname === '/api/v3/klines') {
+      requestedSymbols.push(url.searchParams.get('symbol') ?? '');
+    }
+  });
+
+  await page.goto('/');
+
+  await expect(page.getByTestId('market-watchlist')).toBeVisible();
+  await expect(page.getByTestId('watchlist-instrument')).toHaveCount(3);
+  await expect(page.getByTestId('market-quote-panel')).toHaveAttribute(
+    'data-quote-status',
+    'connected',
+  );
+
+  const quotesRoute = getWebSocketRoute(page, 'binanceQuotes');
+  const sendTicker = (symbol: string, last: string, bid: string, ask: string, change: string) => {
+    quotesRoute.send(
+      JSON.stringify({
+        stream: symbol.toLowerCase() + '@ticker',
+        data: {
+          e: '24hrTicker',
+          E: Date.now(),
+          s: symbol,
+          c: last,
+          b: bid,
+          a: ask,
+          v: '25',
+          P: change,
+        },
+      }),
+    );
+  };
+
+  sendTicker('BTCUSDT', '65000', '64999', '65001', '1.5');
+  sendTicker('ETHUSDT', '3500', '3499', '3501', '2.5');
+
+  await expect(page.getByTestId('watchlist-last-BTC-USDT')).toHaveText('65.000');
+  await expect(page.getByTestId('watchlist-last-ETH-USDT')).toHaveText('3.500');
+  await expect(page.getByTestId('watchlist-change-ETH-USDT')).toHaveText('+2,5%');
+
+  await page.getByRole('button', { name: 'Ethereum ETH / USDT' }).click();
+
+  await expect(page.getByRole('button', { name: 'Ethereum ETH / USDT' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(page.getByTestId('quote-last')).toHaveText('3.500');
+  await expect(page.getByRole('img', { name: /para ETH \/ USDT/ })).toBeVisible();
+  await expect.poll(() => requestedSymbols.includes('ETHUSDT')).toBe(true);
+
+  sendTicker('BTCUSDT', '65100', '65099', '65101', '1.7');
+  await expect(page.getByTestId('watchlist-last-BTC-USDT')).toHaveText('65.100');
+  await expect(page.getByTestId('quote-last')).toHaveText('3.500');
 });
 
 test('displays normalized live quotes and refreshes them across Spot providers', async ({
@@ -751,6 +814,8 @@ test('supports price axis drag, anchored zoom and double-click auto fit', async 
   await expect(canvas).toHaveAttribute('data-chart-ready', 'true');
   await expect(canvas).toHaveAttribute('data-candles-count', /[1-9]\d*/);
 
+  await canvas.scrollIntoViewIfNeeded();
+
   const bounds = await canvas.boundingBox();
 
   expect(bounds).not.toBeNull();
@@ -892,6 +957,8 @@ test('preserves the temporal offset when older history is prepended', async ({ p
   const canvas = page.locator('canvas[data-candles-count]');
   await expect.poll(async () => Number(await canvas.getAttribute('data-candles-count'))).toBe(500);
   await expect(canvas).toHaveAttribute('data-navigation-mode', 'realtime');
+
+  await canvas.scrollIntoViewIfNeeded();
 
   const bounds = await canvas.boundingBox();
   expect(bounds).not.toBeNull();
