@@ -67,6 +67,14 @@ const getLatestHistoricalCandleTimestamp = (page: Page): number => {
   return timestamp;
 };
 
+const updateLatestHistoricalCandleTimestamp = (page: Page, timestamp: number): void => {
+  const previousTimestamp = latestHistoricalCandleTimestamps.get(page);
+
+  if (previousTimestamp === undefined || timestamp > previousTimestamp) {
+    latestHistoricalCandleTimestamps.set(page, timestamp);
+  }
+};
+
 const installBinanceMock = async (page: Page): Promise<void> => {
   await page.route(BINANCE_KLINES_URL, async (route) => {
     const url = new URL(route.request().url());
@@ -77,7 +85,7 @@ const installBinanceMock = async (page: Page): Promise<void> => {
     const latestCandle = candles.at(-1);
 
     if (latestCandle !== undefined) {
-      latestHistoricalCandleTimestamps.set(page, Number(latestCandle[0]));
+      updateLatestHistoricalCandleTimestamp(page, Number(latestCandle[0]));
     }
 
     await route.fulfill({
@@ -283,7 +291,7 @@ test('switches providers, streams Bybit and OKX candles and recovers history aft
     );
 
     if (latestCandle !== null) {
-      latestHistoricalCandleTimestamps.set(page, latestCandle);
+      updateLatestHistoricalCandleTimestamp(page, latestCandle);
     }
 
     await route.fulfill({
@@ -318,7 +326,7 @@ test('switches providers, streams Bybit and OKX candles and recovers history aft
     );
 
     if (latestCandle !== null) {
-      latestHistoricalCandleTimestamps.set(page, latestCandle);
+      updateLatestHistoricalCandleTimestamp(page, latestCandle);
     }
 
     await route.fulfill({
