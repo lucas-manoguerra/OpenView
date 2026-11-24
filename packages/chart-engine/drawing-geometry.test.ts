@@ -94,9 +94,10 @@ describe('chart drawing geometry', () => {
     });
     const start = dataPointToChartCoordinate({ logicalIndex: 0, price: 100 }, frame);
 
-    expect(
-      hitTestChartDrawing(start, [trendDrawing, upperDrawing], candles, frame),
-    ).toEqual({ drawingId: 'trend-2', target: 'start' });
+    expect(hitTestChartDrawing(start, [trendDrawing, upperDrawing], candles, frame)).toEqual({
+      drawingId: 'trend-2',
+      target: 'start',
+    });
   });
 
   it('moves both anchors by a logical-time and price delta', () => {
