@@ -79,16 +79,17 @@ const createFrame = (size: CanvasResize, controller: ChartInteractionController 
               maxBarSpacing: previousScale.maxBarSpacing,
               inverted: previousScale.inverted,
             },
-      priceScale:
-        previousPriceScale === undefined
-          ? undefined
-          : {
+      ...(previousPriceScale === undefined
+        ? {}
+        : {
+            priceScale: {
               mode: previousPriceScale.mode,
               ...(previousPriceScale.baseValue === null
                 ? {}
                 : { baseValue: previousPriceScale.baseValue }),
               inverted: previousPriceScale.inverted,
             },
+          }),
     },
   );
 };
