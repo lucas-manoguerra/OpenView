@@ -28,6 +28,7 @@ const createMockContext = (): Readonly<{
     font: '10px sans-serif',
     textAlign: 'left' as CanvasTextAlign,
     textBaseline: 'alphabetic' as CanvasTextBaseline,
+    measureText: (text: string) => ({ width: text.length * 6 }) as TextMetrics,
     save: () => record('save'),
     restore: () => record('restore'),
     clearRect: (...args: number[]) => record('clearRect', ...args),
@@ -94,6 +95,33 @@ describe('canvas chart painter', () => {
     expect(calls.filter((call) => call.name === 'lineTo').length).toBeGreaterThan(0);
     expect(calls.some((call) => call.name === 'fillText')).toBe(true);
     expect(calls.some((call) => call.name === 'fillRect' && call.args[0] === 0)).toBe(true);
+  });
+
+  it('draws timestamp labels instead of logical indices on the time axis', () => {
+    const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 2, {
+      timeScale: { barSpacing: 50, maxBarSpacing: 50 },
+    });
+    const scene = createChartRenderScene(frame, createCandles());
+    const { context, calls } = createMockContext();
+
+    drawChartScene(context, scene);
+
+    const timeAxisLabels = calls
+      .filter(
+        (call) =>
+          call.name === 'fillText' &&
+          typeof call.args[0] === 'string' &&
+          call.args[2] === frame.layout.timeScaleArea.y + frame.layout.timeScaleArea.height / 2,
+      )
+      .map((call) => call.args[0]);
+
+    expect(timeAxisLabels.length).toBeGreaterThan(0);
+    expect(timeAxisLabels.every((label) => typeof label === 'string' && label.includes(':'))).toBe(
+      true,
+    );
+    expect(timeAxisLabels).not.toContain('0');
+    expect(timeAxisLabels).not.toContain('1');
+    expect(timeAxisLabels).not.toContain('2');
   });
 
   it('draws bullish, bearish and unchanged candles inside the plot clip', () => {
@@ -208,10 +236,6 @@ describe('canvas chart painter', () => {
     const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 10);
     const candles = createCandles();
     const scene = createChartRenderScene(frame, candles);
-
-    expect(Object.isFrozen(scene)).toBe(true);
-    expect(Object.isFrozen(scene.candles)).toBe(true);
-    expect(Object.isFrozen(scene.candles[0])).toBe(true);
     const firstCandle = candles[0];
     const secondCandle = candles[1];
 
@@ -219,7 +243,16 @@ describe('canvas chart painter', () => {
       throw new Error('The candle fixture must contain at least two candles.');
     }
 
+    expect(Object.isFrozen(scene)).toBe(true);
+    expect(Object.isFrozen(scene.candles)).toBe(true);
+    expect(Object.isFrozen(scene.candles[0])).toBe(true);
     expect(() => createChartRenderScene(frame, [secondCandle, firstCandle])).toThrow(RangeError);
+    expect(() =>
+      createChartRenderScene(frame, [
+        firstCandle,
+        { ...secondCandle, timestamp: firstCandle.timestamp },
+      ]),
+    ).toThrow(RangeError);
     expect(() => createChartRenderScene(frame, [{ ...firstCandle, volume: -1 }])).toThrow(
       RangeError,
     );

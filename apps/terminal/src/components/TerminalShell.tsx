@@ -1,4 +1,5 @@
 import { useState } from 'preact/hooks';
+import { ChartCanvas } from './ChartCanvas';
 
 type WorkspaceSection = 'watchlist' | 'markets' | 'chart';
 
@@ -108,37 +109,11 @@ export function TerminalShell() {
                   <div class="text-sm font-medium text-slate-200">Chart engine</div>
                   <div class="mt-1 text-xs text-slate-500">Motor independiente de la interfaz</div>
                 </div>
-                <span class="rounded-md border border-white/10 px-2 py-1 text-[10px] uppercase tracking-wider text-slate-500">
-                  Not connected
+                <span class="rounded-md border border-emerald-400/20 bg-emerald-400/5 px-2 py-1 text-[10px] uppercase tracking-wider text-emerald-300">
+                  Interactive preview
                 </span>
               </div>
-              <div class="grid min-h-[340px] place-items-center p-8">
-                <div class="max-w-md text-center">
-                  <div class="mx-auto mb-5 grid size-14 place-items-center rounded-2xl border border-blue-400/20 bg-blue-400/5 text-blue-300">
-                    <svg viewBox="0 0 24 24" fill="none" class="size-7" aria-hidden="true">
-                      <path
-                        d="M4 19V5m0 14h16M7 15l4-4 3 2 5-7"
-                        stroke="currentColor"
-                        stroke-width="1.6"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                  </div>
-                  <h2 class="text-base font-semibold text-white">El motor comienza aquí</h2>
-                  <p class="mt-2 text-sm leading-6 text-slate-500">
-                    Las escalas, el viewport, el rendering y las interacciones tendrán contratos
-                    propios y pruebas independientes.
-                  </p>
-                  <div class="mt-6 flex flex-wrap justify-center gap-2">
-                    {['Viewport', 'Time scale', 'Price scale', 'Renderer'].map((capability) => (
-                      <span class="rounded-md border border-white/10 bg-white/[0.02] px-2.5 py-1.5 text-[11px] text-slate-400">
-                        {capability}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <ChartCanvas />
             </div>
 
             <div class="space-y-4">

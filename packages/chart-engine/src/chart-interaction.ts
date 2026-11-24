@@ -1,4 +1,6 @@
 import type { ChartCoordinate, ChartFrame } from './chart-frame';
+import { createPriceScale, panPriceScale, zoomPriceScale } from './price-scale';
+import type { NumericRange } from './viewport';
 import { panTimeScale, zoomTimeScale } from './time-scale';
 
 export type PointerPosition = Readonly<{
@@ -10,12 +12,15 @@ export type ChartInteractionSnapshot = Readonly<{
   frame: ChartFrame;
   crosshair: ChartCoordinate | null;
   dragging: boolean;
+  dragTarget: 'time' | 'price' | null;
 }>;
 
 export type ChartInteractionOptions = Readonly<{
   wheelZoomSensitivity?: number;
   onChange?: (snapshot: ChartInteractionSnapshot) => void;
 }>;
+
+type DragTarget = 'time' | 'price';
 
 const containsPoint = (point: PointerPosition, frame: ChartFrame): boolean => {
   const { plotArea } = frame.layout;
@@ -28,6 +33,18 @@ const containsPoint = (point: PointerPosition, frame: ChartFrame): boolean => {
   );
 };
 
+const containsPriceScalePoint = (point: PointerPosition, frame: ChartFrame): boolean => {
+  const { plotArea, leftPriceScaleArea, rightPriceScaleArea } = frame.layout;
+  const withinPriceArea = (area: typeof rightPriceScaleArea): boolean =>
+    area.width > 0 &&
+    point.x >= area.x &&
+    point.x <= area.x + area.width &&
+    point.y >= plotArea.y &&
+    point.y <= plotArea.y + plotArea.height;
+
+  return withinPriceArea(leftPriceScaleArea) || withinPriceArea(rightPriceScaleArea);
+};
+
 const assertFinitePosition = (point: PointerPosition): void => {
   if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) {
     throw new RangeError('Pointer coordinates must be finite numbers.');
@@ -37,10 +54,14 @@ const assertFinitePosition = (point: PointerPosition): void => {
 const withTimeScale = (frame: ChartFrame, timeScale: ChartFrame['timeScale']): ChartFrame =>
   Object.freeze({ ...frame, timeScale });
 
+const withPriceScale = (frame: ChartFrame, priceScale: ChartFrame['priceScale']): ChartFrame =>
+  Object.freeze({ ...frame, priceScale });
+
 export class ChartInteractionController {
   private frame: ChartFrame;
   private crosshair: ChartCoordinate | null = null;
   private dragPosition: PointerPosition | null = null;
+  private dragTarget: DragTarget | null = null;
   private readonly wheelZoomSensitivity: number;
   private readonly onChange: ((snapshot: ChartInteractionSnapshot) => void) | undefined;
 
@@ -61,12 +82,14 @@ export class ChartInteractionController {
       frame: this.frame,
       crosshair: this.crosshair,
       dragging: this.dragPosition !== null,
+      dragTarget: this.dragTarget,
     });
   }
 
   setFrame(frame: ChartFrame): void {
     this.frame = frame;
     this.dragPosition = null;
+    this.dragTarget = null;
     this.crosshair = null;
     this.emit();
   }
@@ -74,11 +97,24 @@ export class ChartInteractionController {
   pointerDown(position: PointerPosition, button = 0): boolean {
     assertFinitePosition(position);
 
-    if (button !== 0 || !containsPoint(position, this.frame)) {
+    if (button !== 0) {
+      return false;
+    }
+
+    if (containsPriceScalePoint(position, this.frame)) {
+      this.dragPosition = Object.freeze({ ...position });
+      this.dragTarget = 'price';
+      this.crosshair = null;
+      this.emit();
+      return true;
+    }
+
+    if (!containsPoint(position, this.frame)) {
       return false;
     }
 
     this.dragPosition = Object.freeze({ ...position });
+    this.dragTarget = 'time';
     this.crosshair = Object.freeze({ ...position });
     this.emit();
 
@@ -89,7 +125,7 @@ export class ChartInteractionController {
     assertFinitePosition(position);
     let changed = false;
 
-    if (this.dragPosition !== null) {
+    if (this.dragPosition !== null && this.dragTarget === 'time') {
       const deltaX = position.x - this.dragPosition.x;
 
       if (deltaX !== 0) {
@@ -97,13 +133,24 @@ export class ChartInteractionController {
         this.frame = withTimeScale(this.frame, timeScale);
         changed = true;
       }
+    } else if (this.dragPosition !== null && this.dragTarget === 'price') {
+      const deltaY = position.y - this.dragPosition.y;
 
+      if (deltaY !== 0) {
+        const priceScale = panPriceScale(this.frame.priceScale, deltaY);
+        this.frame = withPriceScale(this.frame, priceScale);
+        changed = true;
+      }
+    }
+
+    if (this.dragPosition !== null) {
       this.dragPosition = Object.freeze({ ...position });
     }
 
-    const nextCrosshair = containsPoint(position, this.frame)
-      ? Object.freeze({ ...position })
-      : null;
+    const nextCrosshair =
+      this.dragTarget === 'price' || !containsPoint(position, this.frame)
+        ? null
+        : Object.freeze({ ...position });
 
     if (nextCrosshair?.x !== this.crosshair?.x || nextCrosshair?.y !== this.crosshair?.y) {
       this.crosshair = nextCrosshair;
@@ -123,6 +170,7 @@ export class ChartInteractionController {
 
     if (this.dragPosition !== null || position !== undefined) {
       this.dragPosition = null;
+      this.dragTarget = null;
       this.emit();
     }
   }
@@ -133,6 +181,7 @@ export class ChartInteractionController {
     }
 
     this.dragPosition = null;
+    this.dragTarget = null;
     this.crosshair = null;
     this.emit();
   }
@@ -151,6 +200,30 @@ export class ChartInteractionController {
 
     if (!Number.isFinite(deltaX) || !Number.isFinite(deltaY)) {
       throw new RangeError('Wheel deltas must be finite numbers.');
+    }
+
+    if (containsPriceScalePoint(position, this.frame)) {
+      if (deltaY === 0) {
+        return false;
+      }
+
+      const exponent = Math.max(-20, Math.min(20, -deltaY * this.wheelZoomSensitivity));
+      const zoomFactor = Math.exp(exponent);
+      const anchorY = position.y - this.frame.layout.plotArea.y;
+      const priceScale = zoomPriceScale(this.frame.priceScale, zoomFactor, anchorY);
+
+      if (priceScale === this.frame.priceScale) {
+        return false;
+      }
+
+      this.frame = withPriceScale(this.frame, priceScale);
+
+      if (this.crosshair !== null) {
+        this.crosshair = null;
+      }
+
+      this.emit();
+      return true;
     }
 
     if (!containsPoint(position, this.frame) || (deltaX === 0 && deltaY === 0)) {
@@ -189,6 +262,44 @@ export class ChartInteractionController {
     }
 
     return timeScaleChanged || crosshairChanged;
+  }
+
+  fitPriceScale(range: NumericRange): boolean {
+    const currentScale = this.frame.priceScale;
+    const nextScale = this.createFittedPriceScale(range);
+
+    if (
+      nextScale.range.min === currentScale.range.min &&
+      nextScale.range.max === currentScale.range.max
+    ) {
+      return false;
+    }
+
+    this.frame = withPriceScale(this.frame, nextScale);
+    this.crosshair = null;
+    this.emit();
+    return true;
+  }
+
+  fitPriceScaleAt(position: PointerPosition, range: NumericRange): boolean {
+    assertFinitePosition(position);
+
+    if (!containsPriceScalePoint(position, this.frame)) {
+      return false;
+    }
+
+    return this.fitPriceScale(range);
+  }
+
+  private createFittedPriceScale(range: NumericRange): ChartFrame['priceScale'] {
+    const currentScale = this.frame.priceScale;
+    const options = {
+      mode: currentScale.mode,
+      ...(currentScale.baseValue === null ? {} : { baseValue: currentScale.baseValue }),
+      inverted: currentScale.inverted,
+    };
+
+    return createPriceScale(range, currentScale.height, options);
   }
 
   private emit(): void {

@@ -16,6 +16,10 @@ export type PriceScale = Readonly<{
   inverted: boolean;
 }>;
 
+export type PriceTickFormatOptions = Readonly<{
+  locale?: string;
+}>;
+
 export type PriceScaleTick = Readonly<{
   price: number;
   value: number;
@@ -125,14 +129,18 @@ const getDecimalPlaces = (step: number): number => {
   return 12;
 };
 
-const formatNumber = (value: number, precision: number): string => {
+const formatNumber = (value: number, precision: number, locale: string): string => {
   const normalizedValue = normalizeZero(value);
 
   if (Math.abs(normalizedValue) >= 1e21) {
     return normalizedValue.toExponential(precision);
   }
 
-  return normalizedValue.toFixed(precision);
+  return new Intl.NumberFormat(locale, {
+    useGrouping: true,
+    minimumFractionDigits: precision,
+    maximumFractionDigits: precision,
+  }).format(normalizedValue);
 };
 
 const generateLinearValues = (
@@ -299,9 +307,68 @@ export const coordinateToPrice = (coordinate: number, scale: PriceScale): number
   return normalizeZero(price);
 };
 
+const createScaleWithRange = (scale: PriceScale, range: NumericRange): PriceScale =>
+  createPriceScale(range, scale.height, {
+    mode: scale.mode,
+    ...(scale.baseValue === null ? {} : { baseValue: scale.baseValue }),
+    inverted: scale.inverted,
+  });
+
+export const panPriceScale = (scale: PriceScale, deltaY: number): PriceScale => {
+  if (!Number.isFinite(deltaY)) {
+    throw new RangeError('Price scale pan distance must be a finite number.');
+  }
+
+  const transformedRange = getTransformedRange(scale);
+  const transformedOffset =
+    ((scale.inverted ? -deltaY : deltaY) / scale.height) *
+    (transformedRange.max - transformedRange.min);
+
+  const range = {
+    min: fromScaleValue(transformedRange.min + transformedOffset, scale),
+    max: fromScaleValue(transformedRange.max + transformedOffset, scale),
+  };
+
+  return createScaleWithRange(scale, range);
+};
+
+export const zoomPriceScale = (
+  scale: PriceScale,
+  zoomFactor: number,
+  anchorCoordinate: number,
+): PriceScale => {
+  if (!Number.isFinite(zoomFactor) || zoomFactor <= 0 || !Number.isFinite(anchorCoordinate)) {
+    throw new RangeError(
+      'Price zoom factor and anchor coordinate must be finite and zoom positive.',
+    );
+  }
+
+  const transformedRange = getTransformedRange(scale);
+  const currentSpan = transformedRange.max - transformedRange.min;
+  const nextSpan = currentSpan / zoomFactor;
+
+  if (!Number.isFinite(nextSpan) || nextSpan <= 0) {
+    throw new RangeError('Price zoom resolves to a range outside the supported numeric values.');
+  }
+
+  const normalizedAnchor = scale.inverted
+    ? anchorCoordinate / scale.height
+    : 1 - anchorCoordinate / scale.height;
+  const anchorPrice = coordinateToPrice(anchorCoordinate, scale);
+  const transformedAnchor = toScaleValue(anchorPrice, scale);
+  const nextMinimum = transformedAnchor - normalizedAnchor * nextSpan;
+  const nextMaximum = nextMinimum + nextSpan;
+
+  return createScaleWithRange(scale, {
+    min: fromScaleValue(nextMinimum, scale),
+    max: fromScaleValue(nextMaximum, scale),
+  });
+};
+
 export const generatePriceTicks = (
   scale: PriceScale,
   targetTickCount = 6,
+  options: PriceTickFormatOptions = {},
 ): readonly PriceScaleTick[] => {
   if (!Number.isInteger(targetTickCount) || targetTickCount < 2 || targetTickCount > 50) {
     throw new RangeError('Target tick count must be an integer between 2 and 50.');
@@ -313,13 +380,14 @@ export const generatePriceTicks = (
       ? generateLogarithmicValues(scale.range, targetTickCount)
       : generateLinearValues(transformedRange, targetTickCount);
   const precision = getDecimalPlaces(generated.step);
+  const locale = options.locale ?? 'en-US';
 
   return Object.freeze(
     generated.values.map((generatedValue) => {
       const price =
         scale.mode === 'logarithmic' ? generatedValue : fromScaleValue(generatedValue, scale);
       const value = scale.mode === 'logarithmic' ? price : generatedValue;
-      const numberLabel = formatNumber(value, precision);
+      const numberLabel = formatNumber(value, precision, locale);
       const label =
         scale.mode === 'percentage' ? `${value > 0 ? '+' : ''}${numberLabel}%` : numberLabel;
 

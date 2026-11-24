@@ -1,4 +1,9 @@
 import type { ChartInteractionController } from './chart-interaction';
+import type { NumericRange } from './viewport';
+
+export type CanvasPointerAdapterOptions = Readonly<{
+  getAutoScalePriceRange?: () => NumericRange | null;
+}>;
 
 export type CanvasPointerAdapter = Readonly<{
   destroy(): void;
@@ -6,7 +11,7 @@ export type CanvasPointerAdapter = Readonly<{
 
 const getCanvasPosition = (
   canvas: HTMLCanvasElement,
-  event: Pick<PointerEvent | WheelEvent, 'clientX' | 'clientY'>,
+  event: Pick<PointerEvent | WheelEvent | MouseEvent, 'clientX' | 'clientY'>,
 ): Readonly<{ x: number; y: number }> => {
   const bounds = canvas.getBoundingClientRect();
 
@@ -19,6 +24,7 @@ const getCanvasPosition = (
 export const attachCanvasPointerEvents = (
   canvas: HTMLCanvasElement,
   controller: ChartInteractionController,
+  options: CanvasPointerAdapterOptions = {},
 ): CanvasPointerAdapter => {
   let destroyed = false;
   let activePointerId: number | null = null;
@@ -87,12 +93,27 @@ export const attachCanvasPointerEvents = (
     }
   };
 
+  const handleDoubleClick = (event: MouseEvent): void => {
+    const range = options.getAutoScalePriceRange?.();
+
+    if (range === undefined || range === null) {
+      return;
+    }
+
+    const handled = controller.fitPriceScaleAt(getCanvasPosition(canvas, event), range);
+
+    if (handled) {
+      event.preventDefault();
+    }
+  };
+
   canvas.addEventListener('pointerdown', handlePointerDown);
   canvas.addEventListener('pointermove', handlePointerMove);
   canvas.addEventListener('pointerup', handlePointerUp);
   canvas.addEventListener('pointercancel', handlePointerCancel);
   canvas.addEventListener('pointerleave', handlePointerLeave);
   canvas.addEventListener('wheel', handleWheel, { passive: false });
+  canvas.addEventListener('dblclick', handleDoubleClick);
 
   return Object.freeze({
     destroy: (): void => {
@@ -107,6 +128,7 @@ export const attachCanvasPointerEvents = (
       canvas.removeEventListener('pointercancel', handlePointerCancel);
       canvas.removeEventListener('pointerleave', handlePointerLeave);
       canvas.removeEventListener('wheel', handleWheel);
+      canvas.removeEventListener('dblclick', handleDoubleClick);
       releaseActivePointer();
       controller.pointerCancel();
     },
