@@ -35,6 +35,9 @@ type ChartRuntime = Readonly<{
   setPriceScaleMode(mode: PriceScaleMode): void;
   fitContent(mode: PriceScaleMode): void;
   fitPriceScale(): void;
+  scrollTimeByBars(bars: number): void;
+  scrollToRealtime(): void;
+  zoomTime(factor: number): void;
   destroy(): void;
 }>;
 
@@ -369,6 +372,17 @@ export function ChartCanvas({
           controller.fitPriceScale(getVisiblePriceRange(controller, currentCandles));
         }
       },
+      scrollTimeByBars: (bars: number): void => {
+        controller?.scrollTimeByBars(bars);
+      },
+      scrollToRealtime: (): void => {
+        controller?.scrollToRealtime();
+      },
+      zoomTime: (factor: number): void => {
+        if (controller !== null) {
+          controller.zoomTime(factor);
+        }
+      },
       destroy: (): void => {
         pointerAdapter?.destroy();
         resizeAdapter.destroy();
@@ -443,6 +457,55 @@ export function ChartCanvas({
             {label}
           </button>
         ))}
+        <button
+          type="button"
+          disabled={renderCandles.length === 0}
+          aria-label="Desplazar hacia el histórico"
+          data-testid="chart-pan-older"
+          onClick={() => runtimeRef.current?.scrollTimeByBars(-20)}
+          class="rounded px-2 py-1 text-[10px] text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200 disabled:opacity-40"
+        >
+          ←
+        </button>
+        <button
+          type="button"
+          disabled={renderCandles.length === 0}
+          aria-label="Desplazar hacia el presente"
+          data-testid="chart-pan-newer"
+          onClick={() => runtimeRef.current?.scrollTimeByBars(20)}
+          class="rounded px-2 py-1 text-[10px] text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200 disabled:opacity-40"
+        >
+          →
+        </button>
+        <button
+          type="button"
+          disabled={renderCandles.length === 0}
+          aria-label="Alejar escala temporal"
+          data-testid="chart-time-zoom-out"
+          onClick={() => runtimeRef.current?.zoomTime(0.8)}
+          class="rounded px-2 py-1 text-[10px] text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200 disabled:opacity-40"
+        >
+          −
+        </button>
+        <button
+          type="button"
+          disabled={renderCandles.length === 0}
+          aria-label="Acercar escala temporal"
+          data-testid="chart-time-zoom-in"
+          onClick={() => runtimeRef.current?.zoomTime(1.25)}
+          class="rounded px-2 py-1 text-[10px] text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200 disabled:opacity-40"
+        >
+          +
+        </button>
+        <button
+          type="button"
+          disabled={renderCandles.length === 0}
+          data-testid="chart-go-realtime"
+          onClick={() => runtimeRef.current?.scrollToRealtime()}
+          class="rounded px-2 py-1 text-[10px] text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200 disabled:opacity-40"
+        >
+          Ahora
+        </button>
         <span class="mx-0.5 h-4 w-px bg-white/10" />
         <button
           type="button"
