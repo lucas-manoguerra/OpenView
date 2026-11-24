@@ -63,7 +63,9 @@ export const dataPointToChartCoordinate = (
   const y = frame.layout.plotArea.y + priceToCoordinate(point.price, frame.priceScale);
 
   if (!Number.isFinite(x) || !Number.isFinite(y)) {
-    throw new RangeError('Data point resolves to a coordinate outside the supported numeric range.');
+    throw new RangeError(
+      'Data point resolves to a coordinate outside the supported numeric range.',
+    );
   }
 
   return Object.freeze({ x, y });
@@ -81,10 +83,7 @@ export const chartCoordinateToDataPoint = (
     coordinate.x - frame.layout.plotArea.x,
     frame.timeScale,
   );
-  const price = coordinateToPrice(
-    coordinate.y - frame.layout.plotArea.y,
-    frame.priceScale,
-  );
+  const price = coordinateToPrice(coordinate.y - frame.layout.plotArea.y, frame.priceScale);
 
   return Object.freeze({ logicalIndex, price });
 };
