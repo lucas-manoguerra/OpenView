@@ -39,6 +39,7 @@ type ChartRenderData = Readonly<{
 }>;
 
 const EMPTY_PRICE_RANGE: NumericRange = Object.freeze({ min: 0, max: 1 });
+const OLDER_HISTORY_TRIGGER_LOGICAL_INDEX = 120;
 
 const createRenderCandles = (candles: readonly Candle[]): readonly ChartRenderCandle[] =>
   Object.freeze(
@@ -235,7 +236,7 @@ export function ChartCanvas({
       renderer.setScene(scene);
 
       if (
-        snapshot.frame.timeScale.visibleLogicalRange.from <= 120 &&
+        snapshot.frame.timeScale.visibleLogicalRange.from <= OLDER_HISTORY_TRIGGER_LOGICAL_INDEX &&
         currentCandles.length > 0
       ) {
         onNeedMoreHistoryRef.current();
