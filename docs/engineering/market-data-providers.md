@@ -23,7 +23,7 @@ La selección del proveedor es siempre explícita. El servicio no cambia automá
 La terminal utiliza `HistoricalCandleService` desde el componente `MarketChart` y entrega las velas normalizadas a `ChartCanvas`. El componente visual no conoce endpoints ni formatos de exchanges.
 
 - La fuente inicial es `binance-spot`, con el instrumento `BTC-USDT` y temporalidad `1m`.
-- El selector de fuente ofrece Binance Spot, Bybit Spot y OKX Spot. El selector de temporalidad se construye a partir de `supportedIntervals` de la fuente elegida.
+- El selector de fuente ofrece Binance Spot, Bybit Spot y OKX Spot. Los tres proveedores ofrecen streaming de velas; el selector de temporalidad se construye a partir de `supportedIntervals` de la fuente elegida.
 - Cada consulta solicita hasta 500 períodos recientes y utiliza timestamps Unix en milisegundos con rango final exclusivo.
 - Al acercarse al inicio de la ventana visible (120 índices lógicos), `ChartCanvas` solicita otro bloque mediante un callback; `MarketChart` consulta el mismo proveedor e intervalo desde el timestamp de la vela más antigua.
 - Los bloques anteriores se combinan por timestamp, se ordenan cronológicamente y no duplican velas. Una respuesta sin velas nuevas detiene nuevas consultas hasta que se cambie la fuente o la temporalidad.
@@ -92,7 +92,12 @@ El cálculo del próximo timestamp utiliza duraciones fijas para intervalos intr
 - Para velas diarias, semanales y mensuales se utilizan las variantes UTC (`1Dutc`, `1Wutc`, `1Mutc`); el intervalo 1s tiene un histórico documentado de solo tres meses.
 - El planificador serializa peticiones por instancia y aplica 110 ms entre peticiones, conservando margen frente al límite documentado de 20 peticiones cada dos segundos.
 - Los códigos de error de la API y los errores HTTP se convierten en `MarketDataProviderError`; no hay reintentos automáticos.
-- Streaming todavía no está implementado.
+- Stream público de velas: `wss://ws.okx.com:8443/ws/v5/business`; los canales Kline son públicos y no requieren API key.
+- La suscripción usa `candle<interval>` y respeta los sufijos UTC de los intervalos diarios, semanales y mensuales (`candle1Dutc`, `candle1Wutc`, `candle1Mutc`).
+- Cada fila del stream contiene timestamp, OHLCV, volúmenes de cotización y confirmación; el adaptador normaliza el timestamp de apertura y el volumen base, y traduce `confirm=0/1` a vela parcial/cerrada.
+- El heartbeat sigue la guía del exchange: tras 25 segundos sin mensajes envía el texto `ping`, espera el texto `pong` y cierra/reconecta si no llega en 5 segundos.
+- La reconexión usa el ciclo WebSocket compartido, con backoff de 1 a 30 segundos; la suscripción se repite al reabrir.
+- Las cotizaciones bid/ask no están implementadas en este adaptador; `streamingQuotes` continúa en `false`.
 - La redistribución se clasifica como `unknown`; la aplicación no debe asumir que los datos pueden redistribuirse comercialmente.
 
 La documentación oficial de Binance mantiene un endpoint específico de solo datos de mercado, sin credenciales, y documenta el endpoint de klines, el orden de resultados y los límites de peticiones:
@@ -135,6 +140,8 @@ Estos proveedores se mantienen como adaptadores independientes. Que el endpoint 
 - [Binance Spot WebSocket Streams](https://github.com/binance/binance-spot-api-docs/blob/master/web-socket-streams.md)
 - [OKX API v5 — Candlesticks](https://www.okx.com/docs-v5/en/#rest-api-market-data-get-candlesticks)
 - [OKX API v5 — Historical Candlesticks](https://www.okx.com/docs-v5/en/#rest-api-market-data-get-candlesticks-history)
+- [OKX API v5 — WebSocket Candlesticks channel](https://www.okx.com/docs-v5/en/#websocket-api-public-channel-candlesticks-channel)
+- [OKX API v5 — WebSocket heartbeat](https://www.okx.com/docs-v5/en/#websocket-connect)
 - [BingX Open API](https://bingxservice.zendesk.com/hc/en-us)
 - [Bitunix Open API](https://www.bitunix.com/api-docs/)
 - [Kraken API rate limits](https://support.kraken.com/articles/206548367-what-are-the-api-rate-limits-)
