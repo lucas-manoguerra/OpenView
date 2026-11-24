@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createChartFrame } from './src/chart-frame';
-import {
-  createChartRenderScene,
-  type ChartRenderCandle,
-} from './src/canvas-painter';
+import { createChartRenderScene, type ChartRenderCandle } from './src/canvas-painter';
 import {
   createCanvasRenderer,
   type CanvasFrameScheduler,
@@ -258,12 +255,14 @@ describe('canvas renderer lifecycle', () => {
     expect(scheduler.pending.size).toBe(0);
     expect(() => renderer.resize(320, 180)).toThrow(Error);
     expect(() => renderer.renderNow()).toThrow(Error);
-    expect(() => renderer.setScene(
-      createChartRenderScene(
-        createChartFrame(320, 180, { min: 90, max: 120 }, 20),
-        createCandles(),
+    expect(() =>
+      renderer.setScene(
+        createChartRenderScene(
+          createChartFrame(320, 180, { min: 90, max: 120 }, 20),
+          createCandles(),
+        ),
       ),
-    )).toThrow(Error);
+    ).toThrow(Error);
   });
 
   it('requires a usable 2D rendering context', () => {
