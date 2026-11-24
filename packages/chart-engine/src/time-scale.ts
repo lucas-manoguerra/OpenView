@@ -165,6 +165,24 @@ export const resizeTimeScale = (scale: TimeScale, width: number): TimeScale =>
     inverted: scale.inverted,
   });
 
+export const countAppendedBars = (
+  previousLastTimestamp: number | null,
+  nextTimestamps: readonly number[],
+): number => {
+  if (previousLastTimestamp === null) {
+    return 0;
+  }
+
+  if (!Number.isFinite(previousLastTimestamp) || !nextTimestamps.every(Number.isFinite)) {
+    throw new RangeError('Candle timestamps must be finite numbers.');
+  }
+
+  return nextTimestamps.reduce(
+    (count, timestamp) => count + Number(timestamp > previousLastTimestamp),
+    0,
+  );
+};
+
 export const getRightOffsetAfterDataUpdate = (
   currentRightOffset: number,
   appendedBars: number,
