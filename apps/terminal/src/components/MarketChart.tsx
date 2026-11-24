@@ -6,6 +6,7 @@ import {
   HistoricalCandleService,
   MarketDataProviderRegistry,
   MarketDataStreamService,
+  getNextCandleTimestamp,
   OkxSpotMarketDataProvider,
   type CandleInterval,
   type MarketDataStreamState,
@@ -51,14 +52,22 @@ const getFallbackInterval = (
   supportedIntervals: readonly CandleInterval[],
 ): CandleInterval | undefined => (supportedIntervals.includes('1m') ? '1m' : supportedIntervals[0]);
 
-const mergeLiveCandle = (candles: readonly Candle[], nextCandle: Candle): readonly Candle[] => {
-  const merged = new Map(candles.map((candle) => [candle.timestamp, candle]));
-  merged.set(nextCandle.timestamp, nextCandle);
+const mergeCandleSeries = (...series: readonly Candle[][]): readonly Candle[] => {
+  const merged = new Map<number, Candle>();
+
+  for (const candles of series) {
+    for (const candle of candles) {
+      merged.set(candle.timestamp, candle);
+    }
+  }
 
   return Object.freeze(
     [...merged.values()].sort((first, second) => first.timestamp - second.timestamp),
   );
 };
+
+const mergeLiveCandle = (candles: readonly Candle[], nextCandle: Candle): readonly Candle[] =>
+  mergeCandleSeries(candles, [nextCandle]);
 
 const getOlderHistoryStartTime = (endTime: number, interval: CandleInterval): number => {
   if (interval !== '1M') {
@@ -99,15 +108,77 @@ export function MarketChart() {
   const [streamStatus, setStreamStatus] = useState<MarketDataStreamState>('disconnected');
   const [streamError, setStreamError] = useState<string | null>(null);
   const [streamCandleCount, setStreamCandleCount] = useState(0);
+  const [recoveringHistory, setRecoveringHistory] = useState(false);
   const initializedRef = useRef(false);
   const requestIdRef = useRef(0);
   const abortControllerRef = useRef<AbortController | null>(null);
   const olderAbortControllerRef = useRef<AbortController | null>(null);
+  const recoveryAbortControllerRef = useRef<AbortController | null>(null);
+  const recoveryRequestRef = useRef(false);
+  const streamHasConnectedRef = useRef(false);
   const streamSubscriptionRef = useRef<MarketDataSubscription | null>(null);
   const olderRequestRef = useRef(false);
   const hasMoreHistoryRef = useRef(true);
   const candlesRef = useRef(candles);
   candlesRef.current = candles;
+
+  const recoverHistoricalRange = async (
+    requestId: number,
+    sourceId: string,
+    nextInterval: CandleInterval,
+    startTime: number,
+    endTime: number,
+  ): Promise<void> => {
+    if (
+      requestId !== requestIdRef.current ||
+      recoveryRequestRef.current ||
+      !Number.isSafeInteger(startTime) ||
+      !Number.isSafeInteger(endTime) ||
+      endTime <= startTime
+    ) {
+      return;
+    }
+
+    const controller = new AbortController();
+    recoveryAbortControllerRef.current = controller;
+    recoveryRequestRef.current = true;
+    setRecoveringHistory(true);
+
+    try {
+      const recoveredCandles = await historicalService.getHistoricalCandles(sourceId, {
+        instrumentId: INSTRUMENT_ID,
+        interval: nextInterval,
+        startTime,
+        endTime,
+        signal: controller.signal,
+      });
+
+      if (controller.signal.aborted || requestId !== requestIdRef.current) {
+        return;
+      }
+
+      const nextCandles = mergeCandleSeries(recoveredCandles, candlesRef.current);
+      candlesRef.current = nextCandles;
+      setCandles(nextCandles);
+      setStreamError(null);
+    } catch (cause) {
+      if (controller.signal.aborted || requestId !== requestIdRef.current) {
+        return;
+      }
+
+      setStreamError(
+        cause instanceof Error
+          ? 'No se pudo recuperar el histórico tras la reconexión: ' + cause.message
+          : 'No se pudo recuperar el histórico tras la reconexión.',
+      );
+    } finally {
+      if (recoveryAbortControllerRef.current === controller) {
+        recoveryAbortControllerRef.current = null;
+        recoveryRequestRef.current = false;
+        setRecoveringHistory(false);
+      }
+    }
+  };
 
   const loadCandles = useCallback(
     async (nextProviderId: string, nextInterval: CandleInterval): Promise<void> => {
@@ -115,6 +186,11 @@ export function MarketChart() {
       requestIdRef.current = requestId;
       abortControllerRef.current?.abort();
       olderAbortControllerRef.current?.abort();
+      recoveryAbortControllerRef.current?.abort();
+      recoveryAbortControllerRef.current = null;
+      recoveryRequestRef.current = false;
+      streamHasConnectedRef.current = false;
+      setRecoveringHistory(false);
       streamSubscriptionRef.current?.unsubscribe();
       streamSubscriptionRef.current = null;
       setStreamStatus('disconnected');
@@ -162,14 +238,53 @@ export function MarketChart() {
                     return;
                   }
 
+                  const latestCandle = candlesRef.current.at(-1);
+
+                  if (latestCandle !== undefined && update.candle.timestamp > latestCandle.timestamp) {
+                    const nextExpectedTimestamp = getNextCandleTimestamp(
+                      latestCandle.timestamp,
+                      nextInterval,
+                    );
+
+                    if (update.candle.timestamp > nextExpectedTimestamp) {
+                      void recoverHistoricalRange(
+                        requestId,
+                        nextProviderId,
+                        nextInterval,
+                        nextExpectedTimestamp,
+                        update.candle.timestamp,
+                      );
+                    }
+                  }
+
                   const nextCandles = mergeLiveCandle(candlesRef.current, update.candle);
                   candlesRef.current = nextCandles;
                   setStreamCandleCount((count) => count + 1);
                   setCandles(nextCandles);
                 },
                 onStatus: (status) => {
-                  if (requestId === requestIdRef.current) {
-                    setStreamStatus(status);
+                  if (requestId !== requestIdRef.current) {
+                    return;
+                  }
+
+                  setStreamStatus(status);
+
+                  if (status === 'connected') {
+                    if (streamHasConnectedRef.current) {
+                      const latestCandle = candlesRef.current.at(-1);
+
+                      if (latestCandle !== undefined) {
+                        void recoverHistoricalRange(
+                          requestId,
+                          nextProviderId,
+                          nextInterval,
+                          latestCandle.timestamp,
+                          Date.now() + 1,
+                        );
+                      }
+                    } else {
+                      streamHasConnectedRef.current = true;
+                    }
                   }
                 },
                 onError: (streamCause) => {
@@ -278,6 +393,9 @@ export function MarketChart() {
       if (element === null) {
         abortControllerRef.current?.abort();
         olderAbortControllerRef.current?.abort();
+        recoveryAbortControllerRef.current?.abort();
+        recoveryAbortControllerRef.current = null;
+        recoveryRequestRef.current = false;
         streamSubscriptionRef.current?.unsubscribe();
         streamSubscriptionRef.current = null;
         return;
@@ -389,8 +507,13 @@ export function MarketChart() {
             data-stream-status={displayedStreamStatus}
             data-stream-candle-count={streamCandleCount}
           >
-            {streamStatusLabel}
+              {streamStatusLabel}
           </span>
+          {recoveringHistory && (
+            <span data-testid="market-stream-recovery" class="text-blue-300">
+              Sincronizando histórico…
+            </span>
+          )}
           {streamError !== null && (
             <span
               class="max-w-48 truncate text-rose-300"
