@@ -48,6 +48,17 @@ describe('timestamp based time axis', () => {
     ).toBe('00:00');
   });
 
+  it('includes seconds for sub-minute intervals', () => {
+    const timestamp = Date.UTC(2024, 0, 1, 12, 30, 45);
+
+    expect(
+      formatTimeAxisLabel(timestamp, 5_000, 60_000, {
+        locale: 'en-GB',
+        timeZone: 'UTC',
+      }),
+    ).toBe('12:30:45');
+  });
+
   it('adds the day when intraday ticks span multiple dates', () => {
     const timestamp = Date.UTC(2024, 0, 1, 12, 30);
     const label = formatTimeAxisLabel(timestamp, 30 * MINUTE, 2 * 24 * 60 * MINUTE, {
