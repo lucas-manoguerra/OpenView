@@ -24,7 +24,9 @@ const validateInputs = (candles: readonly MovingAverageInput[], period: number):
       candle.logicalIndex <= previousLogicalIndex ||
       !Number.isFinite(candle.close)
     ) {
-      throw new RangeError('Moving average inputs must contain finite closes and ascending indices.');
+      throw new RangeError(
+        'Moving average inputs must contain finite closes and ascending indices.',
+      );
     }
 
     previousLogicalIndex = candle.logicalIndex;
