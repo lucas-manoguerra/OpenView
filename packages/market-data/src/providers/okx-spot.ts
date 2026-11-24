@@ -1,4 +1,4 @@
-import { createCandle, type Candle } from '@openview/market-domain';
+import { createCandle, type Candle, type InstrumentId } from '@openview/market-domain';
 import type {
   CandleInterval,
   CandleStreamHandlers,
@@ -8,6 +8,8 @@ import type {
   MarketDataCapabilities,
   MarketDataProvider,
   MarketDataSubscription,
+  QuoteStreamHandlers,
+  QuoteUpdate,
 } from '../contracts';
 import { MarketDataProviderError } from '../errors';
 import { MarketDataRequestScheduler, type RequestWaiter } from '../request-scheduler';
@@ -64,7 +66,7 @@ const SUPPORTED_INTERVALS: readonly CandleInterval[] = Object.freeze([
 
 const CAPABILITIES: MarketDataCapabilities = Object.freeze({
   historicalCandles: true,
-  streamingQuotes: false,
+  streamingQuotes: true,
   streamingCandles: true,
   supportedIntervals: SUPPORTED_INTERVALS,
   redistribution: 'unknown',
@@ -409,6 +411,144 @@ export class OkxSpotMarketDataProvider implements MarketDataProvider {
 
         for (const update of parseStreamCandles(payload, request, instrumentId, channel)) {
           handlers.onCandle(update);
+        }
+      },
+    });
+  }
+
+
+  subscribeToQuotes(
+    instrumentIds: readonly InstrumentId[],
+    handlers: QuoteStreamHandlers,
+  ): MarketDataSubscription {
+    if (instrumentIds.length === 0) {
+      throw new RangeError('At least one instrument is required for an OKX Spot quote stream.');
+    }
+
+    const instrumentsById = new Map<string, InstrumentId>();
+
+    for (const instrumentId of instrumentIds) {
+      const normalizedId = normalizeInstrumentId(instrumentId);
+
+      if (instrumentsById.has(normalizedId)) {
+        throw new RangeError('OKX Spot quote subscriptions cannot contain duplicate instruments.');
+      }
+
+      instrumentsById.set(normalizedId, instrumentId);
+    }
+
+    const args = [...instrumentsById.keys()].map((instId) => ({
+      channel: 'tickers',
+      instId,
+    }));
+    const url = new URL('/ws/v5/public', this.streamBaseUrl);
+
+    const readOptionalNumber = (value: unknown, field: string): number | null => {
+      if (value === undefined || value === null || value === '') {
+        return null;
+      }
+
+      return toFiniteNumber(value, field);
+    };
+
+    return createReconnectingWebSocketSubscription({
+      url: url.toString(),
+      webSocketFactory: this.webSocketFactory,
+      reconnectDelayMs: this.reconnectDelayMs,
+      maxReconnectDelayMs: this.maxReconnectDelayMs,
+      heartbeatIntervalMs: this.heartbeatIntervalMs,
+      heartbeatMessage: 'ping',
+      heartbeatOnIdle: true,
+      heartbeatResponse: 'pong',
+      heartbeatResponseTimeoutMs: this.heartbeatResponseTimeoutMs,
+      ...(handlers.onStatus === undefined ? {} : { onStatus: handlers.onStatus }),
+      ...(handlers.onError === undefined ? {} : { onError: handlers.onError }),
+      onOpen: (connection) => {
+        if (connection.send === undefined) {
+          throw new Error('OKX Spot WebSocket connection cannot send subscription messages.');
+        }
+
+        connection.send(JSON.stringify({ op: 'subscribe', args }));
+      },
+      onMessage: (message, connection) => {
+        if (message === 'ping') {
+          if (connection.send === undefined) {
+            throw new Error('OKX Spot WebSocket connection cannot send pong messages.');
+          }
+
+          connection.send('pong');
+          return;
+        }
+
+        if (message === 'pong') {
+          return;
+        }
+
+        const payload: unknown = JSON.parse(message);
+        const event = readProperty(payload, 'event');
+
+        if (event === 'error') {
+          connection.close();
+          const code = readProperty(payload, 'code');
+          const reason = readProperty(payload, 'msg');
+          throw new Error(
+            'OKX Spot quote subscription failed' +
+              (code === undefined ? '' : ' (code ' + String(code) + ')') +
+              (typeof reason === 'string' && reason.length > 0 ? ': ' + reason : '.'),
+          );
+        }
+
+        if (event !== undefined) {
+          return;
+        }
+
+        const argument = readProperty(payload, 'arg');
+
+        if (readProperty(argument, 'channel') !== 'tickers') {
+          return;
+        }
+
+        const instrument = readProperty(argument, 'instId');
+
+        if (typeof instrument !== 'string' || !instrumentsById.has(instrument)) {
+          return;
+        }
+
+        const data = readProperty(payload, 'data');
+
+        if (!Array.isArray(data)) {
+          throw new RangeError('OKX returned a malformed WebSocket tickers payload.');
+        }
+
+        for (const item of data) {
+          if (!isRecord(item) || readProperty(item, 'instId') !== instrument) {
+            throw new RangeError('OKX returned a ticker for an unexpected instrument.');
+          }
+
+          const timestamp = toFiniteNumber(readProperty(item, 'ts'), 'ticker timestamp');
+
+          if (!Number.isSafeInteger(timestamp) || timestamp < 0) {
+            throw new RangeError('OKX returned an invalid ticker timestamp.');
+          }
+
+          const last = readOptionalNumber(readProperty(item, 'last'), 'last price');
+          const open24h = readOptionalNumber(readProperty(item, 'open24h'), '24-hour open price');
+          const changePercent24h =
+            last !== null && open24h !== null && open24h > 0
+              ? ((last - open24h) / open24h) * 100
+              : null;
+          const quote: QuoteUpdate = Object.freeze({
+            instrumentId: instrumentsById.get(instrument) as InstrumentId,
+            timestamp,
+            receivedAt: Date.now(),
+            bid: readOptionalNumber(readProperty(item, 'bidPx'), 'best bid price'),
+            ask: readOptionalNumber(readProperty(item, 'askPx'), 'best ask price'),
+            last,
+            volume24h: readOptionalNumber(readProperty(item, 'vol24h'), '24-hour base volume'),
+            changePercent24h,
+          });
+
+          handlers.onQuote(quote);
         }
       },
     });
