@@ -204,7 +204,7 @@ export function ChartCanvas() {
         ref={bindCanvas}
         class="block h-full w-full touch-none"
         role="img"
-        aria-label="Gráfico interactivo de velas y volumen para BTC USDT. Arrastrar para desplazar y usar la rueda para acercar."
+        aria-label="Gráfico interactivo de velas y volumen para BTC USDT. Arrastrar el gráfico para desplazar el tiempo, arrastrar el eje de precios para desplazar los precios, usar la rueda sobre cada área para acercar y hacer doble clic en el eje de precios para autoajustar."
       />
       <div class="pointer-events-none absolute left-4 top-3 flex items-center gap-2">
         <span class="text-xs font-semibold text-slate-200">BTC / USDT</span>
