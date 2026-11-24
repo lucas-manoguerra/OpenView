@@ -964,7 +964,7 @@ export function MarketChart() {
           <button
             type="button"
             onClick={openSymbolSearch}
-            aria-label={'Buscar instrumentos; instrumento actual: ' + selectedInstrument.chartSymbol}
+            aria-label={`Buscar instrumentos; instrumento actual: ${selectedInstrument.chartSymbol}`}
             data-testid="toolbar-symbol-search"
             class="flex h-9 min-w-0 items-center gap-2 rounded-lg border border-white/10 bg-[#0b0f17] px-3 text-left transition-colors hover:border-blue-400/40 hover:bg-[#131e2d]"
           >
@@ -993,12 +993,12 @@ export function MarketChart() {
             </select>
           </label>
           <span class="hidden h-6 w-px bg-white/10 sm:block" />
-          <div
-            role="group"
+          <fieldset
             aria-label="Temporalidades rápidas"
             data-testid="chart-timeframe-toolbar"
             class="flex min-w-0 flex-wrap items-center gap-0.5"
           >
+            <legend class="sr-only">Temporalidades rápidas</legend>
             {QUICK_INTERVALS.filter((quickInterval) =>
               selectedSource.supportedIntervals.includes(quickInterval),
             ).map((quickInterval) => (
@@ -1019,7 +1019,7 @@ export function MarketChart() {
                 {quickInterval}
               </button>
             ))}
-          </div>
+          </fieldset>
           <label class="flex h-9 items-center gap-1 rounded-lg border border-white/10 bg-[#0b0f17] px-2 text-[10px] text-slate-500">
             <span class="sr-only">Todas las temporalidades</span>
             <select
