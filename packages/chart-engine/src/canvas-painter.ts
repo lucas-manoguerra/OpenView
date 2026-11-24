@@ -1,6 +1,12 @@
 import { createCandle, type Candle } from '@openview/market-domain';
 import { generatePriceTicks, priceToCoordinate } from './price-scale';
-import { generateTimeTicks, logicalIndexToCoordinate } from './time-scale';
+import { logicalIndexToCoordinate } from './time-scale';
+import {
+  createTimeAxisData,
+  generateTimeAxisTicks,
+  selectNonOverlappingTimeAxisTicks,
+  type TimeAxisData,
+} from './time-axis';
 import type { ChartCoordinate, ChartFrame } from './chart-frame';
 
 export type ChartRenderCandle = Candle &
@@ -11,6 +17,7 @@ export type ChartRenderCandle = Candle &
 export type ChartRenderScene = Readonly<{
   frame: ChartFrame;
   candles: readonly ChartRenderCandle[];
+  timeAxisData: TimeAxisData;
   crosshair: ChartCoordinate | null;
 }>;
 
@@ -26,6 +33,9 @@ export type ChartRenderTheme = Readonly<{
   unchanged: string;
   crosshair: string;
 }>;
+
+const getTargetTimeTickCount = (plotWidth: number): number =>
+  Math.max(2, Math.min(50, Math.floor(plotWidth / 110)));
 
 export const DEFAULT_CHART_THEME: ChartRenderTheme = Object.freeze({
   background: '#0b0f17',
@@ -69,9 +79,44 @@ export const createChartRenderScene = (
     throw new RangeError('Crosshair coordinates must be finite numbers.');
   }
 
+  const frozenCandles = Object.freeze(normalizedCandles);
+
   return Object.freeze({
     frame,
-    candles: Object.freeze(normalizedCandles),
+    candles: frozenCandles,
+    timeAxisData: createTimeAxisData(frozenCandles),
+    crosshair: crosshair === null ? null : Object.freeze({ ...crosshair }),
+  });
+};
+
+export type ChartRenderSceneUpdate = Readonly<{
+  frame?: ChartFrame;
+  crosshair?: ChartCoordinate | null;
+}>;
+
+export const updateChartRenderScene = (
+  scene: ChartRenderScene,
+  update: ChartRenderSceneUpdate,
+): ChartRenderScene => {
+  const frame = update.frame ?? scene.frame;
+  const crosshair = update.crosshair === undefined ? scene.crosshair : update.crosshair;
+
+  if (crosshair !== null && (!Number.isFinite(crosshair.x) || !Number.isFinite(crosshair.y))) {
+    throw new RangeError('Crosshair coordinates must be finite numbers.');
+  }
+
+  if (
+    frame === scene.frame &&
+    crosshair?.x === scene.crosshair?.x &&
+    crosshair?.y === scene.crosshair?.y
+  ) {
+    return scene;
+  }
+
+  return Object.freeze({
+    frame,
+    candles: scene.candles,
+    timeAxisData: scene.timeAxisData,
     crosshair: crosshair === null ? null : Object.freeze({ ...crosshair }),
   });
 };
@@ -110,7 +155,9 @@ const drawGrid = (
     }
   }
 
-  for (const tick of generateTimeTicks(frame.timeScale, 8)) {
+  for (const tick of generateTimeAxisTicks(frame.timeScale, scene.timeAxisData, {
+    targetTickCount: getTargetTimeTickCount(plotArea.width),
+  })) {
     const x = plotArea.x + tick.coordinate;
     context.moveTo(x, plotArea.y);
     context.lineTo(x, plotArea.y + plotArea.height + volumeArea.height);
@@ -157,7 +204,7 @@ const drawAxes = (
   context.font = '11px sans-serif';
   context.textBaseline = 'middle';
 
-  for (const tick of generatePriceTicks(priceScale, 7)) {
+  for (const tick of generatePriceTicks(priceScale, 7, { locale: 'es-AR' })) {
     const y = plotArea.y + tick.coordinate;
 
     if (rightPriceScaleArea.width > 0) {
@@ -174,9 +221,19 @@ const drawAxes = (
   if (timeScaleArea.height > 0) {
     context.textAlign = 'center';
 
-    for (const tick of generateTimeTicks(timeScale, 8)) {
+    const timeTicks = generateTimeAxisTicks(timeScale, scene.timeAxisData, {
+      targetTickCount: getTargetTimeTickCount(plotArea.width),
+      locale: 'es-AR',
+    });
+    const visibleTimeTicks = selectNonOverlappingTimeAxisTicks(
+      timeTicks,
+      (label) => context.measureText(label).width,
+      timeScaleArea.width,
+    );
+
+    for (const tick of visibleTimeTicks) {
       const x = plotArea.x + tick.coordinate;
-      context.fillText(String(tick.logicalIndex), x, timeScaleArea.y + timeScaleArea.height / 2);
+      context.fillText(tick.label, x, timeScaleArea.y + timeScaleArea.height / 2);
     }
   }
 

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createChartFrame } from './src/chart-frame';
+import { priceToCoordinate } from './src/price-scale';
 import { coordinateToLogicalIndex, logicalIndexToCoordinate } from './src/time-scale';
 import { createChartInteractionController } from './src/chart-interaction';
 
@@ -11,6 +12,11 @@ const createFrame = () =>
       topInset: 12,
     },
   });
+
+const centerOfPriceScale = (frame = createFrame()) => ({
+  x: frame.layout.rightPriceScaleArea.x + frame.layout.rightPriceScaleArea.width / 2,
+  y: frame.layout.plotArea.y + frame.layout.plotArea.height / 2,
+});
 
 const centerOfPlot = (frame = createFrame()) => ({
   x: frame.layout.plotArea.x + frame.layout.plotArea.width / 2,
@@ -111,6 +117,68 @@ describe('chart interaction controller', () => {
 
     expect(controller.snapshot.dragging).toBe(true);
     expect(controller.snapshot.crosshair).toEqual(center);
+  });
+
+  it('starts a price drag on the price axis and pans the visible price range', () => {
+    const frame = createFrame();
+    const controller = createChartInteractionController(frame);
+    const start = centerOfPriceScale(frame);
+    const price = 105;
+    const previousY = frame.layout.plotArea.y + priceToCoordinate(price, frame.priceScale);
+
+    expect(controller.pointerDown(start)).toBe(true);
+    expect(controller.snapshot.dragTarget).toBe('price');
+    controller.pointerMove({ x: start.x, y: start.y + 40 });
+
+    const nextFrame = controller.snapshot.frame;
+    const nextY = nextFrame.layout.plotArea.y + priceToCoordinate(price, nextFrame.priceScale);
+
+    expect(nextFrame.priceScale.range).not.toEqual(frame.priceScale.range);
+    expect(nextY).toBeCloseTo(previousY + 40);
+    expect(controller.snapshot.crosshair).toBeNull();
+  });
+
+  it('zooms the price scale around the cursor when scrolling over the axis', () => {
+    const frame = createFrame();
+    const controller = createChartInteractionController(frame);
+    const position = {
+      x: centerOfPriceScale(frame).x,
+      y: frame.layout.plotArea.y + 80,
+    };
+    const anchorPrice =
+      frame.priceScale.range.min +
+      (1 - 80 / frame.priceScale.height) *
+        (frame.priceScale.range.max - frame.priceScale.range.min);
+
+    expect(controller.wheel(position, 0, -120)).toBe(true);
+
+    const nextScale = controller.snapshot.frame.priceScale;
+
+    expect(nextScale.range.max - nextScale.range.min).toBeLessThan(
+      frame.priceScale.range.max - frame.priceScale.range.min,
+    );
+    expect(priceToCoordinate(anchorPrice, nextScale)).toBeCloseTo(80);
+    expect(controller.snapshot.frame.timeScale.barSpacing).toBe(frame.timeScale.barSpacing);
+  });
+
+  it('fits the price scale only when the auto-fit command comes from a price axis', () => {
+    const frame = createFrame();
+    const controller = createChartInteractionController(frame);
+    const range = { min: 98, max: 108 };
+
+    expect(controller.fitPriceScaleAt(centerOfPlot(frame), range)).toBe(false);
+    expect(controller.fitPriceScaleAt(centerOfPriceScale(frame), range)).toBe(true);
+    expect(controller.snapshot.frame.priceScale.range).toEqual(range);
+    expect(controller.snapshot.crosshair).toBeNull();
+  });
+
+  it('does not emit a change when auto-fit already matches the current range', () => {
+    const frame = createFrame();
+    const onChange = vi.fn();
+    const controller = createChartInteractionController(frame, { onChange });
+
+    expect(controller.fitPriceScale(frame.priceScale.range)).toBe(false);
+    expect(onChange).not.toHaveBeenCalled();
   });
 
   it('zooms around the logical index under the wheel pointer', () => {
