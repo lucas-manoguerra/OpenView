@@ -168,7 +168,7 @@ export class BinanceSpotMarketDataProvider implements MarketDataProvider {
       throw new RangeError('Binance Spot provider base URLs must use HTTPS.');
     }
 
-    const fetcher = options.fetcher ?? globalThis.fetch;
+    const fetcher = options.fetcher ?? globalThis.fetch.bind(globalThis);
     const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE;
     const maxPages = options.maxPages ?? DEFAULT_MAX_PAGES;
 

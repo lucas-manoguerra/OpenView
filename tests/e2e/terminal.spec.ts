@@ -1,4 +1,79 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+
+const BINANCE_KLINES_URL = 'https://data-api.binance.vision/api/v3/klines**';
+
+const getIntervalDuration = (interval: string): number => (interval === '5m' ? 300_000 : 60_000);
+
+const createKlines = (interval: string, startTime: number, endTime: number): unknown[][] => {
+  const duration = getIntervalDuration(interval);
+  const firstTimestamp = Math.ceil(startTime / duration) * duration;
+  const lastTimestamp = Math.floor(endTime / duration) * duration;
+  const candleCount = Math.max(
+    0,
+    Math.min(500, Math.floor((lastTimestamp - firstTimestamp) / duration) + 1),
+  );
+
+  return Array.from({ length: candleCount }, (_, index) => {
+    const timestamp = firstTimestamp + index * duration;
+    const close = 65_000 + index * 0.7 + Math.sin(index / 12) * 90;
+    const open = close - 5;
+    const high = close + 20;
+    const low = open - 20;
+
+    return [
+      timestamp,
+      String(open),
+      String(high),
+      String(low),
+      String(close),
+      '12.5',
+      timestamp + duration - 1,
+      '600',
+      20,
+      '6',
+      '300',
+      '0',
+    ];
+  });
+};
+
+const createBybitRows = (interval: string, startTime: number, endTime: number): unknown[][] =>
+  createKlines(interval, startTime, endTime)
+    .map((row) => [...row.slice(0, 6), 'turnover'])
+    .reverse();
+
+const createOkxRows = (interval: string, startTime: number, endTime: number): unknown[][] =>
+  createKlines(interval, startTime, endTime).map((row) => [
+    row[0],
+    row[1],
+    row[2],
+    row[3],
+    row[4],
+    row[5],
+    'quote-volume',
+    'quote-volume',
+    '1',
+  ]);
+
+const installBinanceMock = async (page: Page): Promise<void> => {
+  await page.route(BINANCE_KLINES_URL, async (route) => {
+    const url = new URL(route.request().url());
+    const interval = url.searchParams.get('interval') ?? '1m';
+    const startTime = Number(url.searchParams.get('startTime') ?? 0);
+    const endTime = Number(url.searchParams.get('endTime') ?? Date.now());
+    const candles = createKlines(interval, startTime, endTime);
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(candles),
+    });
+  });
+};
+
+test.beforeEach(async ({ page }) => {
+  await installBinanceMock(page);
+});
 
 test('loads the OpenView terminal foundation', async ({ page }) => {
   await page.goto('/');
@@ -17,17 +92,152 @@ test('switches between workspace sections after hydration', async ({ page }) => 
   await expect(page.getByRole('heading', { name: 'Mercados' })).toBeVisible();
 });
 
+test('loads Binance Spot history and changes candle interval', async ({ page }) => {
+  const requestedIntervals: string[] = [];
+
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+
+    if (url.pathname === '/api/v3/klines') {
+      requestedIntervals.push(url.searchParams.get('interval') ?? '');
+    }
+  });
+
+  await page.goto('/');
+
+  const canvas = page.locator('canvas[data-candles-count]');
+
+  await expect(canvas).toHaveAttribute('data-chart-ready', 'true');
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+  await expect(page.getByTestId('provider-select')).toHaveValue('binance-spot');
+  await expect(page.getByTestId('interval-select')).toHaveValue('1m');
+
+  await page.getByTestId('interval-select').selectOption('5m');
+
+  await expect(canvas).toHaveAttribute('data-interval', '5m');
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+  expect(requestedIntervals).toContain('1m');
+  expect(requestedIntervals).toContain('5m');
+});
+
+test('switches historical data between Binance, Bybit and OKX Spot', async ({ page }) => {
+  await page.route('https://api.bybit.com/v5/market/kline**', async (route) => {
+    const url = new URL(route.request().url());
+    const interval = url.searchParams.get('interval') === '5' ? '5m' : '1m';
+    const startTime = Number(url.searchParams.get('start') ?? 0);
+    const endTime = Number(url.searchParams.get('end') ?? Date.now()) + 1;
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        retCode: 0,
+        retMsg: 'OK',
+        result: {
+          category: 'spot',
+          symbol: 'BTCUSDT',
+          list: createBybitRows(interval, startTime, endTime),
+        },
+      }),
+    });
+  });
+
+  await page.route('https://www.okx.com/api/v5/market/history-candles**', async (route) => {
+    const url = new URL(route.request().url());
+    const interval = url.searchParams.get('bar') ?? '1m';
+    const after = Number(url.searchParams.get('after') ?? Date.now());
+    const limit = Number(url.searchParams.get('limit') ?? 100);
+    const duration = getIntervalDuration(interval);
+    const startTime = after - duration * 501;
+    const rows = createOkxRows(interval, startTime, after)
+      .filter((row) => Number(row[0]) < after)
+      .sort((left, right) => Number(right[0]) - Number(left[0]))
+      .slice(0, limit);
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ code: '0', msg: '', data: rows }),
+    });
+  });
+
+  await page.goto('/');
+
+  const canvas = page.locator('canvas[data-candles-count]');
+  const providerSelect = page.getByTestId('provider-select');
+
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+
+  await providerSelect.selectOption('bybit-spot');
+  await expect(providerSelect).toHaveValue('bybit-spot');
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+
+  await providerSelect.selectOption('okx-spot');
+  await expect(providerSelect).toHaveValue('okx-spot');
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+});
+
+test('shows a provider error and retries the historical request', async ({ page }) => {
+  let requestCount = 0;
+
+  await page.route(BINANCE_KLINES_URL, async (route) => {
+    requestCount += 1;
+
+    if (requestCount === 1) {
+      await route.fulfill({
+        status: 429,
+        contentType: 'application/json',
+        body: JSON.stringify({ code: -1003, msg: 'Too many requests' }),
+      });
+      return;
+    }
+
+    const url = new URL(route.request().url());
+    const interval = url.searchParams.get('interval') ?? '1m';
+    const startTime = Number(url.searchParams.get('startTime') ?? 0);
+    const endTime = Number(url.searchParams.get('endTime') ?? Date.now());
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(createKlines(interval, startTime, endTime)),
+    });
+  });
+
+  await page.goto('/');
+
+  await expect(page.getByRole('alert')).toContainText('HTTP 429');
+  await page.getByRole('button', { name: 'Reintentar' }).click();
+
+  const canvas = page.locator('canvas[data-candles-count]');
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+  expect(requestCount).toBe(2);
+});
+
 test('renders an interactive canvas chart and responds to pointer and wheel input', async ({
   page,
 }) => {
   await page.goto('/');
 
   const canvas = page.getByRole('img', {
-    name: /Gráfico interactivo de velas y volumen para BTC USDT/,
+    name: /Gráfico interactivo de velas y volumen para BTC \/ USDT/,
   });
 
   await expect(canvas).toBeVisible();
   await expect(canvas).toHaveAttribute('data-chart-ready', 'true');
+  await expect(canvas).toHaveAttribute('data-candles-count', /[1-9]\d*/);
 
   const bounds = await canvas.boundingBox();
 
@@ -59,10 +269,11 @@ test('updates the canvas backing store when the terminal layout changes', async 
   await page.goto('/');
 
   const canvas = page.getByRole('img', {
-    name: /Gráfico interactivo de velas y volumen para BTC USDT/,
+    name: /Gráfico interactivo de velas y volumen para BTC \/ USDT/,
   });
 
   await expect(canvas).toHaveAttribute('data-chart-ready', 'true');
+  await expect(canvas).toHaveAttribute('data-candles-count', /[1-9]\d*/);
 
   const initialWidth = await canvas.evaluate((element: HTMLCanvasElement) => element.width);
 
@@ -88,10 +299,11 @@ test('supports price axis drag, anchored zoom and double-click auto fit', async 
   await page.goto('/');
 
   const canvas = page.getByRole('img', {
-    name: /Gráfico interactivo de velas y volumen para BTC USDT/,
+    name: /Gráfico interactivo de velas y volumen para BTC \/ USDT/,
   });
 
   await expect(canvas).toHaveAttribute('data-chart-ready', 'true');
+  await expect(canvas).toHaveAttribute('data-candles-count', /[1-9]\d*/);
 
   const bounds = await canvas.boundingBox();
 
@@ -160,10 +372,11 @@ test('renders timestamp based time labels instead of logical bar indices', async
   await page.goto('/');
 
   const canvas = page.getByRole('img', {
-    name: /Gráfico interactivo de velas y volumen para BTC USDT/,
+    name: /Gráfico interactivo de velas y volumen para BTC \/ USDT/,
   });
 
   await expect(canvas).toHaveAttribute('data-chart-ready', 'true');
+  await expect(canvas).toHaveAttribute('data-candles-count', /[1-9]\d*/);
 
   await expect
     .poll(() =>
