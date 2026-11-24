@@ -46,10 +46,13 @@ const createKlineEvent = (overrides: Readonly<{ close?: string; final?: boolean 
   },
 });
 
-const createProvider = (connections: FakeWebSocket[], options: Readonly<{
-  reconnectDelayMs?: number;
-  maxReconnectDelayMs?: number;
-}> = {}) =>
+const createProvider = (
+  connections: FakeWebSocket[],
+  options: Readonly<{
+    reconnectDelayMs?: number;
+    maxReconnectDelayMs?: number;
+  }> = {},
+) =>
   new BinanceSpotMarketDataProvider({
     webSocketFactory: (url: string): BinanceWebSocketConnection => {
       const connection = new FakeWebSocket(url);
@@ -81,9 +84,7 @@ describe('Binance Spot candle stream', () => {
     );
 
     const connection = connections[0];
-    expect(connection?.url).toBe(
-      'wss://stream.binance.com:9443/ws/btcusdt@kline_1m',
-    );
+    expect(connection?.url).toBe('wss://stream.binance.com:9443/ws/btcusdt@kline_1m');
 
     connection?.open();
     connection?.emit(createKlineEvent({ close: '103.5' }));
@@ -214,8 +215,8 @@ describe('Binance Spot candle stream', () => {
         { onCandle: () => undefined },
       ),
     ).toThrow('does not support the 1s candle interval');
-    expect(() =>
-      new BinanceSpotMarketDataProvider({ streamBaseUrl: 'ws://stream.example.test' }),
+    expect(
+      () => new BinanceSpotMarketDataProvider({ streamBaseUrl: 'ws://stream.example.test' }),
     ).toThrow('must use WSS');
     expect(connections).toHaveLength(0);
   });
