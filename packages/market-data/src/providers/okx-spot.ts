@@ -306,9 +306,7 @@ export class OkxSpotMarketDataProvider implements MarketDataProvider {
     }
 
     if (!Number.isInteger(maxReconnectDelayMs) || maxReconnectDelayMs < reconnectDelayMs) {
-      throw new RangeError(
-        'OKX Spot maximum reconnect delay must be at least the initial delay.',
-      );
+      throw new RangeError('OKX Spot maximum reconnect delay must be at least the initial delay.');
     }
 
     if (!Number.isInteger(heartbeatIntervalMs) || heartbeatIntervalMs < 1) {
