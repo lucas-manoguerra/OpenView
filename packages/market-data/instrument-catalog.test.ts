@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createInstrumentId } from '@openview/market-domain';
-import {
-  createMarketInstrument,
-  normalizeMarketInstruments,
-} from './src/instrument-catalog';
+import { createMarketInstrument, normalizeMarketInstruments } from './src/instrument-catalog';
 
 describe('normalized market instrument catalog', () => {
   it('normalizes asset codes and creates provider-independent identifiers', () => {
