@@ -21,6 +21,12 @@ const sectionTitles: Record<WorkspaceSection, string> = {
 const activeNavigationClass =
   'flex min-w-0 flex-1 items-center gap-3 rounded-lg bg-blue-500/10 px-3 py-3 text-left text-sm text-blue-200 ring-1 ring-inset ring-blue-400/20 transition-colors lg:flex-none';
 
+const markTerminalHydrated = (element: HTMLElement | null): void => {
+  if (element !== null) {
+    element.dataset.hydrated = 'true';
+  }
+};
+
 const inactiveNavigationClass =
   'flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-3 text-left text-sm text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200 lg:flex-none';
 
@@ -28,7 +34,7 @@ export function TerminalShell() {
   const [activeSection, setActiveSection] = useState<WorkspaceSection>('chart');
 
   return (
-    <main class="min-h-screen bg-[#080b12] text-slate-200">
+    <main ref={markTerminalHydrated} class="min-h-screen bg-[#080b12] text-slate-200">
       <header class="flex h-16 items-center justify-between border-b border-white/10 px-5 lg:px-8">
         <a class="flex items-center gap-3 no-underline" href="/" aria-label="OpenView inicio">
           <span class="grid size-9 place-items-center rounded-xl bg-blue-500/15 text-sm font-bold text-blue-300">
