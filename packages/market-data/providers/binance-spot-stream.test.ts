@@ -220,4 +220,27 @@ describe('Binance Spot candle stream', () => {
     ).toThrow('must use WSS');
     expect(connections).toHaveLength(0);
   });
+
+  it('reconnects when Binance announces a scheduled server shutdown', () => {
+    vi.useFakeTimers();
+    const connections: FakeWebSocket[] = [];
+    const provider = createProvider(connections, { reconnectDelayMs: 500 });
+    const states: string[] = [];
+    const subscription = provider.subscribeToCandles(
+      { instrumentId: createInstrumentId('BTC-USDT'), interval: '1m' },
+      { onCandle: () => undefined, onStatus: (state) => states.push(state) },
+    );
+
+    connections[0]?.open();
+    connections[0]?.emit({ e: 'serverShutdown' });
+    expect(connections[0]?.closeCalls).toBe(1);
+    expect(states.at(-1)).toBe('reconnecting');
+
+    vi.advanceTimersByTime(500);
+    expect(connections).toHaveLength(2);
+    connections[1]?.open();
+    expect(states.at(-1)).toBe('connected');
+
+    subscription.unsubscribe();
+  });
 });
