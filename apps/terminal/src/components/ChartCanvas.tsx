@@ -288,11 +288,14 @@ export function ChartCanvas({
     });
   }, []);
 
-  const bindDataUpdate = useCallback((element: HTMLSpanElement | null): void => {
-    if (element !== null) {
-      runtimeRef.current?.updateCandles(renderDataRef.current.candles);
-    }
-  }, [renderCandles]);
+  const bindDataUpdate = useCallback(
+    (element: HTMLSpanElement | null): void => {
+      if (element !== null) {
+        runtimeRef.current?.updateCandles(renderDataRef.current.candles);
+      }
+    },
+    [renderCandles],
+  );
 
   return (
     <div
@@ -324,14 +327,21 @@ export function ChartCanvas({
       </div>
       {loading && (
         <div class="pointer-events-none absolute inset-0 grid place-items-center bg-[#0b0f17]/70">
-          <span role="status" data-testid="market-data-loading" class="rounded-lg border border-white/10 bg-[#101723] px-4 py-2 text-xs text-slate-300">
+          <span
+            role="status"
+            data-testid="market-data-loading"
+            class="rounded-lg border border-white/10 bg-[#101723] px-4 py-2 text-xs text-slate-300"
+          >
             Cargando velas históricas…
           </span>
         </div>
       )}
       {!loading && error !== null && (
         <div class="pointer-events-none absolute inset-0 grid place-items-center bg-[#0b0f17]/80 p-6">
-          <div role="alert" class="pointer-events-auto max-w-sm rounded-xl border border-rose-400/20 bg-[#101723] p-5 text-center">
+          <div
+            role="alert"
+            class="pointer-events-auto max-w-sm rounded-xl border border-rose-400/20 bg-[#101723] p-5 text-center"
+          >
             <div class="text-sm font-medium text-rose-200">No se pudieron cargar los datos</div>
             <p class="mt-2 break-words text-xs leading-5 text-slate-400">{error}</p>
             <button
@@ -346,7 +356,10 @@ export function ChartCanvas({
       )}
       {!loading && error === null && renderCandles.length === 0 && (
         <div class="pointer-events-none absolute inset-0 grid place-items-center">
-          <span role="status" class="rounded-lg border border-white/10 bg-[#101723] px-4 py-2 text-xs text-slate-400">
+          <span
+            role="status"
+            class="rounded-lg border border-white/10 bg-[#101723] px-4 py-2 text-xs text-slate-400"
+          >
             La fuente no devolvió velas para este rango.
           </span>
         </div>
