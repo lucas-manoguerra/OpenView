@@ -47,7 +47,10 @@ describe('moving average indicators', () => {
     expect(() => calculateExponentialMovingAverage(createCandles(), 1.5)).toThrow(RangeError);
     expect(() =>
       calculateSimpleMovingAverage(
-        [{ logicalIndex: 1, close: 10 }, { logicalIndex: 1, close: 12 }],
+        [
+          { logicalIndex: 1, close: 10 },
+          { logicalIndex: 1, close: 12 },
+        ],
         1,
       ),
     ).toThrow(RangeError);
