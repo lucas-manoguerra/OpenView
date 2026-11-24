@@ -388,6 +388,7 @@ export class BybitSpotMarketDataProvider implements MarketDataProvider {
         const success = readProperty(payload, 'success');
 
         if (success === false && operation === 'subscribe') {
+          connection.close();
           const reason = readProperty(payload, 'ret_msg');
           throw new Error(
             typeof reason === 'string'
