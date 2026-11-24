@@ -603,6 +603,49 @@ describe('Bybit Spot quote stream', () => {
     expect(states.at(-1)).toBe('disconnected');
   });
 
+  it('splits subscriptions into messages with at most ten Spot topics', () => {
+    const connections: FakeBybitWebSocket[] = [];
+    const provider = createStreamProvider(connections);
+    const instrumentIds = [
+      'BTC-USDT',
+      'ETH-USDT',
+      'SOL-USDT',
+      'XRP-USDT',
+      'DOGE-USDT',
+      'ADA-USDT',
+    ].map((instrumentId) => createInstrumentId(instrumentId));
+    const subscription = provider.subscribeToQuotes(instrumentIds, {
+      onQuote: () => undefined,
+    });
+    const connection = connections[0];
+
+    connection?.open();
+
+    const requests = connection?.sent.map((message) => JSON.parse(message) as {
+      op: string;
+      args: string[];
+    });
+
+    expect(requests).toHaveLength(2);
+    expect(requests?.map((request) => request.args.length)).toEqual([10, 2]);
+    expect(requests?.flatMap((request) => request.args)).toEqual([
+      'tickers.BTCUSDT',
+      'orderbook.1.BTCUSDT',
+      'tickers.ETHUSDT',
+      'orderbook.1.ETHUSDT',
+      'tickers.SOLUSDT',
+      'orderbook.1.SOLUSDT',
+      'tickers.XRPUSDT',
+      'orderbook.1.XRPUSDT',
+      'tickers.DOGEUSDT',
+      'orderbook.1.DOGEUSDT',
+      'tickers.ADAUSDT',
+      'orderbook.1.ADAUSDT',
+    ]);
+
+    subscription.unsubscribe();
+  });
+
   it('rejects duplicate normalized symbols before opening a connection', () => {
     const connections: FakeBybitWebSocket[] = [];
     const provider = createStreamProvider(connections);
