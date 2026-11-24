@@ -67,7 +67,11 @@ const normalizeChartIndicators = (
 ): readonly ChartIndicatorSeries[] =>
   Object.freeze(
     indicators.map((indicator) => {
-      if (indicator.id.length === 0 || indicator.label.length === 0 || indicator.color.length === 0) {
+      if (
+        indicator.id.length === 0 ||
+        indicator.label.length === 0 ||
+        indicator.color.length === 0
+      ) {
         throw new RangeError('Chart indicators must include an id, label and color.');
       }
 
@@ -78,7 +82,9 @@ const normalizeChartIndicators = (
           point.logicalIndex <= previousLogicalIndex ||
           !Number.isFinite(point.value)
         ) {
-          throw new RangeError('Chart indicator points must have finite values and ascending indices.');
+          throw new RangeError(
+            'Chart indicator points must have finite values and ascending indices.',
+          );
         }
 
         previousLogicalIndex = point.logicalIndex;
@@ -153,7 +159,9 @@ export const updateChartRenderScene = (
   const crosshair = update.crosshair === undefined ? scene.crosshair : update.crosshair;
   const chartType = update.chartType ?? scene.chartType;
   const indicators =
-    update.indicators === undefined ? scene.indicators : normalizeChartIndicators(update.indicators);
+    update.indicators === undefined
+      ? scene.indicators
+      : normalizeChartIndicators(update.indicators);
 
   if (crosshair !== null && (!Number.isFinite(crosshair.x) || !Number.isFinite(crosshair.y))) {
     throw new RangeError('Crosshair coordinates must be finite numbers.');
@@ -575,10 +583,7 @@ const drawVolumeBars = (
   context.restore();
 };
 
-const drawIndicators = (
-  context: CanvasRenderingContext2D,
-  scene: ChartRenderScene,
-): void => {
+const drawIndicators = (context: CanvasRenderingContext2D, scene: ChartRenderScene): void => {
   if (scene.indicators.length === 0) {
     return;
   }
