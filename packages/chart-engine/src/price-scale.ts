@@ -99,7 +99,9 @@ const getNiceStep = (range: NumericRange, targetTickCount: number): number => {
   const roughStep = (range.max - range.min) / Math.max(1, targetTickCount - 1);
   const magnitude = 10 ** Math.floor(Math.log10(roughStep));
   const normalizedStep = roughStep / magnitude;
-  const multiplier = [1, 2, 2.5, 5, 10].find((candidate) => normalizedStep <= candidate) ?? 10;
+  const comparisonTolerance = Number.EPSILON * Math.max(1, normalizedStep) * 16;
+  const multiplier =
+    [1, 2, 2.5, 5, 10].find((candidate) => normalizedStep <= candidate + comparisonTolerance) ?? 10;
   const step = multiplier * magnitude;
 
   if (!Number.isFinite(step) || step <= 0) {
@@ -138,7 +140,8 @@ const generateLinearValues = (
   targetTickCount: number,
 ): Readonly<{ values: readonly number[]; step: number }> => {
   const step = getNiceStep(range, targetTickCount);
-  const tolerance = Number.EPSILON * Math.max(1, Math.abs(range.min), Math.abs(range.max)) * 16;
+  const tolerance =
+    Number.EPSILON * Math.max(Math.abs(range.min), Math.abs(range.max), Math.abs(step)) * 16;
   const firstIndex = Math.ceil(range.min / step - Number.EPSILON * 8);
   const values: number[] = [];
 
@@ -166,7 +169,8 @@ const generateLogarithmicValues = (
   const exponentSpan = Math.max(1, maximumExponent - minimumExponent);
   const exponentStep = Math.max(1, Math.ceil((exponentSpan + 1) / targetTickCount));
   const multipliers = exponentSpan * 3 <= targetTickCount * 2 ? [1, 2, 5] : [1];
-  const tolerance = Number.EPSILON * Math.max(1, Math.abs(range.min), Math.abs(range.max)) * 16;
+  const tolerance =
+    Number.EPSILON * Math.max(Math.abs(range.min), Math.abs(range.max), Number.MIN_VALUE) * 16;
   const values: number[] = [];
 
   for (let exponent = minimumExponent; exponent <= maximumExponent; exponent += exponentStep) {
@@ -310,9 +314,7 @@ export const generatePriceTicks = (
       const value = scale.mode === 'logarithmic' ? price : generatedValue;
       const numberLabel = formatNumber(value, precision);
       const label =
-        scale.mode === 'percentage'
-          ? `${value > 0 ? '+' : ''}${numberLabel}%`
-          : numberLabel;
+        scale.mode === 'percentage' ? `${value > 0 ? '+' : ''}${numberLabel}%` : numberLabel;
 
       return Object.freeze({
         price,
