@@ -163,10 +163,17 @@ export const attachCanvasPointerEvents = (
         x: Math.max(plotArea.x, Math.min(plotArea.x + plotArea.width, position.x)),
         y: Math.max(plotArea.y, Math.min(plotArea.y + plotArea.height, position.y)),
       });
-      options.onDrawingEdit?.({
-        ...activeDrawingEdit,
-        current: chartCoordinateToDataPoint(boundedPosition, controller.snapshot.frame),
-      });
+      const current = chartCoordinateToDataPoint(boundedPosition, controller.snapshot.frame);
+
+      if (
+        current.logicalIndex !== activeDrawingEdit.origin.logicalIndex ||
+        current.price !== activeDrawingEdit.origin.price
+      ) {
+        options.onDrawingEdit?.({
+          ...activeDrawingEdit,
+          current,
+        });
+      }
       activeDrawingEdit = null;
       releaseActivePointer();
       return;
