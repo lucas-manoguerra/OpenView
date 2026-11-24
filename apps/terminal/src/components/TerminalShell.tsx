@@ -23,7 +23,7 @@ const activeNavigationClass =
 
 const markTerminalHydrated = (element: HTMLElement | null): void => {
   if (element !== null) {
-    element.dataset.hydrated = 'true';
+    element.setAttribute('data-hydrated', 'true');
   }
 };
 
