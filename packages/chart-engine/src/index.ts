@@ -16,6 +16,17 @@ export {
   type ChartRenderTheme,
 } from './canvas-painter';
 export {
+  createChartInteractionController,
+  ChartInteractionController,
+  type ChartInteractionOptions,
+  type ChartInteractionSnapshot,
+  type PointerPosition,
+} from './chart-interaction';
+export {
+  attachCanvasPointerEvents,
+  type CanvasPointerAdapter,
+} from './canvas-pointer-adapter';
+export {
   CanvasRenderer,
   createCanvasRenderer,
   type CanvasFrameScheduler,
