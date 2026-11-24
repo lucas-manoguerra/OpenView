@@ -1,3 +1,5 @@
+import type { MarketInstrument } from '@openview/market-data';
+
 export type WatchlistInstrument = Readonly<{
   id: string;
   symbol: string;
@@ -88,13 +90,84 @@ export const DEFAULT_WATCHLIST: readonly WatchlistInstrument[] = Object.freeze(
 );
 
 const STORAGE_KEY = 'openview.watchlist.preferences';
-const STORAGE_VERSION = 1;
+const STORAGE_VERSION = 2;
+const LEGACY_STORAGE_VERSION = 1;
 
 const createDefaultPreferences = (): WatchlistPreferences =>
   Object.freeze({
     instruments: DEFAULT_WATCHLIST,
     selectedInstrumentId: DEFAULT_WATCHLIST[0]?.id ?? 'BTC-USDT',
   });
+
+const createInstrumentFromId = (value: string, name?: string): WatchlistInstrument | null => {
+  const normalizedId = value.trim().toUpperCase();
+  const match = /^([A-Z0-9]{1,24})-([A-Z0-9]{1,24})$/.exec(normalizedId);
+  const baseAsset = match?.[1];
+  const quoteAsset = match?.[2];
+
+  if (baseAsset === undefined || quoteAsset === undefined) {
+    return null;
+  }
+
+  const knownInstrument = WATCHLIST_CATALOG.find((instrument) => instrument.id === normalizedId);
+  const symbol = baseAsset + ' / ' + quoteAsset;
+
+  return Object.freeze({
+    id: normalizedId,
+    symbol,
+    name: name?.trim() || knownInstrument?.name || baseAsset,
+    chartSymbol: symbol,
+  });
+};
+
+export const createWatchlistInstrument = (
+  instrument: MarketInstrument,
+): WatchlistInstrument => {
+  const normalized = createInstrumentFromId(String(instrument.id));
+  const baseAsset = instrument.baseAsset.trim().toUpperCase();
+  const quoteAsset = instrument.quoteAsset.trim().toUpperCase();
+
+  if (normalized === null || normalized.id !== baseAsset + '-' + quoteAsset) {
+    throw new RangeError('Discovered market instrument identifiers are inconsistent.');
+  }
+
+  return normalized;
+};
+
+const restoreLegacyPreferences = (
+  instrumentIds: unknown,
+  selectedInstrumentId: unknown,
+): WatchlistPreferences => {
+  if (!Array.isArray(instrumentIds)) {
+    return createDefaultPreferences();
+  }
+
+  const knownIds = new Set(WATCHLIST_CATALOG.map((instrument) => instrument.id));
+  const normalizedIds = [
+    ...new Set(
+      instrumentIds.filter((id): id is string => typeof id === 'string' && knownIds.has(id)),
+    ),
+  ].slice(0, MAX_WATCHLIST_INSTRUMENTS);
+
+  if (normalizedIds.length === 0) {
+    return createDefaultPreferences();
+  }
+
+  const instruments = normalizedIds.flatMap((id) => {
+    const instrument = WATCHLIST_CATALOG.find((item) => item.id === id);
+    return instrument === undefined ? [] : [instrument];
+  });
+  const selectedId =
+    typeof selectedInstrumentId === 'string' &&
+    instruments.some((instrument) => instrument.id === selectedInstrumentId)
+      ? selectedInstrumentId
+      : (instruments[0]?.id ?? DEFAULT_WATCHLIST[0]?.id ?? 'BTC-USDT');
+
+  return Object.freeze({
+    instruments: Object.freeze(instruments),
+    selectedInstrumentId: selectedId,
+  });
+};
 
 export const restoreWatchlistPreferences = (serialized: string | null): WatchlistPreferences => {
   if (serialized === null) {
@@ -109,28 +182,45 @@ export const restoreWatchlistPreferences = (serialized: string | null): Watchlis
     }
 
     const version = Reflect.get(parsed, 'version');
-    const instrumentIds = Reflect.get(parsed, 'instrumentIds');
     const selectedInstrumentId = Reflect.get(parsed, 'selectedInstrumentId');
 
-    if (version !== STORAGE_VERSION || !Array.isArray(instrumentIds)) {
+    if (version === LEGACY_STORAGE_VERSION) {
+      return restoreLegacyPreferences(Reflect.get(parsed, 'instrumentIds'), selectedInstrumentId);
+    }
+
+    const savedInstruments = Reflect.get(parsed, 'instruments');
+
+    if (version !== STORAGE_VERSION || !Array.isArray(savedInstruments)) {
       return createDefaultPreferences();
     }
 
-    const knownIds = new Set(WATCHLIST_CATALOG.map((instrument) => instrument.id));
-    const normalizedIds = [
-      ...new Set(
-        instrumentIds.filter((id): id is string => typeof id === 'string' && knownIds.has(id)),
-      ),
-    ].slice(0, MAX_WATCHLIST_INSTRUMENTS);
+    const instrumentsById = new Map<string, WatchlistInstrument>();
 
-    if (normalizedIds.length === 0) {
+    for (const savedInstrument of savedInstruments) {
+      if (typeof savedInstrument !== 'object' || savedInstrument === null) {
+        continue;
+      }
+
+      const id = Reflect.get(savedInstrument, 'id');
+      const name = Reflect.get(savedInstrument, 'name');
+
+      if (typeof id !== 'string' || (name !== undefined && typeof name !== 'string')) {
+        continue;
+      }
+
+      const instrument = createInstrumentFromId(id, name);
+
+      if (instrument !== null && !instrumentsById.has(instrument.id)) {
+        instrumentsById.set(instrument.id, instrument);
+      }
+    }
+
+    const instruments = [...instrumentsById.values()].slice(0, MAX_WATCHLIST_INSTRUMENTS);
+
+    if (instruments.length === 0) {
       return createDefaultPreferences();
     }
 
-    const instruments = normalizedIds.flatMap((id) => {
-      const instrument = WATCHLIST_CATALOG.find((item) => item.id === id);
-      return instrument === undefined ? [] : [instrument];
-    });
     const selectedId =
       typeof selectedInstrumentId === 'string' &&
       instruments.some((instrument) => instrument.id === selectedInstrumentId)
@@ -171,7 +261,10 @@ export const saveWatchlistPreferences = (
       STORAGE_KEY,
       JSON.stringify({
         version: STORAGE_VERSION,
-        instrumentIds: preferences.instruments.map((instrument) => instrument.id),
+        instruments: preferences.instruments.map((instrument) => ({
+          id: instrument.id,
+          name: instrument.name,
+        })),
         selectedInstrumentId: preferences.selectedInstrumentId,
       }),
     );
