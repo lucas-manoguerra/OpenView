@@ -87,7 +87,7 @@ export function MarketChart() {
       setCandles([]);
 
       const endTime = Date.now();
-      const startTime = endTime - INTERVAL_DURATION_MS[nextInterval] * HISTORY_CANDLE_COUNT;
+      const startTime = getHistoryStartTime(endTime, nextInterval);
 
       try {
         const result = await historicalService.getHistoricalCandles(nextProviderId, {
