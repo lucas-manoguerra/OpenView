@@ -1343,7 +1343,13 @@ test('draws geometric annotations and supports undo, redo and clearing', async (
     throw new Error('The chart canvas must have a visible bounding box.');
   }
 
-  const drawDrag = async (toolId: string, fromX: number, fromY: number, toX: number, toY: number) => {
+  const drawDrag = async (
+    toolId: string,
+    fromX: number,
+    fromY: number,
+    toX: number,
+    toY: number,
+  ) => {
     await page.getByTestId(toolId).click();
     await page.mouse.move(fromX, fromY);
     await page.mouse.down();
