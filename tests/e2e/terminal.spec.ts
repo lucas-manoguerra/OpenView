@@ -449,6 +449,47 @@ test('navigates historical time, zooms the time scale and returns to realtime', 
     .not.toBe(imageBeforeRealtime);
 });
 
+test('locks, inverts and automatically fits the price scale', async ({ page }) => {
+  await page.goto('/');
+
+  const canvas = page.locator('canvas[data-candles-count]');
+  await expect.poll(async () => Number(await canvas.getAttribute('data-candles-count'))).toBe(500);
+
+  const autoScale = page.getByTestId('chart-auto-scale');
+  const lockScale = page.getByTestId('chart-lock-price-scale');
+  const invertScale = page.getByTestId('chart-invert-price-scale');
+
+  await expect(autoScale).toHaveAttribute('aria-pressed', 'true');
+  await lockScale.click();
+  await expect(lockScale).toHaveAttribute('aria-pressed', 'true');
+
+  const bounds = await canvas.boundingBox();
+  if (bounds === null) {
+    throw new Error('Chart canvas is not visible');
+  }
+
+  const axisX = bounds.x + bounds.width - 12;
+  const axisY = bounds.y + bounds.height / 2;
+  const lockedImage = await canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL());
+
+  await page.mouse.move(axisX, axisY);
+  await page.mouse.wheel(0, -120);
+  await expect
+    .poll(() => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL()))
+    .toBe(lockedImage);
+
+  await lockScale.click();
+  await expect(lockScale).toHaveAttribute('aria-pressed', 'false');
+  await page.mouse.wheel(0, -120);
+  await expect(autoScale).toHaveAttribute('aria-pressed', 'false');
+
+  await invertScale.click();
+  await expect(invertScale).toHaveAttribute('aria-pressed', 'true');
+
+  await autoScale.click();
+  await expect(autoScale).toHaveAttribute('aria-pressed', 'true');
+});
+
 test('renders timestamp based time labels instead of logical bar indices', async ({ page }) => {
   await page.addInitScript(() => {
     const labels: string[] = [];
