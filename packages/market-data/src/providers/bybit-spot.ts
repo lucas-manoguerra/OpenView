@@ -363,8 +363,8 @@ export class BybitSpotMarketDataProvider implements MarketDataProvider {
       reconnectDelayMs: this.reconnectDelayMs,
       maxReconnectDelayMs: this.maxReconnectDelayMs,
       heartbeatIntervalMs: this.heartbeatIntervalMs,
-      onStatus: handlers.onStatus,
-      onError: handlers.onError,
+      ...(handlers.onStatus === undefined ? {} : { onStatus: handlers.onStatus }),
+      ...(handlers.onError === undefined ? {} : { onError: handlers.onError }),
       onOpen: (connection) => {
         if (connection.send === undefined) {
           throw new Error('Bybit Spot WebSocket connection cannot send subscription messages.');
