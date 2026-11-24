@@ -55,9 +55,7 @@ const createCanvasTarget = (): Readonly<{
   return { canvas, dispatch, listenerCount, capturedPointers };
 };
 
-const createPointerEvent = (
-  values: Partial<PointerEvent> = {},
-): PointerEvent =>
+const createPointerEvent = (values: Partial<PointerEvent> = {}): PointerEvent =>
   ({
     clientX: 500,
     clientY: 250,
@@ -67,9 +65,7 @@ const createPointerEvent = (
     ...values,
   }) as PointerEvent;
 
-const createWheelEvent = (
-  values: Partial<WheelEvent> = {},
-): WheelEvent =>
+const createWheelEvent = (values: Partial<WheelEvent> = {}): WheelEvent =>
   ({
     clientX: 500,
     clientY: 250,
