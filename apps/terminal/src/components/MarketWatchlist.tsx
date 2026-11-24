@@ -40,13 +40,15 @@ export function MarketWatchlist({
   const searchResults =
     normalizedSearch.length === 0
       ? []
-      : availableInstruments.filter(
-          (instrument) =>
-            !instruments.some((current) => current.id === instrument.id) &&
-            (instrument.symbol.toLocaleLowerCase().includes(normalizedSearch) ||
-              instrument.name.toLocaleLowerCase().includes(normalizedSearch) ||
-              instrument.id.toLocaleLowerCase().includes(normalizedSearch)),
-        );
+      : availableInstruments
+          .filter(
+            (instrument) =>
+              !instruments.some((current) => current.id === instrument.id) &&
+              (instrument.symbol.toLocaleLowerCase().includes(normalizedSearch) ||
+                instrument.name.toLocaleLowerCase().includes(normalizedSearch) ||
+                instrument.id.toLocaleLowerCase().includes(normalizedSearch)),
+          )
+          .slice(0, 20);
   const atCapacity = instruments.length >= MAX_WATCHLIST_INSTRUMENTS;
   const availableIds = new Set(availableInstrumentIds);
 
