@@ -274,13 +274,13 @@ describe('canvas chart painter', () => {
         'candles',
         [],
         [
-        {
-          id: 'trend-invalid',
-          type: 'trend-line',
-          start: { timestamp: 1_700_000_000_000, price: 100 },
-          end: null,
-          color: '#60a5fa',
-        },
+          {
+            id: 'trend-invalid',
+            type: 'trend-line',
+            start: { timestamp: 1_700_000_000_000, price: 100 },
+            end: null,
+            color: '#60a5fa',
+          },
         ],
       ),
     ).toThrow(RangeError);
