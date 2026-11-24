@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   coordinateToLogicalIndex,
+  countAppendedBars,
   generateTimeTicks,
   getRightOffsetAfterDataUpdate,
   createTimeScale,
@@ -103,6 +104,17 @@ describe('logical time scale', () => {
     expect(nextScale.barSpacing).toBe(scale.barSpacing);
     expect(nextScale.visibleLogicalRange.to).toBe(scale.visibleLogicalRange.to);
     expect(nextScale.visibleLogicalRange.from).toBeLessThan(scale.visibleLogicalRange.from);
+  });
+
+  it('counts only candles newer than the previous final timestamp', () => {
+    expect(countAppendedBars(120, [60, 90, 120, 150, 180])).toBe(2);
+    expect(countAppendedBars(null, [60, 90, 120])).toBe(0);
+    expect(countAppendedBars(120, [])).toBe(0);
+  });
+
+  it('rejects invalid candle timestamps when counting appended bars', () => {
+    expect(() => countAppendedBars(Number.NaN, [150])).toThrow(RangeError);
+    expect(() => countAppendedBars(120, [Number.POSITIVE_INFINITY])).toThrow(RangeError);
   });
 
   it('keeps the newest candles pinned to the right margin while following updates', () => {
