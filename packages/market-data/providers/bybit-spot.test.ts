@@ -679,10 +679,13 @@ describe('Bybit Spot quote stream', () => {
 
     connection?.open();
 
-    const requests = connection?.sent.map((message) => JSON.parse(message) as {
-      op: string;
-      args: string[];
-    });
+    const requests = connection?.sent.map(
+      (message) =>
+        JSON.parse(message) as {
+          op: string;
+          args: string[];
+        },
+    );
 
     expect(requests).toHaveLength(2);
     expect(requests?.map((request) => request.args.length)).toEqual([10, 2]);
