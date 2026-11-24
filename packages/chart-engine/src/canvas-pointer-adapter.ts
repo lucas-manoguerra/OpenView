@@ -21,34 +21,58 @@ export const attachCanvasPointerEvents = (
   controller: ChartInteractionController,
 ): CanvasPointerAdapter => {
   let destroyed = false;
+  let activePointerId: number | null = null;
+
+  const releaseActivePointer = (): void => {
+    if (activePointerId === null) {
+      return;
+    }
+
+    if (canvas.hasPointerCapture(activePointerId)) {
+      canvas.releasePointerCapture(activePointerId);
+    }
+
+    activePointerId = null;
+  };
 
   const handlePointerDown = (event: PointerEvent): void => {
+    if (activePointerId !== null) {
+      return;
+    }
+
     const position = getCanvasPosition(canvas, event);
 
     if (controller.pointerDown(position, event.button)) {
+      activePointerId = event.pointerId;
       event.preventDefault();
       canvas.setPointerCapture(event.pointerId);
     }
   };
 
   const handlePointerMove = (event: PointerEvent): void => {
+    if (activePointerId !== null && event.pointerId !== activePointerId) {
+      return;
+    }
+
     controller.pointerMove(getCanvasPosition(canvas, event));
   };
 
   const handlePointerUp = (event: PointerEvent): void => {
-    controller.pointerUp(getCanvasPosition(canvas, event));
-
-    if (canvas.hasPointerCapture(event.pointerId)) {
-      canvas.releasePointerCapture(event.pointerId);
+    if (activePointerId === null || event.pointerId !== activePointerId) {
+      return;
     }
+
+    controller.pointerUp(getCanvasPosition(canvas, event));
+    releaseActivePointer();
   };
 
   const handlePointerCancel = (event: PointerEvent): void => {
-    controller.pointerCancel();
-
-    if (canvas.hasPointerCapture(event.pointerId)) {
-      canvas.releasePointerCapture(event.pointerId);
+    if (activePointerId === null || event.pointerId !== activePointerId) {
+      return;
     }
+
+    controller.pointerCancel();
+    releaseActivePointer();
   };
 
   const handlePointerLeave = (): void => {
@@ -87,6 +111,7 @@ export const attachCanvasPointerEvents = (
       canvas.removeEventListener('pointercancel', handlePointerCancel);
       canvas.removeEventListener('pointerleave', handlePointerLeave);
       canvas.removeEventListener('wheel', handleWheel);
+      releaseActivePointer();
       controller.pointerCancel();
     },
   });
