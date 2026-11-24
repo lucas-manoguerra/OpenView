@@ -37,6 +37,10 @@ export const attachCanvasResizeObserver = (
   let destroyed = false;
 
   const emitSize = (width: number, height: number): void => {
+    if (destroyed) {
+      return;
+    }
+
     const devicePixelRatio = getDevicePixelRatio();
 
     if (
