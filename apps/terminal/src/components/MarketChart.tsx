@@ -694,6 +694,7 @@ export function MarketChart() {
 
     setProviderId(nextProviderId);
     setInterval(nextInterval);
+    loadQuotes(nextProviderId, [], []);
     requestIdRef.current += 1;
     abortControllerRef.current?.abort();
     olderAbortControllerRef.current?.abort();
@@ -707,6 +708,8 @@ export function MarketChart() {
     setLoading(true);
     setError(null);
     setStreamStatus('disconnected');
+    setStreamError(null);
+    setStreamCandleCount(0);
 
     const catalogRequest = loadInstrumentCatalog(nextProviderId);
     const catalogRequestId = catalogRequestIdRef.current;
