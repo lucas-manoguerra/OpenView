@@ -27,7 +27,7 @@ Un cambio de dimensiones o DPR reinicia el backing store y descarta la escena an
 
 Cada frame dibuja el fondo y los ejes, el fondo del panel de volumen, la rejilla compartida, las velas OHLC visibles, las barras de volumen visibles y el crosshair.
 
-Las conversiones de precio e índice lógico reutilizan las escalas del motor. El eje temporal mapea intervalos de calendario a timestamps de velas reales, adapta el intervalo al zoom y filtra etiquetas que se solaparían. Las etiquetas se formatean según el intervalo (hora/minuto, día, mes o año). Las velas se validan con el contrato de market-domain y deben llegar en orden estrictamente ascendente por índice lógico. Una búsqueda binaria selecciona el segmento visible antes del dibujo, evitando recorrer toda la serie en cada frame.
+Las conversiones de precio e índice lógico reutilizan las escalas del motor. El eje temporal mapea intervalos de calendario a timestamps de velas reales, adapta el intervalo al zoom y filtra etiquetas que se solaparían. Los datos temporales se validan y congelan una sola vez al construir la escena; los repintados reutilizan esa vista ordenada y buscan el segmento visible. Las etiquetas se formatean según el intervalo (hora/minuto, día, mes o año). Las velas se validan con el contrato de market-domain y deben llegar en orden estrictamente ascendente por índice lógico. Una búsqueda binaria selecciona el segmento visible antes del dibujo, evitando recorrer toda la serie en cada frame.
 
 Las barras de volumen se normalizan con el volumen máximo del segmento visible. El clipping de velas y volumen se limita a sus respectivas áreas.
 
