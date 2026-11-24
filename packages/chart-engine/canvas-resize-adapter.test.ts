@@ -190,7 +190,7 @@ describe('canvas resize observer adapter', () => {
       {
         target: canvas,
         contentRect: { width: 820, height: 420 },
-      } as ResizeObserverEntry,
+      } as unknown as ResizeObserverEntry,
     ]);
 
     expect(onResize).not.toHaveBeenCalled();
@@ -219,7 +219,7 @@ describe('canvas resize observer adapter', () => {
       {
         target: otherCanvas,
         contentRect: { width: 320, height: 180 },
-      } as ResizeObserverEntry,
+      } as unknown as ResizeObserverEntry,
     ]);
 
     expect(onResize).not.toHaveBeenCalled();
