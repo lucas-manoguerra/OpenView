@@ -26,7 +26,7 @@ import { ChartCanvas } from './ChartCanvas';
 
 const DEFAULT_PROVIDER_ID = 'binance-spot';
 const DEFAULT_INTERVAL: CandleInterval = '1m';
-const DEFAULT_INSTRUMENT_ID = createInstrumentId(DEFAULT_WATCHLIST[0].id);
+const DEFAULT_INSTRUMENT_ID = createInstrumentId(DEFAULT_WATCHLIST[0]?.id ?? 'BTC-USDT');
 const HISTORY_CANDLE_COUNT = 500;
 
 const INTERVAL_DURATION_MS: Readonly<Record<CandleInterval, number>> = Object.freeze({
@@ -203,56 +203,56 @@ export function MarketChart() {
 
   const loadQuotes = useCallback(
     (nextProviderId: string, nextInstruments: readonly WatchlistInstrument[]): void => {
-    const requestId = quoteRequestIdRef.current + 1;
-    quoteRequestIdRef.current = requestId;
-    quoteSubscriptionRef.current?.unsubscribe();
-    quoteSubscriptionRef.current = null;
-    setQuotes({});
-    setQuoteStatus('disconnected');
-    setQuoteError(null);
-
-    const selectedSource = historicalService.getSource(nextProviderId);
-
-    if (!selectedSource.streamingQuotes) {
-      return;
-    }
-
-    try {
-      quoteSubscriptionRef.current = streamService.subscribeToQuotes(
-        nextProviderId,
-        nextInstruments.map((instrument) => createInstrumentId(instrument.id)),
-        {
-          onQuote: (nextQuote) => {
-            if (requestId !== quoteRequestIdRef.current) {
-              return;
-            }
-
-            setQuotes((current) => ({
-              ...current,
-              [nextQuote.instrumentId]: nextQuote,
-            }));
-            setQuoteError(null);
-          },
-          onStatus: (status) => {
-            if (requestId === quoteRequestIdRef.current) {
-              setQuoteStatus(status);
-            }
-          },
-          onError: (quoteCause) => {
-            if (requestId === quoteRequestIdRef.current) {
-              setQuoteError(quoteCause.message);
-            }
-          },
-        },
-      );
-    } catch (quoteCause) {
+      const requestId = quoteRequestIdRef.current + 1;
+      quoteRequestIdRef.current = requestId;
+      quoteSubscriptionRef.current?.unsubscribe();
+      quoteSubscriptionRef.current = null;
+      setQuotes({});
       setQuoteStatus('disconnected');
-      setQuoteError(
-        quoteCause instanceof Error
-          ? quoteCause.message
-          : 'No se pudo iniciar el flujo de cotizaciones en vivo.',
-      );
-    }
+      setQuoteError(null);
+
+      const selectedSource = historicalService.getSource(nextProviderId);
+
+      if (!selectedSource.streamingQuotes) {
+        return;
+      }
+
+      try {
+        quoteSubscriptionRef.current = streamService.subscribeToQuotes(
+          nextProviderId,
+          nextInstruments.map((instrument) => createInstrumentId(instrument.id)),
+          {
+            onQuote: (nextQuote) => {
+              if (requestId !== quoteRequestIdRef.current) {
+                return;
+              }
+
+              setQuotes((current) => ({
+                ...current,
+                [nextQuote.instrumentId]: nextQuote,
+              }));
+              setQuoteError(null);
+            },
+            onStatus: (status) => {
+              if (requestId === quoteRequestIdRef.current) {
+                setQuoteStatus(status);
+              }
+            },
+            onError: (quoteCause) => {
+              if (requestId === quoteRequestIdRef.current) {
+                setQuoteError(quoteCause.message);
+              }
+            },
+          },
+        );
+      } catch (quoteCause) {
+        setQuoteStatus('disconnected');
+        setQuoteError(
+          quoteCause instanceof Error
+            ? quoteCause.message
+            : 'No se pudo iniciar el flujo de cotizaciones en vivo.',
+        );
+      }
     },
     [],
   );
@@ -499,9 +499,7 @@ export function MarketChart() {
 
       initializedRef.current = true;
       const preferences = loadBrowserWatchlistPreferences();
-      const restoredSelectedInstrumentId = createInstrumentId(
-        preferences.selectedInstrumentId,
-      );
+      const restoredSelectedInstrumentId = createInstrumentId(preferences.selectedInstrumentId);
       setWatchlist(preferences.instruments);
       setSelectedInstrumentId(restoredSelectedInstrumentId);
       loadQuotes(DEFAULT_PROVIDER_ID, preferences.instruments);
@@ -514,7 +512,7 @@ export function MarketChart() {
   const displayedStreamStatus = selectedSource.streamingCandles ? streamStatus : 'unsupported';
   const quote = quotes[selectedInstrumentId] ?? null;
   const selectedInstrument =
-    watchlist.find((instrument) => instrument.id === selectedInstrumentId) ?? watchlist[0];
+    watchlist.find((instrument) => instrument.id === selectedInstrumentId) ?? DEFAULT_WATCHLIST[0];
   const quoteStatusLabel = !selectedSource.streamingQuotes
     ? 'No disponible'
     : quoteStatus === 'connected'
@@ -621,7 +619,7 @@ export function MarketChart() {
     const nextWatchlist = watchlist.filter((instrument) => instrument.id !== instrumentId);
     const nextSelectedInstrumentId =
       selectedInstrumentId === instrumentId
-        ? createInstrumentId(nextWatchlist[0].id)
+        ? createInstrumentId(nextWatchlist[0]?.id ?? DEFAULT_WATCHLIST[0]?.id ?? 'BTC-USDT')
         : selectedInstrumentId;
 
     setWatchlist(nextWatchlist);
