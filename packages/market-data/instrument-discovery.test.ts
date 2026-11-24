@@ -115,6 +115,25 @@ describe('market instrument discovery service', () => {
     expect(secondProviderFilters).toEqual(['USDT']);
   });
 
+  it('keeps unfiltered catalogs separate from quote filters', async () => {
+    const filters: string[] = [];
+    const provider = createProvider({
+      listInstruments: async (filter) => {
+        filters.push(filter?.quoteAsset ?? 'all');
+        return createInstruments();
+      },
+    });
+    const service = new MarketInstrumentDiscoveryService(
+      new MarketDataProviderRegistry([provider]),
+    );
+
+    await service.listInstruments(provider.id);
+    await service.listInstruments(provider.id, { quoteAsset: '*' });
+    await service.listInstruments(provider.id);
+
+    expect(filters).toEqual(['all', '*']);
+  });
+
   it('normalizes quote filters before requesting and caching catalogs', async () => {
     const filters: string[] = [];
     const provider = createProvider({
