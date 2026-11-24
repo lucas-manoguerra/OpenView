@@ -1,8 +1,5 @@
 import { createInstrumentId } from '@openview/market-domain';
-import type {
-  InstrumentDiscoveryFilter,
-  MarketInstrument,
-} from './contracts';
+import type { InstrumentDiscoveryFilter, MarketInstrument } from './contracts';
 
 const normalizeAssetCode = (value: string, label: string): string => {
   const normalized = value.trim().toUpperCase();
@@ -14,10 +11,7 @@ const normalizeAssetCode = (value: string, label: string): string => {
   return normalized;
 };
 
-export const createMarketInstrument = (
-  baseAsset: string,
-  quoteAsset: string,
-): MarketInstrument => {
+export const createMarketInstrument = (baseAsset: string, quoteAsset: string): MarketInstrument => {
   const normalizedBaseAsset = normalizeAssetCode(baseAsset, 'base asset');
   const normalizedQuoteAsset = normalizeAssetCode(quoteAsset, 'quote asset');
 
@@ -34,9 +28,7 @@ export const normalizeMarketInstruments = (
   filter: InstrumentDiscoveryFilter = {},
 ): readonly MarketInstrument[] => {
   const quoteAsset =
-    filter.quoteAsset === undefined
-      ? null
-      : normalizeAssetCode(filter.quoteAsset, 'quote filter');
+    filter.quoteAsset === undefined ? null : normalizeAssetCode(filter.quoteAsset, 'quote filter');
   const unique = new Map<string, MarketInstrument>();
 
   for (const instrument of instruments) {
