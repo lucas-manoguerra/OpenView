@@ -40,9 +40,18 @@ export type HistoricalCandleRequest = Readonly<{
 export type QuoteUpdate = Readonly<{
   instrumentId: InstrumentId;
   timestamp: number;
+  receivedAt: number;
   bid: number | null;
   ask: number | null;
   last: number | null;
+  volume24h: number | null;
+  changePercent24h: number | null;
+}>;
+
+export type QuoteStreamHandlers = Readonly<{
+  onQuote: (quote: QuoteUpdate) => void;
+  onStatus?: (state: MarketDataStreamState) => void;
+  onError?: (error: Error) => void;
 }>;
 
 export type CandleSubscriptionRequest = Readonly<{
@@ -76,7 +85,7 @@ export interface MarketDataProvider {
   getHistoricalCandles(request: HistoricalCandleRequest): Promise<readonly Candle[]>;
   subscribeToQuotes?(
     instrumentIds: readonly InstrumentId[],
-    onQuote: (quote: QuoteUpdate) => void,
+    handlers: QuoteStreamHandlers,
   ): MarketDataSubscription;
   subscribeToCandles?(
     request: CandleSubscriptionRequest,
