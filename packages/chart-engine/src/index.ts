@@ -47,11 +47,13 @@ export {
   coordinateToPrice,
   createPriceScale,
   generatePriceTicks,
+  panPriceScale,
   type PriceScale,
   type PriceScaleMode,
   type PriceScaleOptions,
   type PriceScaleTick,
   priceToCoordinate,
+  zoomPriceScale,
 } from './price-scale';
 export {
   coordinateToLogicalIndex,
