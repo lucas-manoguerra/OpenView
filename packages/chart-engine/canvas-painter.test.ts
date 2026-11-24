@@ -129,6 +129,42 @@ describe('canvas chart painter', () => {
     expect(calls.some((call) => call.name === 'clip')).toBe(true);
   });
 
+  it('draws volume grid guides above the volume background and beneath its bars', () => {
+    const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 10, {
+      layout: { volumeHeight: 80 },
+    });
+    const scene = createChartRenderScene(frame, createCandles());
+    const { context, calls } = createMockContext();
+
+    drawChartScene(context, scene);
+
+    const volumeBackgroundIndex = calls.findIndex(
+      (call) =>
+        call.name === 'fillRect' &&
+        call.args[0] === frame.layout.volumeArea.x &&
+        call.args[1] === frame.layout.volumeArea.y &&
+        call.args[3] === frame.layout.volumeArea.height,
+    );
+    const gridLineIndex = calls.findIndex(
+      (call) =>
+        call.name === 'lineTo' &&
+        call.args[1] === frame.layout.plotArea.y +
+          frame.layout.plotArea.height +
+          frame.layout.volumeArea.height,
+    );
+    const firstVolumeBarIndex = calls.findIndex(
+      (call, index) =>
+        index > gridLineIndex &&
+        call.name === 'fillRect' &&
+        call.args[1] !== frame.layout.volumeArea.y &&
+        call.args[3] !== frame.layout.volumeArea.height,
+    );
+
+    expect(volumeBackgroundIndex).toBeGreaterThanOrEqual(0);
+    expect(gridLineIndex).toBeGreaterThan(volumeBackgroundIndex);
+    expect(firstVolumeBarIndex).toBeGreaterThan(gridLineIndex);
+  });
+
   it('draws crosshair guides using a dashed stroke', () => {
     const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 10);
     const coordinate = dataPointToChartCoordinate({ logicalIndex: 1, price: 105 }, frame);
