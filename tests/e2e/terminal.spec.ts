@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type WebSocketRoute } from '@playwright/test';
 
 const BINANCE_KLINES_URL = 'https://data-api.binance.vision/api/v3/klines**';
 
@@ -71,41 +71,11 @@ const installBinanceMock = async (page: Page): Promise<void> => {
   });
 };
 
+const webSocketRoutes = new WeakMap<Page, WebSocketRoute>();
+
 const installWebSocketMock = async (page: Page): Promise<void> => {
-  await page.addInitScript(() => {
-    type StreamSocket = Readonly<{
-      url: string;
-      emit: (payload: string) => void;
-      close: () => void;
-    }>;
-    const sockets: StreamSocket[] = [];
-
-    class MockWebSocket extends EventTarget {
-      readonly url: string;
-      readyState = 0;
-
-      constructor(url: string) {
-        super();
-        this.url = url;
-        sockets.push({
-          url,
-          emit: (payload) => this.dispatchEvent(new MessageEvent('message', { data: payload })),
-          close: () => this.close(),
-        });
-        queueMicrotask(() => {
-          this.readyState = 1;
-          this.dispatchEvent(new Event('open'));
-        });
-      }
-
-      close(): void {
-        this.readyState = 3;
-        this.dispatchEvent(new Event('close'));
-      }
-    }
-
-    Object.defineProperty(window, '__openViewSockets', { value: sockets });
-    Object.defineProperty(window, 'WebSocket', { configurable: true, value: MockWebSocket });
+  await page.routeWebSocket(/^wss:\/\/stream\\.binance\\.com:9443\/ws\//, (route) => {
+    webSocketRoutes.set(page, route);
   });
 };
 
@@ -224,12 +194,13 @@ test('streams Binance live candles and updates the current bar without duplicate
   });
 
   const sendEvent = async (close: string): Promise<void> => {
-    await page.evaluate((payload) => {
-      const target = window as Window & {
-        __openViewSockets?: readonly { emit: (message: string) => void }[];
-      };
-      target.__openViewSockets?.[0]?.emit(JSON.stringify(payload));
-    }, createStreamEvent(close));
+    const route = webSocketRoutes.get(page);
+
+    if (route === undefined) {
+      throw new Error('The Binance WebSocket route must be established before sending candles.');
+    }
+
+    route.send(JSON.stringify(createStreamEvent(close)));
   };
 
   await sendEvent('65050');
