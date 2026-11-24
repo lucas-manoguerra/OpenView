@@ -91,7 +91,7 @@ describe('OKX Spot market data provider', () => {
     expect(provider.capabilities.historicalCandles).toBe(true);
     expect(provider.capabilities.streamingQuotes).toBe(false);
     expect(provider.capabilities.supportedIntervals).toContain('1s');
-    expect(provider.capabilities.supportedIntervals).toContain('1Mutc');
+    expect(provider.capabilities.supportedIntervals).toContain('1M');
     expect(provider.capabilities.redistribution).toBe('unknown');
   });
 
