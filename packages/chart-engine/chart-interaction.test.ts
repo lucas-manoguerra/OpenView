@@ -277,6 +277,47 @@ describe('chart interaction controller', () => {
     expect(controller.snapshot.frame.priceScale.range).toEqual({ min: 80, max: 130 });
   });
 
+  it('scrolls the visible time range by a precise number of bars', () => {
+    const controller = createChartInteractionController(createFrame());
+    const initialRange = controller.snapshot.frame.timeScale.visibleLogicalRange;
+
+    expect(controller.scrollTimeByBars(-20)).toBe(true);
+    expect(controller.snapshot.frame.timeScale.visibleLogicalRange.from).toBeCloseTo(
+      initialRange.from - 20,
+    );
+    expect(controller.snapshot.frame.timeScale.visibleLogicalRange.to).toBeCloseTo(
+      initialRange.to - 20,
+    );
+  });
+
+  it('returns to the realtime edge without changing the current zoom level', () => {
+    const frame = createFrame();
+    const controller = createChartInteractionController(frame);
+
+    controller.scrollTimeByBars(-35);
+    expect(controller.snapshot.frame.timeScale.rightOffset).toBe(-35);
+
+    expect(controller.scrollToRealtime()).toBe(true);
+    expect(controller.snapshot.frame.timeScale.rightOffset).toBe(0);
+    expect(controller.snapshot.frame.timeScale.barSpacing).toBe(frame.timeScale.barSpacing);
+    expect(controller.scrollToRealtime()).toBe(false);
+  });
+
+  it('zooms the time scale around an explicit anchor coordinate', () => {
+    const frame = createFrame();
+    const controller = createChartInteractionController(frame);
+    const anchor = frame.timeScale.width * 0.3;
+    const logicalIndex = coordinateToLogicalIndex(anchor, frame.timeScale);
+
+    expect(controller.zoomTime(1.5, anchor)).toBe(true);
+    expect(controller.snapshot.frame.timeScale.barSpacing).toBeGreaterThan(
+      frame.timeScale.barSpacing,
+    );
+    expect(
+      logicalIndexToCoordinate(logicalIndex, controller.snapshot.frame.timeScale),
+    ).toBeCloseTo(anchor);
+  });
+
   it('rejects invalid pointer, wheel and sensitivity values', () => {
     expect(() =>
       createChartInteractionController(createFrame(), { wheelZoomSensitivity: 0 }),
