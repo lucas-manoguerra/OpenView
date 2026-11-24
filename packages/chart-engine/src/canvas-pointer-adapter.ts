@@ -1,9 +1,12 @@
 import { chartCoordinateToDataPoint, type ChartDataPoint } from './chart-frame';
+import { hitTestChartDrawing, type ChartDrawingHit } from './drawing-geometry';
+import type { ChartRenderCandle, ChartRenderDrawing } from './canvas-painter';
 import type { ChartInteractionController } from './chart-interaction';
 import type { NumericRange } from './viewport';
 
 export type CanvasDrawingTool =
   | 'cursor'
+  | 'select'
   | 'trend-line'
   | 'ray'
   | 'horizontal-line'
@@ -16,10 +19,23 @@ export type CanvasDrawingGesture = Readonly<{
   end: ChartDataPoint | null;
 }>;
 
+export type CanvasDrawingEditGesture = Readonly<{
+  drawingId: string;
+  target: ChartDrawingHit['target'];
+  origin: ChartDataPoint;
+  current: ChartDataPoint;
+}>;
+
 export type CanvasPointerAdapterOptions = Readonly<{
   getAutoScalePriceRange?: () => NumericRange | null;
   getDrawingTool?: () => CanvasDrawingTool;
+  getDrawings?: () => readonly ChartRenderDrawing[];
+  getCandles?: () => readonly ChartRenderCandle[];
+  getSelectedDrawingId?: () => string | null;
   onDrawingComplete?: (drawing: CanvasDrawingGesture) => void;
+  onDrawingSelect?: (drawingId: string | null) => void;
+  onDrawingEdit?: (gesture: CanvasDrawingEditGesture) => void;
+  onDrawingDelete?: (drawingId: string) => void;
 }>;
 
 export type CanvasPointerAdapter = Readonly<{
@@ -47,6 +63,7 @@ export const attachCanvasPointerEvents = (
   let activePointerId: number | null = null;
   let activeDrawingTool: Exclude<CanvasDrawingTool, 'cursor'> | null = null;
   let drawingStart: ChartDataPoint | null = null;
+  let activeDrawingEdit: CanvasDrawingEditGesture | null = null;
 
   const releaseActivePointer = (): void => {
     if (activePointerId === null) {
@@ -70,6 +87,29 @@ export const attachCanvasPointerEvents = (
 
     if (event.button !== 0) {
       return;
+    }
+
+    if (drawingTool === 'select') {
+      const hit = hitTestChartDrawing(
+        position,
+        options.getDrawings?.() ?? [],
+        options.getCandles?.() ?? [],
+        controller.snapshot.frame,
+      );
+      options.onDrawingSelect?.(hit?.drawingId ?? null);
+
+      if (hit !== null) {
+        activeDrawingEdit = {
+          drawingId: hit.drawingId,
+          target: hit.target,
+          origin: chartCoordinateToDataPoint(position, controller.snapshot.frame),
+          current: chartCoordinateToDataPoint(position, controller.snapshot.frame),
+        };
+        activePointerId = event.pointerId;
+        event.preventDefault();
+        canvas.setPointerCapture(event.pointerId);
+        return;
+      }
     }
 
     if (drawingTool !== 'cursor') {
@@ -104,7 +144,7 @@ export const attachCanvasPointerEvents = (
       return;
     }
 
-    if (activeDrawingTool !== null) {
+    if (activeDrawingTool !== null || activeDrawingEdit !== null) {
       return;
     }
 
@@ -113,6 +153,22 @@ export const attachCanvasPointerEvents = (
 
   const handlePointerUp = (event: PointerEvent): void => {
     if (activePointerId === null || event.pointerId !== activePointerId) {
+      return;
+    }
+
+    if (activeDrawingEdit !== null) {
+      const position = getCanvasPosition(canvas, event);
+      const { plotArea } = controller.snapshot.frame.layout;
+      const boundedPosition = Object.freeze({
+        x: Math.max(plotArea.x, Math.min(plotArea.x + plotArea.width, position.x)),
+        y: Math.max(plotArea.y, Math.min(plotArea.y + plotArea.height, position.y)),
+      });
+      options.onDrawingEdit?.({
+        ...activeDrawingEdit,
+        current: chartCoordinateToDataPoint(boundedPosition, controller.snapshot.frame),
+      });
+      activeDrawingEdit = null;
+      releaseActivePointer();
       return;
     }
 
@@ -147,6 +203,12 @@ export const attachCanvasPointerEvents = (
       return;
     }
 
+    if (activeDrawingEdit !== null) {
+      activeDrawingEdit = null;
+      releaseActivePointer();
+      return;
+    }
+
     if (activeDrawingTool !== null) {
       drawingStart = null;
       activeDrawingTool = null;
@@ -156,6 +218,21 @@ export const attachCanvasPointerEvents = (
 
     controller.pointerCancel();
     releaseActivePointer();
+  };
+
+  const handleKeyDown = (event: KeyboardEvent): void => {
+    const selectedDrawingId = options.getSelectedDrawingId?.() ?? null;
+
+    if ((event.key === 'Delete' || event.key === 'Backspace') && selectedDrawingId !== null) {
+      options.onDrawingDelete?.(selectedDrawingId);
+      event.preventDefault();
+      return;
+    }
+
+    if (event.key === 'Escape' && selectedDrawingId !== null) {
+      options.onDrawingSelect?.(null);
+      event.preventDefault();
+    }
   };
 
   const handlePointerLeave = (): void => {
@@ -191,6 +268,7 @@ export const attachCanvasPointerEvents = (
   canvas.addEventListener('pointerleave', handlePointerLeave);
   canvas.addEventListener('wheel', handleWheel, { passive: false });
   canvas.addEventListener('dblclick', handleDoubleClick);
+  canvas.addEventListener('keydown', handleKeyDown);
 
   return Object.freeze({
     destroy: (): void => {
@@ -206,7 +284,9 @@ export const attachCanvasPointerEvents = (
       canvas.removeEventListener('pointerleave', handlePointerLeave);
       canvas.removeEventListener('wheel', handleWheel);
       canvas.removeEventListener('dblclick', handleDoubleClick);
+      canvas.removeEventListener('keydown', handleKeyDown);
       drawingStart = null;
+      activeDrawingEdit = null;
       activeDrawingTool = null;
       releaseActivePointer();
       controller.pointerCancel();
