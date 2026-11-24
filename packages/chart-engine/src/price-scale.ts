@@ -25,41 +25,64 @@ export type PriceScaleTick = Readonly<{
 
 const relativeModes = new Set<PriceScaleMode>(['percentage', 'indexed-to-100']);
 
+const getBaseValue = (scale: PriceScale): number => {
+  if (scale.baseValue === null) {
+    throw new RangeError('Relative price scales require a base value.');
+  }
+
+  return scale.baseValue;
+};
+
 const toScaleValue = (price: number, scale: PriceScale): number => {
   if (!Number.isFinite(price)) {
     throw new RangeError('Price values must be finite numbers.');
   }
+
+  let value: number;
 
   if (scale.mode === 'logarithmic') {
     if (price <= 0) {
       throw new RangeError('Logarithmic price scales require positive prices.');
     }
 
-    return Math.log(price);
+    value = Math.log(price);
+  } else if (scale.mode === 'percentage') {
+    const baseValue = getBaseValue(scale);
+    value = ((price - baseValue) / baseValue) * 100;
+  } else if (scale.mode === 'indexed-to-100') {
+    value = (price / getBaseValue(scale)) * 100;
+  } else {
+    value = price;
   }
 
-  if (scale.mode === 'percentage') {
-    return ((price - scale.baseValue!) / scale.baseValue!) * 100;
+  if (!Number.isFinite(value)) {
+    throw new RangeError('Price cannot be represented in the selected scale mode.');
   }
 
-  if (scale.mode === 'indexed-to-100') {
-    return (price / scale.baseValue!) * 100;
-  }
-
-  return price;
+  return value;
 };
 
 const fromScaleValue = (value: number, scale: PriceScale): number => {
+  const baseValue = scale.baseValue;
+
   if (scale.mode === 'logarithmic') {
     return Math.exp(value);
   }
 
   if (scale.mode === 'percentage') {
-    return scale.baseValue! * (1 + value / 100);
+    if (baseValue === null) {
+      throw new RangeError('Relative price scales require a base value.');
+    }
+
+    return baseValue * (1 + value / 100);
   }
 
   if (scale.mode === 'indexed-to-100') {
-    return (scale.baseValue! * value) / 100;
+    if (baseValue === null) {
+      throw new RangeError('Relative price scales require a base value.');
+    }
+
+    return (baseValue * value) / 100;
   }
 
   return value;
@@ -161,7 +184,11 @@ const generateLogarithmicValues = (
   const uniqueValues = [...new Set(values)].sort((left, right) => left - right);
 
   if (uniqueValues.length > 1) {
-    return { values: uniqueValues, step: 1 };
+    const step = Math.min(
+      ...uniqueValues.slice(1).map((value, index) => value - uniqueValues[index]!),
+    );
+
+    return { values: uniqueValues, step };
   }
 
   return generateLinearValues(range, targetTickCount);
@@ -181,6 +208,17 @@ export const createPriceScale = (
   }
 
   const mode = options.mode ?? 'linear';
+  const supportedModes: readonly PriceScaleMode[] = [
+    'linear',
+    'logarithmic',
+    'percentage',
+    'indexed-to-100',
+  ];
+
+  if (!supportedModes.includes(mode)) {
+    throw new RangeError('The selected price scale mode is not supported.');
+  }
+
   const baseValue = options.baseValue === undefined ? null : options.baseValue;
 
   if (relativeModes.has(mode)) {
@@ -207,6 +245,7 @@ export const createPriceScale = (
   if (
     !Number.isFinite(transformedRange.min) ||
     !Number.isFinite(transformedRange.max) ||
+    !Number.isFinite(transformedRange.max - transformedRange.min) ||
     transformedRange.max <= transformedRange.min
   ) {
     throw new RangeError('The transformed price range must have a finite positive span.');
@@ -221,8 +260,13 @@ export const priceToCoordinate = (price: number, scale: PriceScale): number => {
   const normalizedValue =
     (transformedPrice - transformedRange.min) / (transformedRange.max - transformedRange.min);
   const verticalValue = scale.inverted ? normalizedValue : 1 - normalizedValue;
+  const coordinate = verticalValue * scale.height;
 
-  return verticalValue * scale.height;
+  if (!Number.isFinite(coordinate)) {
+    throw new RangeError('Price resolves to a coordinate outside the supported numeric range.');
+  }
+
+  return coordinate;
 };
 
 export const coordinateToPrice = (coordinate: number, scale: PriceScale): number => {
@@ -260,13 +304,14 @@ export const generatePriceTicks = (
   const precision = getDecimalPlaces(generated.step);
 
   return Object.freeze(
-    generated.values.map((value) => {
-      const price = fromScaleValue(value, scale);
-      const labelValue = scale.mode === 'logarithmic' ? price : value;
-      const numberLabel = formatNumber(labelValue, precision);
+    generated.values.map((generatedValue) => {
+      const price =
+        scale.mode === 'logarithmic' ? generatedValue : fromScaleValue(generatedValue, scale);
+      const value = scale.mode === 'logarithmic' ? price : generatedValue;
+      const numberLabel = formatNumber(value, precision);
       const label =
         scale.mode === 'percentage'
-          ? `${labelValue > 0 ? '+' : ''}${numberLabel}%`
+          ? `${value > 0 ? '+' : ''}${numberLabel}%`
           : numberLabel;
 
       return Object.freeze({
