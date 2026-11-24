@@ -1,9 +1,9 @@
-export {
-  type CandleInterval,
-  type DataRedistribution,
-  type HistoricalCandleRequest,
-  type MarketDataCapabilities,
-  type MarketDataProvider,
-  type MarketDataSubscription,
-  type QuoteUpdate,
+export type {
+  CandleInterval,
+  DataRedistribution,
+  HistoricalCandleRequest,
+  MarketDataCapabilities,
+  MarketDataProvider,
+  MarketDataSubscription,
+  QuoteUpdate,
 } from './contracts';

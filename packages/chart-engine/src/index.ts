@@ -1,7 +1,7 @@
 export {
+  type ChartViewport,
   createChartViewport,
+  type NumericRange,
   priceToVerticalCoordinate,
   timeToHorizontalCoordinate,
-  type ChartViewport,
-  type NumericRange,
 } from './viewport';

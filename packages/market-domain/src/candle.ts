@@ -1,4 +1,4 @@
-import { failure, success, type Result } from './result';
+import { failure, type Result, success } from './result';
 
 export type CandleInput = Readonly<{
   timestamp: number;
