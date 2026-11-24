@@ -490,6 +490,10 @@ describe('Bybit Spot candle stream', () => {
 });
 
 describe('Bybit Spot quote stream', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('combines ticker and level-one orderbook updates for multiple instruments', () => {
     const connections: FakeBybitWebSocket[] = [];
     const provider = createStreamProvider(connections);
