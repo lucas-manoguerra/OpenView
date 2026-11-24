@@ -368,7 +368,7 @@ describe('OKX Spot candle stream', () => {
     );
     const connection = getItem(connections, 0);
 
-    expect(connection.url).toBe('wss://ws.okx.com:8443/ws/v5/business');
+    expect(connection.url).toBe('wss://ws.okx.com/ws/v5/business');
     connection.open();
     expect(connection.sent).toEqual([
       JSON.stringify({
