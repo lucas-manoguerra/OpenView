@@ -47,6 +47,7 @@ export const createChartRenderScene = (
   crosshair: ChartCoordinate | null = null,
 ): ChartRenderScene => {
   let previousLogicalIndex = Number.NEGATIVE_INFINITY;
+  let previousTimestamp = Number.NEGATIVE_INFINITY;
   const normalizedCandles: ChartRenderCandle[] = [];
 
   for (const candle of candles) {
@@ -60,7 +61,12 @@ export const createChartRenderScene = (
       throw new RangeError('Render candles must satisfy market domain validation.');
     }
 
+    if (candle.timestamp <= previousTimestamp) {
+      throw new RangeError('Render candle timestamps must be strictly ascending.');
+    }
+
     previousLogicalIndex = candle.logicalIndex;
+    previousTimestamp = candle.timestamp;
     normalizedCandles.push(
       Object.freeze({ ...validation.value, logicalIndex: candle.logicalIndex }),
     );
