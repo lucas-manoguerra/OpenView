@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { chartCoordinateToDataPoint, createChartFrame } from './src/chart-frame';
 import { createChartInteractionController } from './src/chart-interaction';
+import { dataPointToChartCoordinate } from './src/chart-frame';
+import type { ChartRenderCandle, ChartRenderDrawing } from './src/canvas-painter';
 import { attachCanvasPointerEvents, type CanvasDrawingGesture } from './src/canvas-pointer-adapter';
 
 type Listener = EventListenerOrEventListenerObject;
@@ -272,6 +274,110 @@ describe('canvas pointer event adapter', () => {
     expect(gestures).toEqual([]);
     expect(capturedPointers.has(7)).toBe(false);
     expect(controller.snapshot.dragging).toBe(false);
+  });
+
+  it('selects a drawing and reports a moved control point', () => {
+    const { canvas, dispatch, capturedPointers } = createCanvasTarget();
+    const frame = createChartFrame(900, 500, { min: 90, max: 120 }, 2);
+    const controller = createChartInteractionController(frame);
+    const candles: readonly ChartRenderCandle[] = [
+      { logicalIndex: 0, timestamp: 1_700_000_000_000, open: 100, high: 110, low: 95, close: 105, volume: 10 },
+      { logicalIndex: 1, timestamp: 1_700_000_060_000, open: 105, high: 112, low: 100, close: 108, volume: 20 },
+      { logicalIndex: 2, timestamp: 1_700_000_120_000, open: 108, high: 114, low: 105, close: 110, volume: 30 },
+    ];
+    const drawing: ChartRenderDrawing = {
+      id: 'trend-1',
+      type: 'trend-line',
+      start: { timestamp: candles[0]?.timestamp ?? 0, price: 100 },
+      end: { timestamp: candles[2]?.timestamp ?? 0, price: 110 },
+      color: '#60a5fa',
+    };
+    const selections: (string | null)[] = [];
+    const edits: { drawingId: string; target: string; origin: unknown; current: unknown }[] = [];
+    attachCanvasPointerEvents(canvas, controller, {
+      getDrawingTool: () => 'select',
+      getDrawings: () => [drawing],
+      getCandles: () => candles,
+      onDrawingSelect: (drawingId) => selections.push(drawingId),
+      onDrawingEdit: (gesture) => edits.push(gesture),
+    });
+    const start = dataPointToChartCoordinate({ logicalIndex: 0, price: 100 }, frame);
+    const moved = dataPointToChartCoordinate({ logicalIndex: 0.5, price: 103 }, frame);
+
+    dispatch(
+      'pointerdown',
+      createPointerEvent({ clientX: 100 + start.x, clientY: 50 + start.y }),
+    );
+    dispatch(
+      'pointerup',
+      createPointerEvent({ clientX: 100 + moved.x, clientY: 50 + moved.y }),
+    );
+
+    expect(selections).toEqual(['trend-1']);
+    expect(edits).toHaveLength(1);
+    expect(edits[0]).toMatchObject({
+      drawingId: 'trend-1',
+      target: 'start',
+      origin: { logicalIndex: 0, price: 100 },
+      current: { logicalIndex: 0.5, price: 103 },
+    });
+    expect(capturedPointers.has(7)).toBe(false);
+  });
+
+  it('selects a drawing without creating an edit when the pointer does not move', () => {
+    const { canvas, dispatch } = createCanvasTarget();
+    const frame = createChartFrame(900, 500, { min: 90, max: 120 }, 2);
+    const controller = createChartInteractionController(frame);
+    const candles: readonly ChartRenderCandle[] = [
+      { logicalIndex: 0, timestamp: 1_700_000_000_000, open: 100, high: 110, low: 95, close: 105, volume: 10 },
+      { logicalIndex: 1, timestamp: 1_700_000_060_000, open: 105, high: 112, low: 100, close: 108, volume: 20 },
+      { logicalIndex: 2, timestamp: 1_700_000_120_000, open: 108, high: 114, low: 105, close: 110, volume: 30 },
+    ];
+    const drawing: ChartRenderDrawing = {
+      id: 'trend-1',
+      type: 'trend-line',
+      start: { timestamp: candles[0]?.timestamp ?? 0, price: 100 },
+      end: { timestamp: candles[2]?.timestamp ?? 0, price: 110 },
+      color: '#60a5fa',
+    };
+    const edits: unknown[] = [];
+    attachCanvasPointerEvents(canvas, controller, {
+      getDrawingTool: () => 'select',
+      getDrawings: () => [drawing],
+      getCandles: () => candles,
+      onDrawingEdit: (gesture) => edits.push(gesture),
+    });
+    const start = dataPointToChartCoordinate({ logicalIndex: 0, price: 100 }, frame);
+    const event = createPointerEvent({
+      clientX: 100 + start.x,
+      clientY: 50 + start.y,
+    });
+
+    dispatch('pointerdown', event);
+    dispatch('pointerup', event);
+
+    expect(edits).toEqual([]);
+  });
+
+  it('deletes the selected drawing on Delete and deselects on Escape', () => {
+    const { canvas, dispatch } = createCanvasTarget();
+    const deleted: string[] = [];
+    const selections: (string | null)[] = [];
+    let selectedId: string | null = 'trend-1';
+    attachCanvasPointerEvents(canvas, createChartInteractionController(createChartFrame(900, 500, { min: 90, max: 120 }, 2)), {
+      getSelectedDrawingId: () => selectedId,
+      onDrawingDelete: (drawingId) => deleted.push(drawingId),
+      onDrawingSelect: (drawingId) => {
+        selections.push(drawingId);
+        selectedId = drawingId;
+      },
+    });
+
+    dispatch('keydown', { key: 'Delete', preventDefault: vi.fn() } as unknown as KeyboardEvent);
+    dispatch('keydown', { key: 'Escape', preventDefault: vi.fn() } as unknown as KeyboardEvent);
+
+    expect(deleted).toEqual(['trend-1']);
+    expect(selections).toEqual([null]);
   });
 
   it('pans during captured pointer movement and releases capture on pointer up', () => {
