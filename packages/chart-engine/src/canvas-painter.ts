@@ -1,6 +1,7 @@
 import { createCandle, type Candle } from '@openview/market-domain';
 import { generatePriceTicks, priceToCoordinate } from './price-scale';
-import { generateTimeTicks, logicalIndexToCoordinate } from './time-scale';
+import { logicalIndexToCoordinate } from './time-scale';
+import { generateTimeAxisTicks, selectNonOverlappingTimeAxisTicks } from './time-axis';
 import type { ChartCoordinate, ChartFrame } from './chart-frame';
 
 export type ChartRenderCandle = Candle &
@@ -141,7 +142,7 @@ const drawGrid = (
     }
   }
 
-  for (const tick of generateTimeTicks(frame.timeScale, 8)) {
+  for (const tick of generateTimeAxisTicks(frame.timeScale, scene.candles, { targetTickCount: 8 })) {
     const x = plotArea.x + tick.coordinate;
     context.moveTo(x, plotArea.y);
     context.lineTo(x, plotArea.y + plotArea.height + volumeArea.height);
@@ -188,7 +189,7 @@ const drawAxes = (
   context.font = '11px sans-serif';
   context.textBaseline = 'middle';
 
-  for (const tick of generatePriceTicks(priceScale, 7)) {
+  for (const tick of generatePriceTicks(priceScale, 7, { locale: 'es-AR' })) {
     const y = plotArea.y + tick.coordinate;
 
     if (rightPriceScaleArea.width > 0) {
@@ -205,9 +206,19 @@ const drawAxes = (
   if (timeScaleArea.height > 0) {
     context.textAlign = 'center';
 
-    for (const tick of generateTimeTicks(timeScale, 8)) {
+    const timeTicks = generateTimeAxisTicks(timeScale, scene.candles, {
+      targetTickCount: 8,
+      locale: 'es-AR',
+    });
+    const visibleTimeTicks = selectNonOverlappingTimeAxisTicks(
+      timeTicks,
+      (label) => context.measureText(label).width,
+      timeScaleArea.width,
+    );
+
+    for (const tick of visibleTimeTicks) {
       const x = plotArea.x + tick.coordinate;
-      context.fillText(String(tick.logicalIndex), x, timeScaleArea.y + timeScaleArea.height / 2);
+      context.fillText(tick.label, x, timeScaleArea.y + timeScaleArea.height / 2);
     }
   }
 
