@@ -1,12 +1,15 @@
 import { useCallback, useRef, useState } from 'preact/hooks';
-import { createInstrumentId } from '@openview/market-domain';
+import { createInstrumentId, type Candle } from '@openview/market-domain';
 import {
   BinanceSpotMarketDataProvider,
   BybitSpotMarketDataProvider,
   HistoricalCandleService,
   MarketDataProviderRegistry,
+  MarketDataStreamService,
   OkxSpotMarketDataProvider,
   type CandleInterval,
+  type MarketDataStreamState,
+  type MarketDataSubscription,
 } from '@openview/market-data';
 import { ChartCanvas } from './ChartCanvas';
 
@@ -34,19 +37,28 @@ const INTERVAL_DURATION_MS: Readonly<Record<CandleInterval, number>> = Object.fr
   '1M': 2_592_000_000,
 });
 
-const historicalService = new HistoricalCandleService(
-  new MarketDataProviderRegistry([
-    new BinanceSpotMarketDataProvider(),
-    new BybitSpotMarketDataProvider(),
-    new OkxSpotMarketDataProvider(),
-  ]),
-);
+const providerRegistry = new MarketDataProviderRegistry([
+  new BinanceSpotMarketDataProvider(),
+  new BybitSpotMarketDataProvider(),
+  new OkxSpotMarketDataProvider(),
+]);
 
+const historicalService = new HistoricalCandleService(providerRegistry);
+const streamService = new MarketDataStreamService(providerRegistry);
 const dataSources = historicalService.listSources();
 
 const getFallbackInterval = (
   supportedIntervals: readonly CandleInterval[],
 ): CandleInterval | undefined => (supportedIntervals.includes('1m') ? '1m' : supportedIntervals[0]);
+
+const mergeLiveCandle = (candles: readonly Candle[], nextCandle: Candle): readonly Candle[] => {
+  const merged = new Map(candles.map((candle) => [candle.timestamp, candle]));
+  merged.set(nextCandle.timestamp, nextCandle);
+
+  return Object.freeze(
+    [...merged.values()].sort((first, second) => first.timestamp - second.timestamp),
+  );
+};
 
 const getOlderHistoryStartTime = (endTime: number, interval: CandleInterval): number => {
   if (interval !== '1M') {
@@ -84,10 +96,14 @@ export function MarketChart() {
   const [error, setError] = useState<string | null>(null);
   const [olderLoading, setOlderLoading] = useState(false);
   const [olderError, setOlderError] = useState<string | null>(null);
+  const [streamStatus, setStreamStatus] = useState<MarketDataStreamState>('disconnected');
+  const [streamError, setStreamError] = useState<string | null>(null);
+  const [streamCandleCount, setStreamCandleCount] = useState(0);
   const initializedRef = useRef(false);
   const requestIdRef = useRef(0);
   const abortControllerRef = useRef<AbortController | null>(null);
   const olderAbortControllerRef = useRef<AbortController | null>(null);
+  const streamSubscriptionRef = useRef<MarketDataSubscription | null>(null);
   const olderRequestRef = useRef(false);
   const hasMoreHistoryRef = useRef(true);
   const candlesRef = useRef(candles);
@@ -99,6 +115,11 @@ export function MarketChart() {
       requestIdRef.current = requestId;
       abortControllerRef.current?.abort();
       olderAbortControllerRef.current?.abort();
+      streamSubscriptionRef.current?.unsubscribe();
+      streamSubscriptionRef.current = null;
+      setStreamStatus('disconnected');
+      setStreamError(null);
+      setStreamCandleCount(0);
       olderRequestRef.current = false;
       hasMoreHistoryRef.current = true;
       setOlderLoading(false);
@@ -127,7 +148,46 @@ export function MarketChart() {
           return;
         }
 
+        candlesRef.current = result;
         setCandles(result);
+
+        if (historicalService.getSource(nextProviderId).streamingCandles) {
+          try {
+            streamSubscriptionRef.current = streamService.subscribeToCandles(
+              nextProviderId,
+              { instrumentId: INSTRUMENT_ID, interval: nextInterval },
+              {
+                onCandle: (update) => {
+                  if (requestId !== requestIdRef.current) {
+                    return;
+                  }
+
+                  const nextCandles = mergeLiveCandle(candlesRef.current, update.candle);
+                  candlesRef.current = nextCandles;
+                  setStreamCandleCount((count) => count + 1);
+                  setCandles(nextCandles);
+                },
+                onStatus: (status) => {
+                  if (requestId === requestIdRef.current) {
+                    setStreamStatus(status);
+                  }
+                },
+                onError: (streamCause) => {
+                  if (requestId === requestIdRef.current) {
+                    setStreamError(streamCause.message);
+                  }
+                },
+              },
+            );
+          } catch (streamCause) {
+            setStreamError(
+              streamCause instanceof Error
+                ? streamCause.message
+                : 'No se pudo iniciar el flujo de velas en vivo.',
+            );
+            setStreamStatus('disconnected');
+          }
+        }
       } catch (cause) {
         if (controller.signal.aborted || requestId !== requestIdRef.current) {
           return;
@@ -217,6 +277,9 @@ export function MarketChart() {
     (element: HTMLSpanElement | null): void => {
       if (element === null) {
         abortControllerRef.current?.abort();
+        olderAbortControllerRef.current?.abort();
+        streamSubscriptionRef.current?.unsubscribe();
+        streamSubscriptionRef.current = null;
         return;
       }
 
@@ -231,6 +294,16 @@ export function MarketChart() {
   );
 
   const selectedSource = historicalService.getSource(providerId);
+  const displayedStreamStatus = selectedSource.streamingCandles ? streamStatus : 'unsupported';
+  const streamStatusLabel = !selectedSource.streamingCandles
+    ? 'Solo histórico'
+    : streamStatus === 'connected'
+      ? 'En vivo'
+      : streamStatus === 'reconnecting'
+        ? 'Reconectando'
+        : streamStatus === 'connecting'
+          ? 'Conectando'
+          : 'Desconectado';
 
   const handleProviderChange = (nextProviderId: string): void => {
     const nextSource = dataSources.find((source) => source.id === nextProviderId);
@@ -297,10 +370,36 @@ export function MarketChart() {
           </label>
         </div>
         <div class="flex items-center gap-2 pb-2 text-[11px] text-slate-500">
-          <span class="size-1.5 rounded-full bg-emerald-400" />
+          <span
+            class={
+              'size-1.5 rounded-full ' +
+              (streamStatus === 'connected'
+                ? 'bg-emerald-400'
+                : selectedSource.streamingCandles
+                  ? 'bg-amber-400'
+                  : 'bg-slate-500')
+            }
+          />
           <span>{selectedSource.displayName}</span>
           <span aria-hidden="true">·</span>
           <span>{INSTRUMENT_ID}</span>
+          <span aria-hidden="true">·</span>
+          <span
+            data-testid="market-stream-status"
+            data-stream-status={displayedStreamStatus}
+            data-stream-candle-count={streamCandleCount}
+          >
+            {streamStatusLabel}
+          </span>
+          {streamError !== null && (
+            <span
+              class="max-w-48 truncate text-rose-300"
+              data-testid="market-stream-error"
+              title={streamError}
+            >
+              {streamError}
+            </span>
+          )}
         </div>
       </div>
       <ChartCanvas

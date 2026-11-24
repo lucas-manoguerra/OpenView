@@ -78,6 +78,7 @@ describe('historical candle service', () => {
       displayName: 'binance-spot',
       supportedIntervals: ['1m', '1h'],
       streamingQuotes: false,
+      streamingCandles: false,
       redistribution: 'unknown',
       attributionRequired: false,
     });

@@ -13,6 +13,7 @@ export type HistoricalDataSource = Readonly<{
   displayName: string;
   supportedIntervals: readonly CandleInterval[];
   streamingQuotes: boolean;
+  streamingCandles: boolean;
   redistribution: DataRedistribution;
   attributionRequired: boolean;
 }>;
@@ -23,6 +24,7 @@ const createSource = (provider: MarketDataProvider): HistoricalDataSource =>
     displayName: provider.displayName,
     supportedIntervals: Object.freeze([...provider.capabilities.supportedIntervals]),
     streamingQuotes: provider.capabilities.streamingQuotes,
+    streamingCandles: provider.capabilities.streamingCandles ?? false,
     redistribution: provider.capabilities.redistribution,
     attributionRequired: provider.capabilities.attributionRequired,
   });

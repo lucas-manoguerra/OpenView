@@ -23,6 +23,7 @@ export type DataRedistribution = 'allowed' | 'restricted' | 'unknown';
 export type MarketDataCapabilities = Readonly<{
   historicalCandles: boolean;
   streamingQuotes: boolean;
+  streamingCandles?: boolean;
   supportedIntervals: readonly CandleInterval[];
   redistribution: DataRedistribution;
   attributionRequired: boolean;
@@ -44,6 +45,26 @@ export type QuoteUpdate = Readonly<{
   last: number | null;
 }>;
 
+export type CandleSubscriptionRequest = Readonly<{
+  instrumentId: InstrumentId;
+  interval: CandleInterval;
+}>;
+
+export type CandleUpdate = Readonly<{
+  instrumentId: InstrumentId;
+  interval: CandleInterval;
+  candle: Candle;
+  isFinal: boolean;
+}>;
+
+export type MarketDataStreamState = 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
+
+export type CandleStreamHandlers = Readonly<{
+  onCandle: (update: CandleUpdate) => void;
+  onStatus?: (state: MarketDataStreamState) => void;
+  onError?: (error: Error) => void;
+}>;
+
 export type MarketDataSubscription = Readonly<{
   unsubscribe: () => void;
 }>;
@@ -56,5 +77,9 @@ export interface MarketDataProvider {
   subscribeToQuotes?(
     instrumentIds: readonly InstrumentId[],
     onQuote: (quote: QuoteUpdate) => void,
+  ): MarketDataSubscription;
+  subscribeToCandles?(
+    request: CandleSubscriptionRequest,
+    handlers: CandleStreamHandlers,
   ): MarketDataSubscription;
 }

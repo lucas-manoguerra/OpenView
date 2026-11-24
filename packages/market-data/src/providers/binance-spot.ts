@@ -1,9 +1,13 @@
 import { createCandle, type Candle } from '@openview/market-domain';
 import type {
   CandleInterval,
+  CandleStreamHandlers,
+  CandleSubscriptionRequest,
+  CandleUpdate,
   HistoricalCandleRequest,
   MarketDataCapabilities,
   MarketDataProvider,
+  MarketDataSubscription,
 } from '../contracts';
 import { MarketDataProviderError } from '../errors';
 
@@ -11,6 +15,9 @@ const PROVIDER_ID = 'binance-spot';
 const DEFAULT_BASE_URL = 'https://data-api.binance.vision';
 const DEFAULT_PAGE_SIZE = 1_000;
 const DEFAULT_MAX_PAGES = 100;
+const DEFAULT_STREAM_BASE_URL = 'wss://stream.binance.com:9443';
+const DEFAULT_RECONNECT_DELAY_MS = 1_000;
+const DEFAULT_MAX_RECONNECT_DELAY_MS = 30_000;
 
 const SUPPORTED_INTERVALS: readonly CandleInterval[] = Object.freeze([
   '1m',
@@ -33,16 +40,28 @@ const SUPPORTED_INTERVALS: readonly CandleInterval[] = Object.freeze([
 const CAPABILITIES: MarketDataCapabilities = Object.freeze({
   historicalCandles: true,
   streamingQuotes: false,
+  streamingCandles: true,
   supportedIntervals: SUPPORTED_INTERVALS,
   redistribution: 'unknown',
   attributionRequired: false,
 });
 
+export type BinanceWebSocketConnection = EventTarget &
+  Readonly<{
+    close: (code?: number, reason?: string) => void;
+  }>;
+
+export type BinanceWebSocketFactory = (url: string) => BinanceWebSocketConnection;
+
 export type BinanceSpotProviderOptions = Readonly<{
   baseUrl?: string;
+  streamBaseUrl?: string;
   fetcher?: typeof fetch;
+  webSocketFactory?: BinanceWebSocketFactory;
   pageSize?: number;
   maxPages?: number;
+  reconnectDelayMs?: number;
+  maxReconnectDelayMs?: number;
 }>;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -92,6 +111,60 @@ const parseCandle = (value: unknown): Candle => {
   return candle.value;
 };
 
+const parseStreamCandle = (
+  value: unknown,
+  request: CandleSubscriptionRequest,
+  symbol: string,
+): CandleUpdate | null => {
+  if (!isRecord(value) || Reflect.get(value, 'e') !== 'kline') {
+    return null;
+  }
+
+  const eventSymbol = Reflect.get(value, 's');
+  const kline = Reflect.get(value, 'k');
+
+  if (!isRecord(kline) || eventSymbol !== symbol || Reflect.get(kline, 's') !== symbol) {
+    throw new RangeError('Binance returned a kline event for an unexpected instrument.');
+  }
+
+  if (Reflect.get(kline, 'i') !== request.interval) {
+    throw new RangeError('Binance returned a kline event for an unexpected interval.');
+  }
+
+  const timestamp = toFiniteNumber(Reflect.get(kline, 't'), 'open time');
+
+  if (!Number.isSafeInteger(timestamp) || timestamp < 0) {
+    throw new RangeError('Binance returned an invalid streamed candle open time.');
+  }
+
+  const result = createCandle({
+    timestamp,
+    open: toFiniteNumber(Reflect.get(kline, 'o'), 'open price'),
+    high: toFiniteNumber(Reflect.get(kline, 'h'), 'high price'),
+    low: toFiniteNumber(Reflect.get(kline, 'l'), 'low price'),
+    close: toFiniteNumber(Reflect.get(kline, 'c'), 'close price'),
+    volume: toFiniteNumber(Reflect.get(kline, 'v'), 'base volume'),
+  });
+
+  if (!result.ok) {
+    throw new RangeError(
+      'Binance returned an invalid streamed OHLCV candle: ' + result.error + '.',
+    );
+  }
+
+  const isFinal = Reflect.get(kline, 'x');
+
+  if (typeof isFinal !== 'boolean') {
+    throw new RangeError('Binance returned an invalid streamed candle finality flag.');
+  }
+
+  return Object.freeze({
+    instrumentId: request.instrumentId,
+    interval: request.interval,
+    candle: result.value,
+    isFinal,
+  });
+};
 const normalizeSymbol = (instrumentId: string): string => {
   const value = instrumentId.trim().toUpperCase();
   const separatorIndex = value.indexOf(':');
@@ -156,9 +229,13 @@ export class BinanceSpotMarketDataProvider implements MarketDataProvider {
   readonly capabilities = CAPABILITIES;
 
   private readonly baseUrl: string;
+  private readonly streamBaseUrl: string;
   private readonly fetcher: typeof fetch;
+  private readonly webSocketFactory: BinanceWebSocketFactory;
   private readonly pageSize: number;
   private readonly maxPages: number;
+  private readonly reconnectDelayMs: number;
+  private readonly maxReconnectDelayMs: number;
 
   constructor(options: BinanceSpotProviderOptions = {}) {
     const baseUrl = options.baseUrl ?? DEFAULT_BASE_URL;
@@ -168,12 +245,34 @@ export class BinanceSpotMarketDataProvider implements MarketDataProvider {
       throw new RangeError('Binance Spot provider base URLs must use HTTPS.');
     }
 
+    const streamBaseUrl = new URL(options.streamBaseUrl ?? DEFAULT_STREAM_BASE_URL);
     const fetcher = options.fetcher ?? globalThis.fetch.bind(globalThis);
+    const webSocketFactory = options.webSocketFactory ?? ((url: string) => new WebSocket(url));
     const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE;
     const maxPages = options.maxPages ?? DEFAULT_MAX_PAGES;
+    const reconnectDelayMs = options.reconnectDelayMs ?? DEFAULT_RECONNECT_DELAY_MS;
+    const maxReconnectDelayMs = options.maxReconnectDelayMs ?? DEFAULT_MAX_RECONNECT_DELAY_MS;
 
     if (typeof fetcher !== 'function') {
       throw new Error('A Fetch API implementation is required for the Binance Spot provider.');
+    }
+
+    if (streamBaseUrl.protocol !== 'wss:') {
+      throw new RangeError('Binance Spot stream URLs must use WSS.');
+    }
+
+    if (typeof webSocketFactory !== 'function') {
+      throw new Error('A WebSocket factory is required for the Binance Spot provider.');
+    }
+
+    if (!Number.isInteger(reconnectDelayMs) || reconnectDelayMs < 1) {
+      throw new RangeError('Binance Spot reconnect delay must be a positive integer.');
+    }
+
+    if (!Number.isInteger(maxReconnectDelayMs) || maxReconnectDelayMs < reconnectDelayMs) {
+      throw new RangeError(
+        'Binance Spot maximum reconnect delay must be at least the initial delay.',
+      );
     }
 
     if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > DEFAULT_PAGE_SIZE) {
@@ -185,11 +284,166 @@ export class BinanceSpotMarketDataProvider implements MarketDataProvider {
     }
 
     this.baseUrl = parsedBaseUrl.toString().replace(/\/$/, '');
+    this.streamBaseUrl = streamBaseUrl.toString().replace(/\/$/, '');
     this.fetcher = fetcher;
+    this.webSocketFactory = webSocketFactory;
     this.pageSize = pageSize;
     this.maxPages = maxPages;
+    this.reconnectDelayMs = reconnectDelayMs;
+    this.maxReconnectDelayMs = maxReconnectDelayMs;
   }
 
+  subscribeToCandles(
+    request: CandleSubscriptionRequest,
+    handlers: CandleStreamHandlers,
+  ): MarketDataSubscription {
+    if (!this.capabilities.supportedIntervals.includes(request.interval)) {
+      throw new RangeError(
+        'Binance Spot does not support the ' + request.interval + ' candle interval.',
+      );
+    }
+
+    const symbol = normalizeSymbol(request.instrumentId);
+    const url = new URL(
+      '/ws/' + symbol.toLowerCase() + '@kline_' + request.interval,
+      this.streamBaseUrl,
+    );
+    let active = true;
+    let reconnectAttempt = 0;
+    let socket: BinanceWebSocketConnection | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const emitError = (cause: unknown): void => {
+      handlers.onError?.(
+        cause instanceof Error ? cause : new Error('Binance Spot stream failed unexpectedly.'),
+      );
+    };
+
+    const clearReconnectTimer = (): void => {
+      if (reconnectTimer !== null) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+      }
+    };
+
+    const scheduleReconnect = (): void => {
+      if (!active || reconnectTimer !== null) {
+        return;
+      }
+
+      reconnectAttempt += 1;
+      handlers.onStatus?.('reconnecting');
+      const exponent = Math.min(reconnectAttempt - 1, 20);
+      const delay = Math.min(this.maxReconnectDelayMs, this.reconnectDelayMs * 2 ** exponent);
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        connect();
+      }, delay);
+    };
+
+    const connect = (): void => {
+      if (!active) {
+        return;
+      }
+
+      if (reconnectAttempt === 0) {
+        handlers.onStatus?.('connecting');
+      }
+
+      let connection: BinanceWebSocketConnection;
+
+      try {
+        connection = this.webSocketFactory(url.toString());
+      } catch (cause) {
+        emitError(cause);
+        scheduleReconnect();
+        return;
+      }
+
+      socket = connection;
+
+      const handleOpen = (): void => {
+        if (!active || socket !== connection) {
+          return;
+        }
+
+        reconnectAttempt = 0;
+        handlers.onStatus?.('connected');
+      };
+
+      const handleMessage = (event: Event): void => {
+        if (!active || socket !== connection) {
+          return;
+        }
+
+        const messageData = Reflect.get(event, 'data');
+
+        if (typeof messageData !== 'string') {
+          emitError(new RangeError('Binance returned a WebSocket message without text data.'));
+          return;
+        }
+
+        try {
+          const payload: unknown = JSON.parse(messageData);
+          const update = parseStreamCandle(payload, request, symbol);
+
+          if (update !== null) {
+            handlers.onCandle(update);
+          }
+        } catch (cause) {
+          emitError(cause);
+        }
+      };
+
+      const handleError = (): void => {
+        if (!active || socket !== connection) {
+          return;
+        }
+
+        emitError(new Error('Binance Spot WebSocket connection reported an error.'));
+        connection.close();
+        scheduleReconnect();
+      };
+
+      const handleClose = (): void => {
+        if (socket !== connection) {
+          return;
+        }
+
+        socket = null;
+
+        if (active) {
+          scheduleReconnect();
+        }
+      };
+
+      connection.addEventListener('open', handleOpen);
+      connection.addEventListener('message', handleMessage);
+      connection.addEventListener('error', handleError);
+      connection.addEventListener('close', handleClose);
+    };
+
+    connect();
+
+    return Object.freeze({
+      unsubscribe: (): void => {
+        if (!active) {
+          return;
+        }
+
+        active = false;
+        clearReconnectTimer();
+        const currentSocket = socket;
+        socket = null;
+
+        if (currentSocket !== null) {
+          currentSocket.close(1000, 'Subscription closed');
+        }
+
+        handlers.onStatus?.('disconnected');
+      },
+    });
+  }
   async getHistoricalCandles(request: HistoricalCandleRequest): Promise<readonly Candle[]> {
     validateRequest(request);
 
