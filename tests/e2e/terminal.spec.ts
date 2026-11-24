@@ -264,7 +264,7 @@ test('switches providers, streams Bybit candles and recovers history after recon
     const url = new URL(route.request().url());
     const interval = url.searchParams.get('interval') === '5' ? '5m' : '1m';
     const startTime = Number(url.searchParams.get('start') ?? 0);
-    const endTime = Number(url.searchParams.get('end') ?? Date.now()) + 1;
+    const endTime = Number(url.searchParams.get('end') ?? Date.now());
     const candles = createBybitRows(interval, startTime, endTime);
     const latestCandle = candles.reduce<number | null>(
       (latest, row) => (latest === null ? Number(row[0]) : Math.max(latest, Number(row[0]))),
