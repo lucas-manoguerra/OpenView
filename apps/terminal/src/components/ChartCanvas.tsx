@@ -8,6 +8,7 @@ import {
   createChartInteractionController,
   createChartRenderScene,
   createCanvasRenderer,
+  countAppendedBars,
   getRightOffsetAfterDataUpdate,
   updateChartRenderScene,
   type CanvasPointerAdapter,
@@ -61,22 +62,6 @@ const createRenderCandles = (candles: readonly Candle[]): readonly ChartRenderCa
       }),
     ),
   );
-
-const getAppendedCandleCount = (
-  previousCandles: readonly ChartRenderCandle[],
-  nextCandles: readonly ChartRenderCandle[],
-): number => {
-  const previousLastCandle = previousCandles[previousCandles.length - 1];
-
-  if (previousLastCandle === undefined) {
-    return 0;
-  }
-
-  return nextCandles.reduce(
-    (count, candle) => count + Number(candle.timestamp > previousLastCandle.timestamp),
-    0,
-  );
-};
 
 const getPriceRange = (candles: readonly ChartRenderCandle[]): NumericRange => {
   if (candles.length === 0) {
@@ -373,7 +358,11 @@ export function ChartCanvas({
         }
 
         const currentTimeScale = controller.snapshot.frame.timeScale;
-        const appendedBars = getAppendedCandleCount(previousCandles, currentCandles);
+        const previousLastCandle = previousCandles[previousCandles.length - 1];
+        const appendedBars = countAppendedBars(
+          previousLastCandle?.timestamp ?? null,
+          currentCandles.map((candle) => candle.timestamp),
+        );
         const nextRightOffset = getRightOffsetAfterDataUpdate(
           currentTimeScale.rightOffset,
           appendedBars,
