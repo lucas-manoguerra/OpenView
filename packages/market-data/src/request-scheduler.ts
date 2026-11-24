@@ -27,9 +27,9 @@ export class MarketDataRequestScheduler {
 
   async run<T>(operation: () => Promise<T>, signal?: AbortSignal): Promise<T> {
     const previousRequest = this.queue;
-    let releaseRequest: (() => void) | null = null;
+    let releaseRequest: () => void = () => undefined;
 
-    this.queue = new Promise((resolve) => {
+    this.queue = new Promise<void>((resolve) => {
       releaseRequest = resolve;
     });
 
@@ -38,7 +38,8 @@ export class MarketDataRequestScheduler {
     try {
       signal?.throwIfAborted();
 
-      const elapsed = this.lastRequestAt === 0 ? this.minimumIntervalMs : Date.now() - this.lastRequestAt;
+      const elapsed =
+        this.lastRequestAt === 0 ? this.minimumIntervalMs : Date.now() - this.lastRequestAt;
       const waitDuration = Math.max(0, this.minimumIntervalMs - elapsed);
 
       if (waitDuration > 0) {
@@ -50,7 +51,7 @@ export class MarketDataRequestScheduler {
 
       return await operation();
     } finally {
-      releaseRequest?.();
+      releaseRequest();
     }
   }
 }
