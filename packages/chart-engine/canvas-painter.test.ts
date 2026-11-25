@@ -25,8 +25,12 @@ const createMockContext = (): Readonly<{
   };
   const context = {
     fillStyle: '#000000',
-    get strokeStyle() { return currentStrokeStyle; },
-    set strokeStyle(value: string) { currentStrokeStyle = value; },
+    get strokeStyle() {
+      return currentStrokeStyle;
+    },
+    set strokeStyle(value: string) {
+      currentStrokeStyle = value;
+    },
     lineWidth: 1,
     globalAlpha: 1,
     font: '10px sans-serif',
