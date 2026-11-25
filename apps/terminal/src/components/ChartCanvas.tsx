@@ -2,6 +2,14 @@ import { useCallback, useMemo, useRef, useState } from 'preact/hooks';
 import type { Candle } from '@openview/market-domain';
 import type { CandleInterval } from '@openview/market-data';
 import {
+  BUILT_IN_DRAWING_STYLE_TEMPLATES,
+  MAX_CUSTOM_DRAWING_TEMPLATES,
+  createDrawingStyleTemplate,
+  loadBrowserDrawingStyleTemplates,
+  saveBrowserDrawingStyleTemplates,
+  type DrawingStyleTemplate,
+} from '../drawings/drawing-style-templates';
+import {
   attachCanvasPointerEvents,
   type CanvasDrawingEditGesture,
   type CanvasDrawingGroupEditGesture,
@@ -269,6 +277,14 @@ export function ChartCanvas({
   const [drawingPanelPosition, setDrawingPanelPosition] = useState<DrawingPanelPosition | null>(
     null,
   );
+  const [customDrawingTemplates, setCustomDrawingTemplates] = useState<
+    readonly DrawingStyleTemplate[]
+  >([]);
+  const [drawingTemplatesExpanded, setDrawingTemplatesExpanded] = useState(false);
+  const [drawingTemplatesLoaded, setDrawingTemplatesLoaded] = useState(false);
+  const [selectedDrawingTemplateId, setSelectedDrawingTemplateId] = useState('builtin-blue');
+  const [newDrawingTemplateName, setNewDrawingTemplateName] = useState('');
+  const [drawingTemplateError, setDrawingTemplateError] = useState<string | null>(null);
   const [autoScale, setAutoScale] = useState(true);
   const [priceScaleLocked, setPriceScaleLocked] = useState(false);
   const [priceScaleInverted, setPriceScaleInverted] = useState(false);
@@ -794,6 +810,77 @@ export function ChartCanvas({
     commitDrawingsRef.current(nextDrawings);
   };
 
+  const handleToggleDrawingTemplates = (): void => {
+    if (!drawingTemplatesLoaded) {
+      setCustomDrawingTemplates(loadBrowserDrawingStyleTemplates());
+      setDrawingTemplatesLoaded(true);
+    }
+
+    setDrawingTemplatesExpanded(!drawingTemplatesExpanded);
+    setDrawingTemplateError(null);
+  };
+
+  const handleApplyDrawingTemplate = (): void => {
+    const template = drawingStyleTemplates.find(
+      (candidate) => candidate.id === selectedDrawingTemplateId,
+    );
+
+    if (template === undefined) {
+      return;
+    }
+
+    handleSelectedDrawingUpdate({
+      color: template.color,
+      lineWidth: template.lineWidth,
+      lineStyle: template.lineStyle,
+    });
+  };
+
+  const handleSaveDrawingTemplate = (): void => {
+    if (selectedDrawing === null) {
+      return;
+    }
+
+    const template = createDrawingStyleTemplate(
+      'custom-' + crypto.randomUUID(),
+      newDrawingTemplateName,
+      {
+        color: selectedDrawing.color,
+        lineWidth: selectedDrawing.lineWidth ?? 1.5,
+        lineStyle: selectedDrawing.lineStyle ?? 'solid',
+      },
+    );
+
+    if (template === null) {
+      setDrawingTemplateError('Escribe un nombre de hasta 32 caracteres.');
+      return;
+    }
+
+    const nextTemplates = [
+      ...customDrawingTemplates.filter(
+        (candidate) => candidate.name.toLowerCase() !== template.name.toLowerCase(),
+      ),
+      template,
+    ].slice(-MAX_CUSTOM_DRAWING_TEMPLATES);
+
+    setCustomDrawingTemplates(nextTemplates);
+    saveBrowserDrawingStyleTemplates(nextTemplates);
+    setSelectedDrawingTemplateId(template.id);
+    setNewDrawingTemplateName('');
+    setDrawingTemplateError(null);
+  };
+
+  const handleDeleteDrawingTemplate = (): void => {
+    const nextTemplates = customDrawingTemplates.filter(
+      (template) => template.id !== selectedDrawingTemplateId,
+    );
+
+    setCustomDrawingTemplates(nextTemplates);
+    saveBrowserDrawingStyleTemplates(nextTemplates);
+    setSelectedDrawingTemplateId('builtin-blue');
+    setDrawingTemplateError(null);
+  };
+
   const handleClearDrawings = (): void => {
     if (drawingsRef.current.length > 0) {
       commitDrawingsRef.current([]);
@@ -883,6 +970,7 @@ export function ChartCanvas({
   };
 
   const selectedDrawing = drawings.find((drawing) => drawing.id === selectedDrawingId) ?? null;
+  const drawingStyleTemplates = [...BUILT_IN_DRAWING_STYLE_TEMPLATES, ...customDrawingTemplates];
 
   return (
     <div class="grid h-[390px] min-h-[340px] w-full grid-cols-[38px_minmax(0,1fr)] bg-[#0b0f17]">
@@ -1453,6 +1541,95 @@ export function ChartCanvas({
                 <option value="dashed">Guiones</option>
                 <option value="dotted">Puntos</option>
               </select>
+            </div>
+            <div class="mt-3 border-t border-white/10 pt-3">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                  Plantillas
+                </span>
+                <button
+                  type="button"
+                  data-testid="drawing-templates-toggle"
+                  aria-expanded={drawingTemplatesExpanded}
+                  onClick={handleToggleDrawingTemplates}
+                  class="rounded px-2 py-1 text-[10px] text-blue-300 transition-colors hover:bg-blue-400/10"
+                >
+                  {drawingTemplatesExpanded ? 'Ocultar' : 'Gestionar'}
+                </button>
+              </div>
+              {drawingTemplatesExpanded && (
+                <div class="mt-2 space-y-2" data-testid="drawing-templates-manager">
+                  <select
+                    aria-label="Plantilla de dibujo"
+                    data-testid="drawing-template-select"
+                    value={selectedDrawingTemplateId}
+                    onChange={(event) => setSelectedDrawingTemplateId(event.currentTarget.value)}
+                    class="w-full rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-[10px] text-slate-200 outline-none focus:border-blue-400"
+                  >
+                    {drawingStyleTemplates.map((template) => (
+                      <option key={template.id} value={template.id}>
+                        {template.name}
+                      </option>
+                    ))}
+                  </select>
+                  <div class="flex gap-2">
+                    <button
+                      type="button"
+                      data-testid="drawing-template-apply"
+                      onClick={handleApplyDrawingTemplate}
+                      class="flex-1 rounded bg-blue-500/15 px-2 py-1.5 text-[10px] font-medium text-blue-200 hover:bg-blue-500/25"
+                    >
+                      Aplicar
+                    </button>
+                    {customDrawingTemplates.some(
+                      (template) => template.id === selectedDrawingTemplateId,
+                    ) && (
+                      <button
+                        type="button"
+                        data-testid="drawing-template-delete"
+                        aria-label="Eliminar plantilla personalizada"
+                        onClick={handleDeleteDrawingTemplate}
+                        class="rounded bg-rose-500/10 px-2 py-1.5 text-[10px] text-rose-200 hover:bg-rose-500/20"
+                      >
+                        Eliminar
+                      </button>
+                    )}
+                  </div>
+                  <div class="flex gap-2">
+                    <input
+                      type="text"
+                      aria-label="Nombre de la nueva plantilla"
+                      data-testid="drawing-template-name"
+                      maxLength={32}
+                      value={newDrawingTemplateName}
+                      onInput={(event) => {
+                        setNewDrawingTemplateName(event.currentTarget.value);
+                        setDrawingTemplateError(null);
+                      }}
+                      placeholder="Guardar estilo actual…"
+                      class="min-w-0 flex-1 rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-[10px] text-slate-200 outline-none placeholder:text-slate-600 focus:border-blue-400"
+                    />
+                    <button
+                      type="button"
+                      data-testid="drawing-template-save"
+                      disabled={newDrawingTemplateName.trim().length === 0}
+                      onClick={handleSaveDrawingTemplate}
+                      class="rounded bg-white/10 px-2 py-1.5 text-[10px] font-medium text-slate-200 hover:bg-white/15 disabled:opacity-30"
+                    >
+                      Guardar
+                    </button>
+                  </div>
+                  {drawingTemplateError !== null && (
+                    <p role="alert" class="text-[10px] text-rose-300">
+                      {drawingTemplateError}
+                    </p>
+                  )}
+                  <p class="text-[9px] leading-relaxed text-slate-500">
+                    Las plantillas personalizadas se guardan en este navegador y se aplican a toda
+                    la selección.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         )}

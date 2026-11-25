@@ -1590,6 +1590,96 @@ test('selects drawings with Shift and moves and deletes the group together', asy
   await expect(canvas).toHaveAttribute('data-drawing-count', '0');
 });
 
+test('saves and reapplies custom drawing style templates across reloads', async ({ page }) => {
+  await page.goto('/');
+  await expect
+    .poll(async () =>
+      Number(
+        await page
+          .getByRole('img', {
+            name: /Gráfico interactivo de velas y volumen para BTC \/ USDT/,
+          })
+          .getAttribute('data-candles-count'),
+      ),
+    )
+    .toBeGreaterThan(400);
+
+  await page.evaluate(() => localStorage.removeItem('openview.chart.drawing-style-templates'));
+  await page.reload();
+
+  const canvas = page.getByRole('img', {
+    name: /Gráfico interactivo de velas y volumen para BTC \/ USDT/,
+  });
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+
+  const drawAndSelect = async () => {
+    const bounds = await canvas.boundingBox();
+    expect(bounds).not.toBeNull();
+
+    if (bounds === null) {
+      throw new Error('The chart canvas must have a visible bounding box.');
+    }
+
+    const startX = bounds.x + bounds.width * 0.3;
+    const startY = bounds.y + bounds.height * 0.34;
+    const endX = bounds.x + bounds.width * 0.58;
+    const endY = bounds.y + bounds.height * 0.56;
+
+    await page.getByTestId('drawing-tool-trend-line').click();
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.mouse.move(endX, endY);
+    await page.mouse.up();
+    await expect(canvas).toHaveAttribute('data-drawing-count', '1');
+
+    await page.getByTestId('drawing-tool-select').click();
+    await page.mouse.click((startX + endX) / 2, (startY + endY) / 2);
+    await expect(canvas).toHaveAttribute('data-selected-drawing-count', '1');
+  };
+
+  await drawAndSelect();
+  await page.getByTestId('drawing-templates-toggle').click();
+  await expect(page.getByTestId('drawing-templates-manager')).toBeVisible();
+  await page.getByTestId('drawing-template-select').selectOption('builtin-red-dashed');
+  await page.getByTestId('drawing-template-apply').click();
+
+  await expect(canvas).toHaveAttribute('data-selected-drawing-color', '#ef5350');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-width', '2');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-line-style', 'dashed');
+
+  await page.getByTestId('drawing-template-name').fill('Mi estilo');
+  await page.getByTestId('drawing-template-save').click();
+  await expect
+    .poll(() =>
+      page.evaluate(() => localStorage.getItem('openview.chart.drawing-style-templates') ?? ''),
+    )
+    .toContain('Mi estilo');
+
+  await page.reload();
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+
+  await drawAndSelect();
+  await page.getByTestId('drawing-templates-toggle').click();
+  await expect(page.getByTestId('drawing-template-select')).toContainText('Mi estilo');
+  await page.getByTestId('drawing-template-select').selectOption({ label: 'Mi estilo' });
+  await page.getByTestId('drawing-template-apply').click();
+
+  await expect(canvas).toHaveAttribute('data-selected-drawing-color', '#ef5350');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-width', '2');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-line-style', 'dashed');
+
+  await page.getByTestId('drawing-template-delete').click();
+  await expect
+    .poll(() =>
+      page.evaluate(() => localStorage.getItem('openview.chart.drawing-style-templates') ?? ''),
+    )
+    .toContain('"templates":[]');
+});
+
 test('renders timestamp based time labels instead of logical bar indices', async ({ page }) => {
   await page.addInitScript(() => {
     const labels: string[] = [];
