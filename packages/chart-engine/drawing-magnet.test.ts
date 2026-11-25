@@ -44,24 +44,13 @@ describe('chart drawing magnet', () => {
 
   it('strong magnet snaps to the nearest OHLC value on the closest candle', () => {
     expect(
-      snapChartDrawingPointToOhlc(
-        { logicalIndex: 1.1, price: 109 },
-        candles,
-        frame,
-        'strong',
-      ),
+      snapChartDrawingPointToOhlc({ logicalIndex: 1.1, price: 109 }, candles, frame, 'strong'),
     ).toEqual({ logicalIndex: 1, price: 108 });
   });
 
   it('weak magnet snaps only while the pointer is within its pixel tolerance', () => {
     expect(
-      snapChartDrawingPointToOhlc(
-        { logicalIndex: 1, price: 107.8 },
-        candles,
-        frame,
-        'weak',
-        8,
-      ),
+      snapChartDrawingPointToOhlc({ logicalIndex: 1, price: 107.8 }, candles, frame, 'weak', 8),
     ).toEqual({ logicalIndex: 1, price: 108 });
 
     const distantPoint = Object.freeze({ logicalIndex: 1, price: 100 });
