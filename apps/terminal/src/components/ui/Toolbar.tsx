@@ -1,4 +1,3 @@
-import type { JSX } from 'preact';
 import { Icon, type IconName } from './Icon';
 import { IconButton } from './IconButton';
 import { Tooltip } from './Tooltip';
@@ -34,33 +33,35 @@ export function Toolbar({
   orientation = 'horizontal',
   size = 'small',
 }: ToolbarProps) {
-  const handleKeyDown = (event: JSX.TargetedKeyboardEvent<HTMLDivElement>) => {
+  const handleKeyDown = (event: Event) => {
+    const keyboardEvent = event as KeyboardEvent;
+    const toolbarElement = event.currentTarget as HTMLDivElement;
     const horizontal = orientation === 'horizontal';
     const previousKey = horizontal ? 'ArrowLeft' : 'ArrowUp';
     const nextKey = horizontal ? 'ArrowRight' : 'ArrowDown';
-    if (![previousKey, nextKey, 'Home', 'End'].includes(event.key)) return;
+    if (![previousKey, nextKey, 'Home', 'End'].includes(keyboardEvent.key)) return;
 
     const buttons = Array.from(
-      event.currentTarget.querySelectorAll<HTMLButtonElement>(
+      toolbarElement.querySelectorAll<HTMLButtonElement>(
         'button[data-toolbar-item]:not(:disabled)',
       ),
     );
     if (buttons.length === 0) return;
 
-    const current = (event.target as HTMLElement).closest<HTMLButtonElement>(
+    const current = (keyboardEvent.target as HTMLElement).closest<HTMLButtonElement>(
       'button[data-toolbar-item]',
     );
     const currentIndex = current ? buttons.indexOf(current) : -1;
     let nextIndex = currentIndex;
 
-    if (event.key === 'Home') nextIndex = 0;
-    else if (event.key === 'End') nextIndex = buttons.length - 1;
-    else if (event.key === nextKey) nextIndex = (currentIndex + 1) % buttons.length;
-    else if (event.key === previousKey) {
+    if (keyboardEvent.key === 'Home') nextIndex = 0;
+    else if (keyboardEvent.key === 'End') nextIndex = buttons.length - 1;
+    else if (keyboardEvent.key === nextKey) nextIndex = (currentIndex + 1) % buttons.length;
+    else if (keyboardEvent.key === previousKey) {
       nextIndex = (currentIndex - 1 + buttons.length) % buttons.length;
     }
 
-    event.preventDefault();
+    keyboardEvent.preventDefault();
     buttons[nextIndex]?.focus();
   };
 
