@@ -1638,6 +1638,14 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
 
   const restoredCoordinatePanel = page.getByTestId('drawing-coordinate-panel');
   await expect(restoredCoordinatePanel).toBeVisible();
+  await expect(restoredCoordinatePanel).toHaveAttribute(
+    'data-panel-left',
+    String(persistedPanelLayout.positions.coordinates?.left ?? 'default'),
+  );
+  await expect(restoredCoordinatePanel).toHaveAttribute(
+    'data-panel-top',
+    String(persistedPanelLayout.positions.coordinates?.top ?? 'default'),
+  );
   const restoredCoordinatePosition = await restoredCoordinatePanel.evaluate(
     (element: HTMLElement) => ({
       left: element.style.left,
@@ -1649,6 +1657,14 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
 
   await page.getByTestId('drawing-panel-toggle-appearance').click();
   await expect(propertiesPanel).toBeVisible();
+  await expect(propertiesPanel).toHaveAttribute(
+    'data-panel-left',
+    String(persistedPanelLayout.positions.appearance?.left ?? 'default'),
+  );
+  await expect(propertiesPanel).toHaveAttribute(
+    'data-panel-top',
+    String(persistedPanelLayout.positions.appearance?.top ?? 'default'),
+  );
   const restoredAppearancePosition = await propertiesPanel.evaluate((element: HTMLElement) => ({
     left: element.style.left,
     top: element.style.top,
