@@ -21,17 +21,6 @@ export function Dialog({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
 
-  const setDialogRef = (element: HTMLDivElement | null) => {
-    dialogRef.current = element;
-    if (!element) return;
-
-    const focusTarget =
-      element.querySelector<HTMLElement>(
-        '[data-dialog-autofocus], button:not(:disabled), input:not(:disabled)',
-      ) ?? element;
-    focusTarget.focus();
-  };
-
   const openDialog = () => setOpen(true);
 
   const closeDialog = () => {
@@ -92,7 +81,7 @@ export function Dialog({
             class="absolute inset-0 cursor-default bg-black/60"
           />
           <div
-            ref={setDialogRef}
+            ref={dialogRef}
             role="dialog"
             aria-modal="true"
             tabIndex={-1}
