@@ -2100,7 +2100,18 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
     throw new Error('The drawing properties panel must remain visible after dragging.');
   }
 
-  expect(panelAfterDrag.x).toBeGreaterThan(panelBeforeDrag.x + 20);
+  const panelDragMetrics = await propertiesPanel.evaluate((element: HTMLElement) => ({
+    styleLeft: element.style.left,
+    styleTop: element.style.top,
+    offsetLeft: element.offsetLeft,
+    offsetWidth: element.offsetWidth,
+    parentWidth: element.parentElement?.clientWidth ?? null,
+    parentHeight: element.parentElement?.clientHeight ?? null,
+    parentLeft: element.parentElement?.getBoundingClientRect().left ?? null,
+  }));
+  expect(panelAfterDrag.x, JSON.stringify(panelDragMetrics)).toBeGreaterThan(
+    panelBeforeDrag.x + 20,
+  );
   expect(panelAfterDrag.y).toBeGreaterThan(panelBeforeDrag.y + 10);
 
   await coordinatePanelToggle.click();
