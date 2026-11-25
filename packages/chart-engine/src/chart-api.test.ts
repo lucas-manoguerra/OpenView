@@ -77,11 +77,26 @@ describe('chart public API', () => {
     };
 
     chart.execute({ type: 'set-drawings', drawings: [drawing] });
-    expect(chart.exportSnapshot().scene.drawings).toEqual([drawing]);
+    const normalizedDrawings = chart.exportSnapshot().scene.drawings;
+    expect(normalizedDrawings).toEqual([
+      expect.objectContaining({
+        ...drawing,
+        lineWidth: 1.5,
+        lineStyle: 'solid',
+        fillColor: '#ffffff',
+        fillOpacity: 0,
+        extendStart: false,
+        extendEnd: false,
+        startStyle: 'none',
+        endStyle: 'none',
+        locked: false,
+        visible: true,
+      }),
+    ]);
     expect(listener).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'drawing-state-changed',
-        drawings: [drawing],
+        drawings: normalizedDrawings,
         selectedDrawingId: null,
         selectedDrawingIds: [],
       }),
