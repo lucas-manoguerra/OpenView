@@ -42,7 +42,8 @@ export function DropdownMenu({ label, items, onSelect, align = 'start' }: Dropdo
     }
 
     const enabledItems = Array.from(
-      menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)') ?? [],
+      menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)') ??
+        [],
     );
     const currentIndex = enabledItems.indexOf(event.target as HTMLButtonElement);
     if (currentIndex < 0 || enabledItems.length === 0) return;
