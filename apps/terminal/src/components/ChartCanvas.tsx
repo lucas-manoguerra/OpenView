@@ -1431,6 +1431,12 @@ export function ChartCanvas({
   const selectedDrawingStartTimestamps = JSON.stringify(
     selectedDrawings.map((drawing) => drawing.start.timestamp),
   );
+  const selectedDrawingStartPrices = JSON.stringify(
+    selectedDrawings.map((drawing) => drawing.start.price),
+  );
+  const selectedDrawingStartTimestamps = JSON.stringify(
+    selectedDrawings.map((drawing) => drawing.start.timestamp),
+  );
   const allDrawingsLocked =
     drawings.length > 0 && drawings.every((drawing) => drawing.locked === true);
   const drawingStyleTemplates = [...BUILT_IN_DRAWING_STYLE_TEMPLATES, ...customDrawingTemplates];
@@ -1946,6 +1952,8 @@ export function ChartCanvas({
           data-selected-drawing-ids={selectedDrawingIds.join(',')}
           data-selected-drawing-colors={selectedDrawingColors}
           data-selected-drawing-widths={selectedDrawingWidths}
+          data-selected-drawing-start-prices={selectedDrawingStartPrices}
+          data-selected-drawing-start-timestamps={selectedDrawingStartTimestamps}
           data-selected-drawing-start-prices={selectedDrawingStartPrices}
           data-selected-drawing-start-timestamps={selectedDrawingStartTimestamps}
           data-selected-drawing-color={selectedDrawing?.color ?? ''}
