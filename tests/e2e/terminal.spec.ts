@@ -1440,6 +1440,51 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
   await page.mouse.click(middleX, middleY);
 
   await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-1');
+  const propertiesPanel = page.getByTestId('drawing-properties-panel');
+  await expect(propertiesPanel).toBeVisible();
+
+  const colorPicker = page.getByTestId('drawing-style-color');
+  await colorPicker.evaluate((element: HTMLInputElement) => {
+    element.value = '#ef4444';
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await expect(canvas).toHaveAttribute('data-selected-drawing-color', '#ef4444');
+
+  await page.getByTestId('drawing-style-width').selectOption('4');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-width', '4');
+  await page.getByTestId('drawing-style-line').selectOption('dashed');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-line-style', 'dashed');
+
+  const panelBeforeDrag = await propertiesPanel.boundingBox();
+  const dragHandle = page.getByTestId('drawing-properties-drag-handle');
+  const dragHandleBounds = await dragHandle.boundingBox();
+  expect(panelBeforeDrag).not.toBeNull();
+  expect(dragHandleBounds).not.toBeNull();
+
+  if (panelBeforeDrag === null || dragHandleBounds === null) {
+    throw new Error('The drawing properties panel must be visible before dragging.');
+  }
+
+  await page.mouse.move(
+    dragHandleBounds.x + dragHandleBounds.width / 2,
+    dragHandleBounds.y + dragHandleBounds.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    dragHandleBounds.x + dragHandleBounds.width / 2 + 45,
+    dragHandleBounds.y + dragHandleBounds.height / 2 + 30,
+  );
+  await page.mouse.up();
+
+  const panelAfterDrag = await propertiesPanel.boundingBox();
+  expect(panelAfterDrag).not.toBeNull();
+
+  if (panelAfterDrag === null) {
+    throw new Error('The drawing properties panel must remain visible after dragging.');
+  }
+
+  expect(panelAfterDrag.x).toBeGreaterThan(panelBeforeDrag.x + 20);
+  expect(panelAfterDrag.y).toBeGreaterThan(panelBeforeDrag.y + 10);
 
   const selectedImage = await canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL());
   await page.mouse.move(middleX, middleY);

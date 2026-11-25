@@ -40,6 +40,7 @@ const createMockContext = (): Readonly<{
     beginPath: () => record('beginPath'),
     moveTo: (...args: number[]) => record('moveTo', ...args),
     lineTo: (...args: number[]) => record('lineTo', ...args),
+    arc: (...args: number[]) => record('arc', ...args),
     stroke: () => record('stroke'),
     fillText: (...args: [string, number, number]) => record('fillText', ...args),
     rect: (...args: number[]) => record('rect', ...args),
@@ -250,6 +251,42 @@ describe('canvas chart painter', () => {
     expect(calls.filter((call) => call.name === 'lineTo').length).toBeGreaterThan(5);
   });
 
+  it('normalizes drawing color, width and line pattern', () => {
+    const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 10);
+    const drawings: readonly ChartRenderDrawing[] = [
+      {
+        id: 'styled-trend',
+        type: 'trend-line',
+        start: { timestamp: 1_700_000_000_000, price: 100 },
+        end: { timestamp: 1_700_000_120_000, price: 110 },
+        color: '#ef4444',
+        lineWidth: 4,
+        lineStyle: 'dashed',
+      },
+    ];
+    const scene = createChartRenderScene(frame, createCandles(), null, 'candles', [], drawings);
+    const { context, calls } = createMockContext();
+
+    drawChartScene(context, scene);
+
+    expect(scene.drawings[0]?.color).toBe('#ef4444');
+    expect(scene.drawings[0]?.lineWidth).toBe(4);
+    expect(scene.drawings[0]?.lineStyle).toBe('dashed');
+    expect(calls.some((call) => call.name === 'setLineDash' && call.args.join(',') === '8,5')).toBe(
+      true,
+    );
+    expect(() =>
+      createChartRenderScene(
+        frame,
+        createCandles(),
+        null,
+        'candles',
+        [],
+        [{ ...drawings[0]!, id: 'invalid-width', lineWidth: 9 }],
+      ),
+    ).toThrow(RangeError);
+  });
+
   it('renders ray, vertical line and rectangle geometry', () => {
     const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 10);
     const drawings: readonly ChartRenderDrawing[] = [
@@ -361,8 +398,8 @@ describe('canvas chart painter', () => {
 
     expect(selectedScene.selectedDrawingId).toBe('trend-selected');
     expect(
-      selectedContext.calls.filter((call) => call.name === 'fillRect').length -
-        normalContext.calls.filter((call) => call.name === 'fillRect').length,
+      selectedContext.calls.filter((call) => call.name === 'arc').length -
+        normalContext.calls.filter((call) => call.name === 'arc').length,
     ).toBe(4);
   });
 
