@@ -276,9 +276,14 @@ describe('canvas chart painter', () => {
       true,
     );
     expect(() =>
-      createChartRenderScene(frame, createCandles(), null, 'candles', [], [
-        { ...drawings[0]!, id: 'invalid-width', lineWidth: 9 },
-      ]),
+      createChartRenderScene(
+        frame,
+        createCandles(),
+        null,
+        'candles',
+        [],
+        [{ ...drawings[0]!, id: 'invalid-width', lineWidth: 9 }],
+      ),
     ).toThrow(RangeError);
   });
 
