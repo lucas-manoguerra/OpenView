@@ -581,11 +581,10 @@ describe('canvas chart painter', () => {
     drawChartScene(context, scene);
 
     const drawingColors = new Set(['#60a5fa', '#f4c542']);
-    const lastDrawingStroke = calls.reduce(
-      (lastIndex, call, index) =>
-        call.name === 'stroke' && drawingColors.has(String(call.args[0])) ? index : lastIndex,
-      -1,
+    const drawingStrokeIndexes = calls.flatMap((call, index) =>
+      call.name === 'stroke' && drawingColors.has(String(call.args[0])) ? [index] : [],
     );
+    const lastDrawingStroke = drawingStrokeIndexes[1] ?? -1;
     const firstSelectionHandle = calls.findIndex(
       (call) => call.name === 'arc' && (call.args[2] === 6 || call.args[2] === 7),
     );
