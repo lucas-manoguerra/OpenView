@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test('opens the isolated component lab and navigates to the core controls', async ({ page }) => {
+test('opens the component lab and explores drawing tools and style templates', async ({ page }) => {
   await page.goto('/component-lab');
 
   await expect(page).toHaveTitle(/Component Lab/);
@@ -9,6 +9,45 @@ test('opens the isolated component lab and navigates to the core controls', asyn
 
   await expect(page).toHaveURL(/buttons$/);
   await expect(page.getByRole('heading', { name: 'Buttons & Controls' })).toBeVisible();
+
+  await page.goto('/component-lab');
+  await page.getByRole('link', { name: 'Drawings · Tools & Styles' }).click();
+  await expect(page).toHaveURL(/component-lab\/drawings$/);
+  await expect(page.getByRole('heading', { name: 'Drawings' })).toBeVisible();
+  await expect(page.getByTestId('drawings-playground')).toHaveAttribute('data-hydrated', 'true');
+
+  await page.getByTestId('drawing-tool-catalog-toggle').click();
+  const catalog = page.getByTestId('drawing-tool-catalog');
+  await expect(catalog).toBeVisible();
+  await page.getByTestId('drawing-tool-catalog-search').fill('retroceso');
+  await expect(page.getByTestId('drawing-tool-catalog-item-fib-retracement')).toBeDisabled();
+
+  await page.getByTestId('drawing-tool-catalog-search').fill('');
+  await page.getByTestId('drawing-tool-group-lines').click();
+  await page.getByTestId('drawing-tool-catalog-item-trend-line').click();
+  await expect(page.getByTestId('drawing-active-tool')).toHaveText('trend-line');
+
+  await page.getByTestId('drawing-template-builtin-red-dashed').click();
+  await expect(page.getByTestId('drawing-style-color')).toHaveValue('#ef5350');
+  await expect(page.getByTestId('drawing-style-width')).toHaveValue('2');
+  await expect(page.getByTestId('drawing-style-line')).toHaveValue('dashed');
+
+  await page.getByTestId('drawing-style-color').evaluate((element: HTMLInputElement) => {
+    element.value = '#abcdef';
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await page.getByTestId('drawing-style-width').selectOption('4');
+  await page.getByTestId('drawing-style-line').selectOption('dotted');
+  await page.getByTestId('drawing-template-name').fill('Estilo de prueba');
+  await page.getByTestId('drawing-template-save').click();
+  await expect(page.getByTestId('drawing-template-count')).toHaveText(
+    '1 / 20 plantillas personalizadas',
+  );
+  await expect(page.locator('[data-testid^="drawing-custom-template-custom-"]')).toHaveCount(1);
+  await page.getByTestId('drawing-template-load').click();
+  await expect(page.getByTestId('drawing-template-count')).toHaveText(
+    '1 / 20 plantillas personalizadas',
+  );
 });
 
 test('exposes button variants and sizes in the playground', async ({ page }) => {
@@ -237,46 +276,4 @@ test('controls chart timeframe, chart type and price scale independently', async
   await expect(page.getByLabel('Todas las temporalidades')).toBeDisabled();
   await expect(page.getByLabel('Tipo de gráfico')).toBeDisabled();
   await expect(page.getByRole('button', { name: '%' })).toBeDisabled();
-});
-
-test('explores drawing tools and custom style templates in isolation', async ({ page }) => {
-  await page.goto('/component-lab');
-
-  await page.getByRole('link', { name: 'Drawings · Tools & Styles' }).click();
-  await expect(page).toHaveURL(/component-lab\/drawings$/);
-  await expect(page.getByRole('heading', { name: 'Drawings' })).toBeVisible();
-  await expect(page.getByTestId('drawings-playground')).toHaveAttribute('data-hydrated', 'true');
-
-  await page.getByTestId('drawing-tool-catalog-toggle').click();
-  const catalog = page.getByTestId('drawing-tool-catalog');
-  await expect(catalog).toBeVisible();
-  await page.getByTestId('drawing-tool-catalog-search').fill('retroceso');
-  await expect(page.getByTestId('drawing-tool-catalog-item-fib-retracement')).toBeDisabled();
-
-  await page.getByTestId('drawing-tool-catalog-search').fill('');
-  await page.getByTestId('drawing-tool-group-lines').click();
-  await page.getByTestId('drawing-tool-catalog-item-trend-line').click();
-  await expect(page.getByTestId('drawing-active-tool')).toHaveText('trend-line');
-
-  await page.getByTestId('drawing-template-builtin-red-dashed').click();
-  await expect(page.getByTestId('drawing-style-color')).toHaveValue('#ef5350');
-  await expect(page.getByTestId('drawing-style-width')).toHaveValue('2');
-  await expect(page.getByTestId('drawing-style-line')).toHaveValue('dashed');
-
-  await page.getByTestId('drawing-style-color').evaluate((element: HTMLInputElement) => {
-    element.value = '#abcdef';
-    element.dispatchEvent(new Event('input', { bubbles: true }));
-  });
-  await page.getByTestId('drawing-style-width').selectOption('4');
-  await page.getByTestId('drawing-style-line').selectOption('dotted');
-  await page.getByTestId('drawing-template-name').fill('Estilo de prueba');
-  await page.getByTestId('drawing-template-save').click();
-  await expect(page.getByTestId('drawing-template-count')).toHaveText(
-    '1 / 20 plantillas personalizadas',
-  );
-  await expect(page.locator('[data-testid^="drawing-custom-template-custom-"]')).toHaveCount(1);
-  await page.getByTestId('drawing-template-load').click();
-  await expect(page.getByTestId('drawing-template-count')).toHaveText(
-    '1 / 20 plantillas personalizadas',
-  );
 });
