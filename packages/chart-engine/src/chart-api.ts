@@ -48,6 +48,9 @@ export type ChartCommand =
   | Readonly<{ type: 'set-drawing-hover'; hit: ChartDrawingHit | null }>
   | Readonly<{ type: 'set-drawing-edit-preview'; gesture: ChartDrawingEditPreview | null }>
   | Readonly<{ type: 'commit-drawing-edit'; gesture: ChartDrawingEditPreview }>
+  | Readonly<{ type: 'undo-drawings' }>
+  | Readonly<{ type: 'redo-drawings' }>
+  | Readonly<{ type: 'clear-drawing-history' }>
   | Readonly<{ type: 'move-object'; target: ChartObjectOrderItem; action: ChartObjectOrderAction }>
   | Readonly<{ type: 'resize'; width: number; height: number; devicePixelRatio?: number }>
   | Readonly<{ type: 'render-now' }>;
@@ -61,6 +64,7 @@ export type ChartEvent =
       selectedDrawingId: string | null;
       selectedDrawingIds: readonly string[];
     }>
+  | Readonly<{ type: 'history-state-changed'; undoCount: number; redoCount: number }>
   | Readonly<{ type: 'destroyed' }>;
 
 export type ChartSnapshot = Readonly<{
@@ -100,6 +104,8 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
   let objectOrder = createChartObjectOrder(getAvailableObjects(scene));
   let drawingsVisible = true;
   let drawingPreview: readonly ChartRenderDrawing[] | null = null;
+  const drawingUndoStack: (readonly ChartRenderDrawing[])[] = [];
+  const drawingRedoStack: (readonly ChartRenderDrawing[])[] = [];
   let destroyed = false;
 
   const emit = (event: ChartEvent): void => {
@@ -121,6 +127,10 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
       ? previewScene
       : updateChartRenderScene(previewScene, { drawings: [] });
     renderer.setScene(updateChartRenderScene(renderScene, { objectOrder }));
+  };
+
+  const emitHistoryState = (): void => {
+    emit(Object.freeze({ type: 'history-state-changed', undoCount: drawingUndoStack.length, redoCount: drawingRedoStack.length }));
   };
 
   const emitDrawingState = (): void => {
@@ -158,6 +168,12 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
 
       if (command.type === 'set-drawings') {
         drawingPreview = null;
+        if (JSON.stringify(scene.drawings) !== JSON.stringify(command.drawings)) {
+          drawingUndoStack.push(scene.drawings);
+          if (drawingUndoStack.length > 50) drawingUndoStack.shift();
+          drawingRedoStack.length = 0;
+          emitHistoryState();
+        }
         const drawingIds = new Set(command.drawings.map((drawing) => drawing.id));
         const selectedDrawingIds = scene.selectedDrawingIds.filter((id) => drawingIds.has(id));
         const selectedDrawingId =
@@ -183,6 +199,36 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
         render();
         emitDrawingState();
         emit(Object.freeze({ type: 'object-order-changed', order: objectOrder }));
+        return;
+      }
+
+      if (command.type === 'undo-drawings' || command.type === 'redo-drawings') {
+        const source = command.type === 'undo-drawings' ? drawingUndoStack : drawingRedoStack;
+        const destination = command.type === 'undo-drawings' ? drawingRedoStack : drawingUndoStack;
+        const previousDrawings = source.pop();
+        if (previousDrawings === undefined) return;
+        destination.push(scene.drawings);
+        if (destination.length > 50) destination.shift();
+        drawingPreview = null;
+        const availableIds = new Set(previousDrawings.map((drawing) => drawing.id));
+        const selectedDrawingIds = Object.freeze(scene.selectedDrawingIds.filter((id) => availableIds.has(id)));
+        const selectedDrawingId =
+          scene.selectedDrawingId !== null && availableIds.has(scene.selectedDrawingId)
+            ? scene.selectedDrawingId
+            : (selectedDrawingIds[selectedDrawingIds.length - 1] ?? null);
+        scene = updateChartRenderScene(scene, { drawings: previousDrawings, selectedDrawingId, selectedDrawingIds });
+        objectOrder = reconcileChartObjectOrder(objectOrder, getAvailableObjects(scene));
+        render();
+        emitDrawingState();
+        emit(Object.freeze({ type: 'object-order-changed', order: objectOrder }));
+        emitHistoryState();
+        return;
+      }
+
+      if (command.type === 'clear-drawing-history') {
+        drawingUndoStack.length = 0;
+        drawingRedoStack.length = 0;
+        emitHistoryState();
         return;
       }
 
@@ -255,6 +301,7 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
       }
 
       if (command.type === 'commit-drawing-edit') {
+        const previousDrawings = scene.drawings;
         const gesture = command.gesture;
         const nextDrawings =
           gesture.kind === 'single'
@@ -286,8 +333,12 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
         drawingPreview = null;
         if (nextDrawings.some((drawing, index) => drawing !== scene.drawings[index])) {
           scene = updateChartRenderScene(scene, { drawings: nextDrawings });
+          drawingUndoStack.push(previousDrawings);
+          if (drawingUndoStack.length > 50) drawingUndoStack.shift();
+          drawingRedoStack.length = 0;
           render();
           emitDrawingState();
+          emitHistoryState();
         } else {
           render();
         }
