@@ -518,9 +518,7 @@ describe('canvas pointer event adapter', () => {
         Math.min(frame.layout.plotArea.y + frame.layout.plotArea.height, movedBody.y),
       ),
     };
-    expect(groupEdits[0]?.current).toEqual(
-      chartCoordinateToDataPoint(boundedMovedBody, frame),
-    );
+    expect(groupEdits[0]?.current).toEqual(chartCoordinateToDataPoint(boundedMovedBody, frame));
     expect(capturedPointers.has(7)).toBe(false);
     expect(selections).toEqual([
       ['trend-1'],
