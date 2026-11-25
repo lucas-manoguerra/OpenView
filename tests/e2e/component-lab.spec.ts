@@ -168,3 +168,41 @@ test('inspects the centralized Lucide icon catalog and its accessible variants',
 
   await expect(page.getByRole('img', { name: 'Tendencia alcista' })).toBeVisible();
 });
+
+test('selects toolbar tools and supports horizontal and vertical keyboard navigation', async ({
+  page,
+}) => {
+  await page.goto('/component-lab/core/toolbars');
+
+  await expect(page.getByRole('heading', { name: 'Toolbars' })).toBeVisible();
+  await expect(page.getByTestId('toolbar-playground')).toHaveAttribute('data-hydrated', 'true');
+
+  const toolbar = page.getByRole('toolbar', { name: 'Herramientas de dibujo' });
+  await expect(toolbar).toHaveAttribute('aria-orientation', 'horizontal');
+
+  const cursor = page.getByRole('button', { name: 'Cursor' });
+  const trendLine = page.getByRole('button', { name: 'Línea de tendencia' });
+  const horizontalLine = page.getByRole('button', { name: 'Línea horizontal' });
+  const hide = page.getByRole('button', { name: 'Ocultar dibujos' });
+
+  await expect(cursor).toHaveAttribute('aria-pressed', 'true');
+  await trendLine.click();
+  await expect(trendLine).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('toolbar-active-tool')).toHaveText('trend-line');
+
+  await trendLine.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(horizontalLine).toBeFocused();
+  await page.keyboard.press('Home');
+  await expect(cursor).toBeFocused();
+  await page.keyboard.press('End');
+  await expect(hide).toBeFocused();
+
+  await expect(page.getByRole('button', { name: 'Eliminar dibujos' })).toBeDisabled();
+  await page.getByLabel('Orientación de la barra').selectOption('vertical');
+  await expect(toolbar).toHaveAttribute('aria-orientation', 'vertical');
+
+  await cursor.focus();
+  await page.keyboard.press('ArrowDown');
+  await expect(page.getByRole('button', { name: 'Cruz' })).toBeFocused();
+});
