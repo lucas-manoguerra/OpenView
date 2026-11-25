@@ -460,8 +460,7 @@ describe('canvas pointer event adapter', () => {
     let selectedIds: readonly string[] = [];
     const selections: string[][] = [];
     const groupEdits: CanvasDrawingGroupEditGesture[] = [];
-    const deletedGroups: readonly string[][] = [];
-    const mutableDeletedGroups = deletedGroups as string[][];
+    const deletedGroups: string[][] = [];
     attachCanvasPointerEvents(canvas, controller, {
       getDrawingTool: () => 'select',
       getDrawings: () => drawings,
@@ -472,7 +471,7 @@ describe('canvas pointer event adapter', () => {
         selections.push([...ids]);
       },
       onDrawingGroupEdit: (gesture) => groupEdits.push(gesture),
-      onDrawingDeleteMany: (drawingIds) => mutableDeletedGroups.push([...drawingIds]),
+      onDrawingDeleteMany: (drawingIds) => deletedGroups.push([...drawingIds]),
     });
 
     const firstBody = dataPointToChartCoordinate({ logicalIndex: 1, price: 104 }, frame);
