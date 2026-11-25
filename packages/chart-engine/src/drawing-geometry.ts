@@ -315,7 +315,7 @@ export const hitTestChartDrawing = (
   for (let index = drawings.length - 1; index >= 0; index -= 1) {
     const drawing = drawings[index];
 
-    if (drawing === undefined) {
+    if (drawing === undefined || drawing.locked === true) {
       continue;
     }
 
