@@ -42,14 +42,14 @@ export function DrawingToolCatalogMenu({ activeTool, onSelect }: DrawingToolCata
   }, [group, query]);
 
   return (
-    <div class="pointer-events-none absolute left-0 top-[84px] z-40 w-full px-1">
+    <div class="relative z-40 w-full px-1">
       <button
         type="button"
         data-testid="drawing-tool-catalog-toggle"
         aria-label="Abrir catálogo de herramientas de dibujo"
         aria-expanded={open}
         onClick={() => setOpen(!open)}
-        class="pointer-events-auto grid size-8 place-items-center rounded text-sm text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
+        class="grid size-8 place-items-center rounded text-sm text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
         title="Todas las herramientas de dibujo"
       >
         ▦
