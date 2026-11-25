@@ -5,13 +5,14 @@ import {
   type ChartObjectOrderAction,
   type ChartObjectOrderItem,
 } from './chart-object-order';
-import type { ChartCoordinate } from './chart-frame';
+import type { ChartCoordinate, ChartDataPoint } from './chart-frame';
 import {
   hitTestChartDrawing,
   selectChartDrawingsWithinArea,
   type ChartDrawingHit,
   type ChartDrawingSelectionArea,
 } from './drawing-geometry';
+import { updateChartDrawing } from './drawing-geometry';
 import {
   updateChartRenderScene,
   type ChartRenderDrawing,
@@ -24,12 +25,28 @@ import {
   type CanvasSurface,
 } from './canvas-renderer';
 
+export type ChartDrawingEditPreview =
+  | Readonly<{
+      kind: 'single';
+      drawingId: string;
+      target: ChartDrawingHit['target'];
+      origin: ChartDataPoint;
+      current: ChartDataPoint;
+    }>
+  | Readonly<{
+      kind: 'group';
+      drawingIds: readonly string[];
+      origin: ChartDataPoint;
+      current: ChartDataPoint;
+    }>;
+
 export type ChartCommand =
   | Readonly<{ type: 'set-scene'; scene: ChartRenderScene }>
   | Readonly<{ type: 'set-drawings'; drawings: readonly ChartRenderDrawing[] }>
   | Readonly<{ type: 'set-drawings-visible'; visible: boolean }>
   | Readonly<{ type: 'set-drawing-selection'; drawingIds: readonly string[] }>
   | Readonly<{ type: 'set-drawing-hover'; hit: ChartDrawingHit | null }>
+  | Readonly<{ type: 'set-drawing-edit-preview'; gesture: ChartDrawingEditPreview | null }>
   | Readonly<{ type: 'move-object'; target: ChartObjectOrderItem; action: ChartObjectOrderAction }>
   | Readonly<{ type: 'resize'; width: number; height: number; devicePixelRatio?: number }>
   | Readonly<{ type: 'render-now' }>;
@@ -81,6 +98,7 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
   let scene = options.initialScene;
   let objectOrder = createChartObjectOrder(getAvailableObjects(scene));
   let drawingsVisible = true;
+  let drawingPreview: readonly ChartRenderDrawing[] | null = null;
   let destroyed = false;
 
   const emit = (event: ChartEvent): void => {
@@ -96,7 +114,11 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
   };
 
   const render = (): void => {
-    const renderScene = drawingsVisible ? scene : updateChartRenderScene(scene, { drawings: [] });
+    const previewScene =
+      drawingPreview === null ? scene : updateChartRenderScene(scene, { drawings: drawingPreview });
+    const renderScene = drawingsVisible
+      ? previewScene
+      : updateChartRenderScene(previewScene, { drawings: [] });
     renderer.setScene(updateChartRenderScene(renderScene, { objectOrder }));
   };
 
@@ -134,6 +156,7 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
       }
 
       if (command.type === 'set-drawings') {
+        drawingPreview = null;
         const drawingIds = new Set(command.drawings.map((drawing) => drawing.id));
         const selectedDrawingIds = scene.selectedDrawingIds.filter((id) => drawingIds.has(id));
         const selectedDrawingId =
@@ -181,6 +204,52 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
         scene = updateChartRenderScene(scene, { selectedDrawingId, selectedDrawingIds });
         render();
         emitDrawingState();
+        return;
+      }
+
+      if (command.type === 'set-drawing-edit-preview') {
+        const gesture = command.gesture;
+        if (gesture === null) {
+          drawingPreview = null;
+          render();
+          return;
+        }
+
+        if (gesture.kind === 'single') {
+          const targetDrawing = scene.drawings.find((drawing) => drawing.id === gesture.drawingId);
+          if (targetDrawing === undefined || targetDrawing.visible === false) {
+            drawingPreview = null;
+          } else {
+            const previewDrawing = updateChartDrawing(
+              targetDrawing,
+              gesture.target,
+              gesture.origin,
+              gesture.current,
+              scene.candles,
+            );
+            drawingPreview = Object.freeze(
+              scene.drawings.map((drawing) =>
+                drawing.id === gesture.drawingId ? previewDrawing : drawing,
+              ),
+            );
+          }
+        } else {
+          const selectedIds = new Set(gesture.drawingIds);
+          drawingPreview = Object.freeze(
+            scene.drawings.map((drawing) =>
+              selectedIds.has(drawing.id) && drawing.visible !== false
+                ? updateChartDrawing(
+                    drawing,
+                    'body',
+                    gesture.origin,
+                    gesture.current,
+                    scene.candles,
+                  )
+                : drawing,
+            ),
+          );
+        }
+        render();
         return;
       }
 
