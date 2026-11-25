@@ -45,8 +45,14 @@ export function NavigationPlayground() {
             onChange={setActiveTab}
             id="navigation-playground-tabs"
           />
-          <p class="mt-3 border-t border-[#2a2e39] pt-3 text-[11px] text-[#787b86]" aria-live="polite">
-            Pestaña activa: <span class="font-mono text-[#d1d4dc]" data-testid="navigation-active-tab">{activeTab}</span>
+          <p
+            class="mt-3 border-t border-[#2a2e39] pt-3 text-[11px] text-[#787b86]"
+            aria-live="polite"
+          >
+            Pestaña activa:{' '}
+            <span class="font-mono text-[#d1d4dc]" data-testid="navigation-active-tab">
+              {activeTab}
+            </span>
           </p>
         </div>
       </section>
