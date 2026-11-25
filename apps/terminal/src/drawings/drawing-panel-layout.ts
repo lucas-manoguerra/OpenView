@@ -214,9 +214,7 @@ export const startDrawingPanelDrag = (
 
   try {
     dragTarget?.setPointerCapture(pointerId);
-  } catch {
-    return cleanup;
-  }
+  } catch {}
 
   window.addEventListener('pointermove', handlePointerMove, true);
   window.addEventListener('pointerup', handlePointerEnd, true);
