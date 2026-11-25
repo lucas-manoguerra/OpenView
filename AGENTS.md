@@ -2,7 +2,15 @@
 
 ## Misión
 
-Construir OpenView como una plataforma gratuita, modular, extensible y de alto rendimiento. La implementación es propia y comienza desde cero. TradingView Lightweight Charts es una referencia para estudiar comportamientos y capacidades, no una fuente de código para copiar.
+Construir OpenView como una réplica visual y funcional integral de TradingView, con paridad progresiva de toda la plataforma. OpenView conserva una implementación y arquitectura propias, modulares, extensibles y de alto rendimiento.
+
+## Referencia exclusiva de producto
+
+- TradingView es la única referencia de producto para visuales, estilos, funcionalidades, flujos de trabajo, interacciones y UI/UX.
+- No utilizar otras plataformas de trading, gráficos, brokers o terminales como referencia ni adoptar de ellas patrones, componentes, nombres, comportamientos o decisiones de producto.
+- Para definir un comportamiento, inspeccionar TradingView directamente y priorizar su interfaz y documentación oficial. Registrar como pendiente cualquier comportamiento que no se haya podido verificar, en lugar de inferirlo a partir de otros productos.
+- Reimplementar las capacidades con código y arquitectura propios. No copiar código fuente, assets propietarios, tests internos ni detalles privados de implementación de TradingView.
+- La paridad abarca la plataforma completa, no solamente el gráfico: incluye módulos, paneles, herramientas, flujos de trabajo, preferencias e interacciones.
 
 ## Jerarquía de autoridad
 
