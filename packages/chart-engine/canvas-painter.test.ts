@@ -251,6 +251,31 @@ describe('canvas chart painter', () => {
     expect(calls.filter((call) => call.name === 'lineTo').length).toBeGreaterThan(5);
   });
 
+  it('normalizes drawing lock state and preserves locked annotations', () => {
+    const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 10);
+    const drawings: readonly ChartRenderDrawing[] = [
+      {
+        id: 'unlocked-trend',
+        type: 'trend-line',
+        start: { timestamp: 1_700_000_000_000, price: 100 },
+        end: { timestamp: 1_700_000_120_000, price: 110 },
+        color: '#ef4444',
+      },
+      {
+        id: 'locked-trend',
+        type: 'trend-line',
+        start: { timestamp: 1_700_000_000_000, price: 100 },
+        end: { timestamp: 1_700_000_120_000, price: 110 },
+        color: '#60a5fa',
+        locked: true,
+      },
+    ];
+    const scene = createChartRenderScene(frame, createCandles(), null, 'candles', [], drawings);
+
+    expect(scene.drawings[0]?.locked).toBe(false);
+    expect(scene.drawings[1]?.locked).toBe(true);
+  });
+
   it('normalizes drawing color, width and line pattern', () => {
     const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 10);
     const drawings: readonly ChartRenderDrawing[] = [

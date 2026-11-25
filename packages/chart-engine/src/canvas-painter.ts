@@ -47,6 +47,7 @@ export type ChartRenderDrawing = Readonly<{
   extendEnd?: boolean;
   startStyle?: ChartDrawingEndpointStyle;
   endStyle?: ChartDrawingEndpointStyle;
+  locked?: boolean;
 }>;
 
 export type ChartRenderScene = Readonly<{
@@ -181,6 +182,7 @@ const normalizeChartDrawings = (
       const extendEnd = drawing.extendEnd ?? drawing.type === 'ray';
       const startStyle = drawing.startStyle ?? 'none';
       const endStyle = drawing.endStyle ?? 'none';
+      const locked = drawing.locked ?? false;
 
       if (
         typeof fillColor !== 'string' ||
@@ -218,6 +220,7 @@ const normalizeChartDrawings = (
         extendEnd,
         startStyle,
         endStyle,
+        locked,
       });
     }),
   );
