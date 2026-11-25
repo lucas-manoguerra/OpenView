@@ -33,16 +33,18 @@ export function DrawingPlayground() {
     if (
       name.length === 0 ||
       customTemplates.length >= MAX_CUSTOM_DRAWING_TEMPLATES ||
-      customTemplates.some((template) => template.name.toLocaleLowerCase() === name.toLocaleLowerCase())
+      customTemplates.some(
+        (template) => template.name.toLocaleLowerCase() === name.toLocaleLowerCase(),
+      )
     ) {
       return;
     }
 
-    const template = createDrawingStyleTemplate(
-      'custom-' + Date.now().toString(36),
-      name,
-      { color, lineWidth, lineStyle },
-    );
+    const template = createDrawingStyleTemplate('custom-' + Date.now().toString(36), name, {
+      color,
+      lineWidth,
+      lineStyle,
+    });
     if (template === null) return;
 
     const nextTemplates = Object.freeze([...customTemplates, template]);
