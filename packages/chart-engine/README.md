@@ -13,12 +13,12 @@
 
 Create an instance with `createChart({ surface, initialScene, renderer? })`. The returned `ChartApi` exposes:
 
-- `execute(command)` for scene updates, drawing collection and selection mutations, object-order changes, resize, and immediate rendering.
+- `execute(command)` for scene updates, drawing collection, global drawing visibility and selection mutations, object-order changes, resize, and immediate rendering.
 - `subscribe(listener)` for scene, drawing-state, object-order, and lifecycle events.
 - `exportSnapshot()` and `importSnapshot(snapshot)` for versioned, serializable persistence.
 - `destroy()` for deterministic renderer and subscription cleanup.
 
-The host should retain only the returned API instance. Drawing creation, updates, deletion, and selection are sent through `set-drawings` and `set-drawing-selection`; the chart updates its authoritative scene and emits `drawing-state-changed`. A context-menu action such as “bring to front” is sent as a `move-object` command; the chart updates its own order and renderer.
+The host should retain only the returned API instance. Drawing creation, updates, and deletion are sent through `set-drawings`; selection is sent through `set-drawing-selection`; and global show/hide is sent through `set-drawings-visible`. Global visibility affects rendering only: it does not remove drawings from the chart scene, snapshots, or object order. Individual drawing visibility remains part of each drawing's own state. The chart updates its authoritative scene and emits `drawing-state-changed` for collection and selection changes. A context-menu action such as “bring to front” is sent as a `move-object` command; the chart updates its own order and renderer.
 
 ## Object ordering
 
