@@ -311,6 +311,7 @@ export function ChartCanvas({
   const [keepDrawing, setKeepDrawing] = useState(
     DEFAULT_DRAWING_INTERACTION_PREFERENCES.keepDrawing,
   );
+  const [drawingsVisible, setDrawingsVisible] = useState(true);
   const [drawingInteractionPreferencesLoaded, setDrawingInteractionPreferencesLoaded] =
     useState(false);
   const [drawingMagnetMenuOpen, setDrawingMagnetMenuOpen] = useState(false);
@@ -326,6 +327,7 @@ export function ChartCanvas({
   const drawingMagnetModeRef = useRef<ChartDrawingMagnetMode>(drawingMagnetMode);
   const snapToIndicatorsRef = useRef(snapToIndicators);
   const keepDrawingRef = useRef(keepDrawing);
+  const drawingsVisibleRef = useRef(drawingsVisible);
   const drawingsRef = useRef<readonly ChartRenderDrawing[]>(drawings);
   const selectedDrawingIdRef = useRef<string | null>(selectedDrawingId);
   const selectedDrawingIdsRef = useRef<readonly string[]>(selectedDrawingIds);
@@ -348,9 +350,13 @@ export function ChartCanvas({
   drawingMagnetModeRef.current = drawingMagnetMode;
   snapToIndicatorsRef.current = snapToIndicators;
   keepDrawingRef.current = keepDrawing;
+  drawingsVisibleRef.current = drawingsVisible;
   drawingsRef.current = drawings;
   selectedDrawingIdRef.current = selectedDrawingId;
   selectedDrawingIdsRef.current = selectedDrawingIds;
+  const getRenderableDrawings = (
+    source: readonly ChartRenderDrawing[] = drawingsRef.current,
+  ): readonly ChartRenderDrawing[] => (drawingsVisibleRef.current ? source : []);
   commitDrawingsRef.current = (nextDrawings): void => {
     const previousDrawings = drawingsRef.current;
     const nextUndoStack = [...drawingUndoStackRef.current, previousDrawings].slice(-50);
@@ -360,7 +366,7 @@ export function ChartCanvas({
     setDrawings(drawingsRef.current);
     setDrawingUndoCount(drawingUndoStackRef.current.length);
     setDrawingRedoCount(0);
-    runtimeRef.current?.setDrawings(drawingsRef.current);
+    runtimeRef.current?.setDrawings(getRenderableDrawings(drawingsRef.current));
   };
   const ensureDrawingPanelLayoutLoaded = (): void => {
     if (drawingPanelLayoutLoadedRef.current) {
@@ -590,7 +596,7 @@ export function ChartCanvas({
           getSnapToIndicators: () => snapToIndicatorsRef.current,
           getIndicators: () => indicatorsRef.current,
           getKeepDrawing: () => keepDrawingRef.current,
-          getDrawings: () => drawingsRef.current,
+          getDrawings: () => getRenderableDrawings(),
           getCandles: () => currentCandles,
           getSelectedDrawingId: () => selectedDrawingIdRef.current,
           getSelectedDrawingIds: () => selectedDrawingIdsRef.current,
@@ -902,7 +908,7 @@ export function ChartCanvas({
           setDrawings(drawingsRef.current);
           setDrawingUndoCount(0);
           setDrawingRedoCount(0);
-          runtimeRef.current?.setDrawings(drawingsRef.current);
+          runtimeRef.current?.setDrawings(getRenderableDrawings(drawingsRef.current));
         }
 
         runtimeRef.current?.updateCandles(renderDataRef.current.candles, priceScaleMode);
@@ -1221,6 +1227,17 @@ export function ChartCanvas({
     updateDrawingSelection([]);
   };
 
+  const handleToggleDrawingsVisibility = (): void => {
+    const nextVisible = !drawingsVisibleRef.current;
+    drawingsVisibleRef.current = nextVisible;
+    setDrawingsVisible(nextVisible);
+    runtimeRef.current?.setDrawings(getRenderableDrawings());
+
+    if (!nextVisible) {
+      updateDrawingSelection([]);
+    }
+  };
+
   const handleDeleteSelectedDrawing = (): void => {
     const selectedIds = new Set(selectedDrawingIdsRef.current);
 
@@ -1249,7 +1266,7 @@ export function ChartCanvas({
     setDrawings(previousDrawings);
     setDrawingUndoCount(drawingUndoStackRef.current.length);
     setDrawingRedoCount(drawingRedoStackRef.current.length);
-    runtimeRef.current?.setDrawings(previousDrawings);
+    runtimeRef.current?.setDrawings(getRenderableDrawings(previousDrawings));
   };
 
   const handleDrawingRedo = (): void => {
@@ -1267,7 +1284,7 @@ export function ChartCanvas({
     setDrawings(nextDrawings);
     setDrawingUndoCount(drawingUndoStackRef.current.length);
     setDrawingRedoCount(drawingRedoStackRef.current.length);
-    runtimeRef.current?.setDrawings(nextDrawings);
+    runtimeRef.current?.setDrawings(getRenderableDrawings(nextDrawings));
   };
 
   const handleAutoScaleChange = (): void => {
@@ -1685,6 +1702,45 @@ export function ChartCanvas({
             )}
           </svg>
         </button>
+        <button
+          type="button"
+          aria-label={drawingsVisible ? 'Ocultar dibujos' : 'Mostrar dibujos'}
+          aria-pressed={!drawingsVisible}
+          data-testid="drawings-visibility-toggle"
+          title={drawingsVisible ? 'Ocultar dibujos' : 'Mostrar dibujos'}
+          disabled={drawings.length === 0}
+          onClick={handleToggleDrawingsVisibility}
+          class={
+            'grid size-8 place-items-center rounded text-sm transition-colors disabled:opacity-30 ' +
+            (!drawingsVisible
+              ? 'bg-blue-500/20 text-blue-200'
+              : 'text-slate-400 hover:bg-white/5 hover:text-slate-100')
+          }
+        >
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            class="size-[18px]"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            {drawingsVisible ? (
+              <>
+                <path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z" />
+                <circle cx="12" cy="12" r="2.5" />
+              </>
+            ) : (
+              <>
+                <path d="m3 3 18 18" />
+                <path d="M10.6 6.2A10.9 10.9 0 0 1 12 6c6.1 0 9.5 6 9.5 6a16.4 16.4 0 0 1-3.2 3.9" />
+                <path d="M6.2 6.3C3.8 7.9 2.5 12 2.5 12s3.4 6 9.5 6c1.3 0 2.4-.3 3.4-.7" />
+              </>
+            )}
+          </svg>
+        </button>
         <span class="my-1 h-px w-6 bg-white/10" />
         <button
           type="button"
@@ -1751,6 +1807,7 @@ export function ChartCanvas({
           data-indicator-count={renderIndicators.length}
           data-drawing-count={drawings.length}
           data-drawings-locked={String(allDrawingsLocked)}
+          data-drawings-visible={String(drawingsVisible)}
           data-drawing-magnet-mode={drawingMagnetMode}
           data-drawing-snap-to-indicators={String(snapToIndicators)}
           data-keep-drawing={String(keepDrawing)}
