@@ -17,6 +17,15 @@ import {
   type DrawingToolType,
 } from '../drawings/drawing-tool-preferences';
 import {
+  DEFAULT_DRAWING_PANEL_LAYOUT,
+  loadBrowserDrawingPanelLayout,
+  saveBrowserDrawingPanelLayout,
+  startDrawingPanelDrag,
+  type DrawingPanelId,
+  type DrawingPanelLayout,
+  type DrawingPanelPosition,
+} from '../drawings/drawing-panel-layout';
+import {
   attachCanvasPointerEvents,
   type CanvasDrawingEditGesture,
   type CanvasDrawingGroupEditGesture,
@@ -79,16 +88,6 @@ type ChartRuntime = Readonly<{
 
 type ChartRenderData = Readonly<{
   candles: readonly ChartRenderCandle[];
-}>;
-
-type DrawingPanelPosition = Readonly<{ left: number; top: number }>;
-
-type DrawingPanelDrag = Readonly<{
-  pointerId: number;
-  pointerX: number;
-  pointerY: number;
-  left: number;
-  top: number;
 }>;
 
 const EMPTY_PRICE_RANGE: NumericRange = Object.freeze({ min: 0, max: 1 });
@@ -281,9 +280,10 @@ export function ChartCanvas({
   const [selectedDrawingIds, setSelectedDrawingIds] = useState<readonly string[]>([]);
   const [drawingUndoCount, setDrawingUndoCount] = useState(0);
   const [drawingRedoCount, setDrawingRedoCount] = useState(0);
-  const [drawingPanelPosition, setDrawingPanelPosition] = useState<DrawingPanelPosition | null>(
-    null,
+  const [drawingPanelLayout, setDrawingPanelLayout] = useState<DrawingPanelLayout>(
+    DEFAULT_DRAWING_PANEL_LAYOUT,
   );
+
   const [customDrawingTemplates, setCustomDrawingTemplates] = useState<
     readonly DrawingStyleTemplate[]
   >([]);
@@ -312,8 +312,11 @@ export function ChartCanvas({
   const drawingRedoStackRef = useRef<readonly (readonly ChartRenderDrawing[])[]>([]);
   const commitDrawingsRef = useRef<(nextDrawings: readonly ChartRenderDrawing[]) => void>(() => {});
   const drawingSequenceRef = useRef(0);
+  const drawingPanelLayoutRef = useRef<DrawingPanelLayout>(drawingPanelLayout);
+  const drawingPanelLayoutLoadedRef = useRef(false);
   const drawingPropertiesPanelRef = useRef<HTMLDivElement | null>(null);
-  const drawingPropertiesDragRef = useRef<DrawingPanelDrag | null>(null);
+  const drawingCoordinatesPanelRef = useRef<HTMLElement | null>(null);
+  const drawingPanelDragCleanupRef = useRef<(() => void) | null>(null);
   const drawingSymbolRef = useRef(symbol);
   const autoScaleRef = useRef(autoScale);
   const priceScaleLockedRef = useRef(priceScaleLocked);
@@ -335,7 +338,80 @@ export function ChartCanvas({
     setDrawingRedoCount(0);
     runtimeRef.current?.setDrawings(drawingsRef.current);
   };
+  const ensureDrawingPanelLayoutLoaded = (): void => {
+    if (drawingPanelLayoutLoadedRef.current) {
+      return;
+    }
+
+    const layout = loadBrowserDrawingPanelLayout();
+    drawingPanelLayoutRef.current = layout;
+    drawingPanelLayoutLoadedRef.current = true;
+    setDrawingPanelLayout(layout);
+  };
+  const commitDrawingPanelLayout = (layout: DrawingPanelLayout): void => {
+    drawingPanelLayoutRef.current = layout;
+    drawingPanelLayoutLoadedRef.current = true;
+    setDrawingPanelLayout(layout);
+    saveBrowserDrawingPanelLayout(layout);
+  };
+  const handleDrawingPanelPositionChange = (
+    panelId: DrawingPanelId,
+    position: DrawingPanelPosition,
+  ): void => {
+    ensureDrawingPanelLayoutLoaded();
+    const currentLayout = drawingPanelLayoutRef.current;
+    commitDrawingPanelLayout({
+      ...currentLayout,
+      positions: Object.freeze({ ...currentLayout.positions, [panelId]: position }),
+    });
+  };
+  const handleDrawingPanelVisibilityChange = (panelId: DrawingPanelId, visible: boolean): void => {
+    ensureDrawingPanelLayoutLoaded();
+    const currentLayout = drawingPanelLayoutRef.current;
+    commitDrawingPanelLayout({
+      ...currentLayout,
+      visible: Object.freeze({ ...currentLayout.visible, [panelId]: visible }),
+    });
+  };
+  const attachDrawingPanelElement = (
+    panelId: DrawingPanelId,
+    element: HTMLElement | null,
+  ): void => {
+    const panelRef =
+      panelId === 'appearance' ? drawingPropertiesPanelRef : drawingCoordinatesPanelRef;
+    panelRef.current = element;
+
+    if (element === null) {
+      return;
+    }
+
+    const position = drawingPanelLayoutRef.current.positions[panelId];
+
+    if (position !== null) {
+      element.style.left = String(position.left) + 'px';
+      element.style.top = String(position.top) + 'px';
+      element.style.right = 'auto';
+      element.style.bottom = 'auto';
+    }
+  };
+  const handleDrawingPanelPointerDown = (panelId: DrawingPanelId, event: PointerEvent): void => {
+    ensureDrawingPanelLayoutLoaded();
+    const panel =
+      panelId === 'appearance'
+        ? drawingPropertiesPanelRef.current
+        : drawingCoordinatesPanelRef.current;
+
+    if (panel === null) {
+      return;
+    }
+
+    drawingPanelDragCleanupRef.current?.();
+    drawingPanelDragCleanupRef.current = startDrawingPanelDrag(event, panel, (position) =>
+      handleDrawingPanelPositionChange(panelId, position),
+    );
+  };
   const updateDrawingSelection = (drawingIds: readonly string[]): void => {
+    ensureDrawingPanelLayoutLoaded();
     const availableIds = new Set(drawingsRef.current.map((drawing) => drawing.id));
     const nextSelection = Object.freeze(
       [...new Set(drawingIds)].filter((drawingId) => availableIds.has(drawingId)),
@@ -1355,6 +1431,52 @@ export function ChartCanvas({
             {renderCandles.length} velas
           </span>
         </div>
+        {selectedDrawing !== null && (
+          <div class="absolute left-4 top-12 z-30 flex items-center gap-1">
+            <button
+              type="button"
+              aria-label="Mostrar u ocultar panel de estilo"
+              aria-pressed={drawingPanelLayout.visible.appearance}
+              data-testid="drawing-panel-toggle-appearance"
+              onClick={() =>
+                handleDrawingPanelVisibilityChange(
+                  'appearance',
+                  !drawingPanelLayout.visible.appearance,
+                )
+              }
+              class={
+                'rounded border px-2 py-1 text-[10px] shadow-lg ' +
+                (drawingPanelLayout.visible.appearance
+                  ? 'border-blue-400/30 bg-blue-500/20 text-blue-200'
+                  : 'border-white/10 bg-[#101723]/95 text-slate-400 hover:text-slate-200')
+              }
+            >
+              Estilo
+            </button>
+            {selectedDrawingHasSingleSelection && (
+              <button
+                type="button"
+                aria-label="Mostrar u ocultar panel de coordenadas"
+                aria-pressed={drawingPanelLayout.visible.coordinates}
+                data-testid="drawing-panel-toggle-coordinates"
+                onClick={() =>
+                  handleDrawingPanelVisibilityChange(
+                    'coordinates',
+                    !drawingPanelLayout.visible.coordinates,
+                  )
+                }
+                class={
+                  'rounded border px-2 py-1 text-[10px] shadow-lg ' +
+                  (drawingPanelLayout.visible.coordinates
+                    ? 'border-blue-400/30 bg-blue-500/20 text-blue-200'
+                    : 'border-white/10 bg-[#101723]/95 text-slate-400 hover:text-slate-200')
+                }
+              >
+                Coordenadas
+              </button>
+            )}
+          </div>
+        )}
         <fieldset class="absolute right-3 top-3 z-10 flex flex-wrap items-center justify-end gap-1 rounded-lg border border-white/10 bg-[#101723]/95 p-1 shadow-lg">
           <legend class="sr-only">Controles del gráfico</legend>
           <label class="flex items-center gap-1 px-1 text-[10px] text-slate-400">
@@ -1539,66 +1661,132 @@ export function ChartCanvas({
             Ver todo
           </button>
         </fieldset>
-        {selectedDrawingHasSingleSelection && selectedDrawing !== null && (
-          <section
-            data-testid="drawing-coordinate-panel"
-            aria-label="Coordenadas del dibujo"
-            class="absolute left-3 top-14 z-20 w-56 rounded-xl border border-white/10 bg-[#101723]/95 p-3 shadow-xl backdrop-blur"
-          >
-            <div class="mb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-              {selectedDrawing.type === 'horizontal-line'
-                ? 'Nivel de precio'
-                : selectedDrawing.type === 'vertical-line'
-                  ? 'Marca temporal'
-                  : selectedDrawing.type === 'rectangle'
-                    ? 'Límites del rectángulo'
-                    : 'Puntos de anclaje'}
-            </div>
-            {selectedDrawing.type === 'horizontal-line' && (
-              <label class="grid grid-cols-[1fr_auto] items-center gap-2 text-[10px] text-slate-400">
-                Precio
-                <input
-                  type="number"
-                  step="any"
-                  aria-label="Precio de la línea horizontal"
-                  data-testid="drawing-horizontal-price"
-                  value={String(selectedDrawing.start.price)}
-                  onChange={(event) =>
-                    handleSelectedDrawingAnchorUpdate('start', {
-                      price: Number(event.currentTarget.value),
-                    })
-                  }
-                  class="w-28 rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-right text-[10px] text-slate-200 outline-none focus:border-blue-400"
-                />
-              </label>
-            )}
-            {selectedDrawing.type === 'vertical-line' && (
-              <label class="grid grid-cols-1 gap-1 text-[10px] text-slate-400">
-                Fecha y hora local
-                <input
-                  type="datetime-local"
-                  aria-label="Fecha y hora de la línea vertical"
-                  data-testid="drawing-vertical-time"
-                  value={toLocalDateTimeValue(selectedDrawing.start.timestamp)}
-                  onChange={(event) =>
-                    handleSelectedDrawingAnchorUpdate('start', {
-                      timestamp: new Date(event.currentTarget.value).getTime(),
-                    })
-                  }
-                  class="w-full rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-[10px] text-slate-200 outline-none focus:border-blue-400"
-                />
-              </label>
-            )}
-            {(selectedDrawing.type === 'trend-line' || selectedDrawing.type === 'ray') &&
-              selectedDrawing.end !== null && (
+        {selectedDrawingHasSingleSelection &&
+          selectedDrawing !== null &&
+          drawingPanelLayout.visible.coordinates && (
+            <section
+              ref={(element) => attachDrawingPanelElement('coordinates', element)}
+              data-testid="drawing-coordinate-panel"
+              data-panel-left={drawingPanelLayout.positions.coordinates?.left ?? 'default'}
+              data-panel-top={drawingPanelLayout.positions.coordinates?.top ?? 'default'}
+              aria-label="Coordenadas del dibujo"
+              class="absolute left-3 top-24 z-20 w-56 rounded-xl border border-white/10 bg-[#101723]/95 p-3 shadow-xl backdrop-blur"
+              style={
+                drawingPanelLayout.positions.coordinates === null
+                  ? undefined
+                  : {
+                      left: drawingPanelLayout.positions.coordinates.left,
+                      top: drawingPanelLayout.positions.coordinates.top,
+                      right: 'auto',
+                      bottom: 'auto',
+                    }
+              }
+            >
+              <div class="mb-2 flex items-center gap-2">
+                <div
+                  data-testid="drawing-coordinate-drag-handle"
+                  onPointerDown={(event) => handleDrawingPanelPointerDown('coordinates', event)}
+                  class="min-w-0 flex-1 cursor-grab touch-none rounded px-1 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400 active:cursor-grabbing"
+                >
+                  {selectedDrawing.type === 'horizontal-line'
+                    ? 'Nivel de precio'
+                    : selectedDrawing.type === 'vertical-line'
+                      ? 'Marca temporal'
+                      : selectedDrawing.type === 'rectangle'
+                        ? 'Límites del rectángulo'
+                        : 'Puntos de anclaje'}
+                </div>
+                <button
+                  type="button"
+                  aria-label="Ocultar panel de coordenadas"
+                  data-testid="drawing-coordinate-close"
+                  onClick={() => handleDrawingPanelVisibilityChange('coordinates', false)}
+                  class="grid size-6 shrink-0 place-items-center rounded text-xs text-slate-400 hover:bg-white/10 hover:text-white"
+                >
+                  ×
+                </button>
+              </div>
+              {selectedDrawing.type === 'horizontal-line' && (
+                <label class="grid grid-cols-[1fr_auto] items-center gap-2 text-[10px] text-slate-400">
+                  Precio
+                  <input
+                    type="number"
+                    step="any"
+                    aria-label="Precio de la línea horizontal"
+                    data-testid="drawing-horizontal-price"
+                    value={String(selectedDrawing.start.price)}
+                    onChange={(event) =>
+                      handleSelectedDrawingAnchorUpdate('start', {
+                        price: Number(event.currentTarget.value),
+                      })
+                    }
+                    class="w-28 rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-right text-[10px] text-slate-200 outline-none focus:border-blue-400"
+                  />
+                </label>
+              )}
+              {selectedDrawing.type === 'vertical-line' && (
+                <label class="grid grid-cols-1 gap-1 text-[10px] text-slate-400">
+                  Fecha y hora local
+                  <input
+                    type="datetime-local"
+                    aria-label="Fecha y hora de la línea vertical"
+                    data-testid="drawing-vertical-time"
+                    value={toLocalDateTimeValue(selectedDrawing.start.timestamp)}
+                    onChange={(event) =>
+                      handleSelectedDrawingAnchorUpdate('start', {
+                        timestamp: new Date(event.currentTarget.value).getTime(),
+                      })
+                    }
+                    class="w-full rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-[10px] text-slate-200 outline-none focus:border-blue-400"
+                  />
+                </label>
+              )}
+              {(selectedDrawing.type === 'trend-line' || selectedDrawing.type === 'ray') &&
+                selectedDrawing.end !== null && (
+                  <div class="space-y-2">
+                    <label class="grid grid-cols-[1fr_auto] items-center gap-2 text-[10px] text-slate-400">
+                      Precio inicial
+                      <input
+                        type="number"
+                        step="any"
+                        aria-label="Precio inicial del dibujo"
+                        data-testid="drawing-start-price"
+                        value={String(selectedDrawing.start.price)}
+                        onChange={(event) =>
+                          handleSelectedDrawingAnchorUpdate('start', {
+                            price: Number(event.currentTarget.value),
+                          })
+                        }
+                        class="w-28 rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-right text-[10px] text-slate-200 outline-none focus:border-blue-400"
+                      />
+                    </label>
+                    <label class="grid grid-cols-[1fr_auto] items-center gap-2 text-[10px] text-slate-400">
+                      Precio final
+                      <input
+                        type="number"
+                        step="any"
+                        aria-label="Precio final del dibujo"
+                        data-testid="drawing-end-price"
+                        value={String(selectedDrawing.end.price)}
+                        onChange={(event) =>
+                          handleSelectedDrawingAnchorUpdate('end', {
+                            price: Number(event.currentTarget.value),
+                          })
+                        }
+                        class="w-28 rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-right text-[10px] text-slate-200 outline-none focus:border-blue-400"
+                      />
+                    </label>
+                  </div>
+                )}
+              {selectedDrawing.type === 'rectangle' && selectedDrawing.end !== null && (
                 <div class="space-y-2">
                   <label class="grid grid-cols-[1fr_auto] items-center gap-2 text-[10px] text-slate-400">
-                    Precio inicial
+                    Precio del primer punto
                     <input
                       type="number"
                       step="any"
-                      aria-label="Precio inicial del dibujo"
-                      data-testid="drawing-start-price"
+                      aria-label="Precio del primer punto del rectángulo"
+                      data-testid="drawing-rectangle-start-price"
                       value={String(selectedDrawing.start.price)}
                       onChange={(event) =>
                         handleSelectedDrawingAnchorUpdate('start', {
@@ -1609,12 +1797,12 @@ export function ChartCanvas({
                     />
                   </label>
                   <label class="grid grid-cols-[1fr_auto] items-center gap-2 text-[10px] text-slate-400">
-                    Precio final
+                    Precio del segundo punto
                     <input
                       type="number"
                       step="any"
-                      aria-label="Precio final del dibujo"
-                      data-testid="drawing-end-price"
+                      aria-label="Precio del segundo punto del rectángulo"
+                      data-testid="drawing-rectangle-end-price"
                       value={String(selectedDrawing.end.price)}
                       onChange={(event) =>
                         handleSelectedDrawingAnchorUpdate('end', {
@@ -1626,55 +1814,21 @@ export function ChartCanvas({
                   </label>
                 </div>
               )}
-            {selectedDrawing.type === 'rectangle' && selectedDrawing.end !== null && (
-              <div class="space-y-2">
-                <label class="grid grid-cols-[1fr_auto] items-center gap-2 text-[10px] text-slate-400">
-                  Precio del primer punto
-                  <input
-                    type="number"
-                    step="any"
-                    aria-label="Precio del primer punto del rectángulo"
-                    data-testid="drawing-rectangle-start-price"
-                    value={String(selectedDrawing.start.price)}
-                    onChange={(event) =>
-                      handleSelectedDrawingAnchorUpdate('start', {
-                        price: Number(event.currentTarget.value),
-                      })
-                    }
-                    class="w-28 rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-right text-[10px] text-slate-200 outline-none focus:border-blue-400"
-                  />
-                </label>
-                <label class="grid grid-cols-[1fr_auto] items-center gap-2 text-[10px] text-slate-400">
-                  Precio del segundo punto
-                  <input
-                    type="number"
-                    step="any"
-                    aria-label="Precio del segundo punto del rectángulo"
-                    data-testid="drawing-rectangle-end-price"
-                    value={String(selectedDrawing.end.price)}
-                    onChange={(event) =>
-                      handleSelectedDrawingAnchorUpdate('end', {
-                        price: Number(event.currentTarget.value),
-                      })
-                    }
-                    class="w-28 rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-right text-[10px] text-slate-200 outline-none focus:border-blue-400"
-                  />
-                </label>
-              </div>
-            )}
-          </section>
-        )}
-        {selectedDrawing !== null && (
+            </section>
+          )}
+        {selectedDrawing !== null && drawingPanelLayout.visible.appearance && (
           <div
-            ref={drawingPropertiesPanelRef}
+            ref={(element) => attachDrawingPanelElement('appearance', element)}
             data-testid="drawing-properties-panel"
+            data-panel-left={drawingPanelLayout.positions.appearance?.left ?? 'default'}
+            data-panel-top={drawingPanelLayout.positions.appearance?.top ?? 'default'}
             class="absolute bottom-10 left-3 z-20 w-64 rounded-xl border border-white/10 bg-[#101723]/95 p-3 shadow-2xl backdrop-blur"
             style={
-              drawingPanelPosition === null
+              drawingPanelLayout.positions.appearance === null
                 ? undefined
                 : {
-                    left: drawingPanelPosition.left,
-                    top: drawingPanelPosition.top,
+                    left: drawingPanelLayout.positions.appearance.left,
+                    top: drawingPanelLayout.positions.appearance.top,
                     right: 'auto',
                     bottom: 'auto',
                   }
@@ -1684,87 +1838,7 @@ export function ChartCanvas({
               <div
                 data-testid="drawing-properties-drag-handle"
                 class="flex min-w-0 flex-1 cursor-grab items-center gap-2 touch-none rounded px-1 py-1 text-[11px] font-semibold text-slate-200 active:cursor-grabbing"
-                onPointerDown={(event) => {
-                  if (event.button !== 0) {
-                    return;
-                  }
-
-                  const panel = drawingPropertiesPanelRef.current;
-
-                  const dragSurface = panel?.parentElement;
-
-                  if (panel === null || dragSurface === null || dragSurface === undefined) {
-                    return;
-                  }
-
-                  const left = panel.offsetLeft;
-                  const top = panel.offsetTop;
-                  drawingPropertiesDragRef.current = {
-                    pointerId: event.pointerId,
-                    pointerX: event.clientX,
-                    pointerY: event.clientY,
-                    left,
-                    top,
-                  };
-                  setDrawingPanelPosition({ left, top });
-
-                  const updatePanelPosition = (clientX: number, clientY: number): void => {
-                    const currentPanel = drawingPropertiesPanelRef.current;
-                    const parent = currentPanel?.parentElement ?? null;
-
-                    if (currentPanel === null || parent === null) {
-                      return;
-                    }
-
-                    const maxLeft = Math.max(0, parent.clientWidth - currentPanel.offsetWidth);
-                    const maxTop = Math.max(0, parent.clientHeight - currentPanel.offsetHeight);
-                    const nextLeft = Math.max(0, Math.min(maxLeft, left + clientX - event.clientX));
-                    const nextTop = Math.max(0, Math.min(maxTop, top + clientY - event.clientY));
-                    currentPanel.style.left = String(nextLeft) + 'px';
-                    currentPanel.style.top = String(nextTop) + 'px';
-                    currentPanel.style.right = 'auto';
-                    currentPanel.style.bottom = 'auto';
-                    setDrawingPanelPosition({ left: nextLeft, top: nextTop });
-                  };
-
-                  const handlePointerMove = (pointerEvent: PointerEvent): void => {
-                    if (pointerEvent.pointerId === event.pointerId) {
-                      updatePanelPosition(pointerEvent.clientX, pointerEvent.clientY);
-                    }
-                  };
-
-                  const handlePointerEnd = (pointerEvent: PointerEvent): void => {
-                    if (pointerEvent.pointerId !== event.pointerId) {
-                      return;
-                    }
-
-                    window.removeEventListener('pointermove', handlePointerMove, true);
-                    window.removeEventListener('pointerup', handlePointerEnd, true);
-                    window.removeEventListener('pointercancel', handlePointerEnd, true);
-                    window.removeEventListener('mousemove', handleMouseMove, true);
-                    window.removeEventListener('mouseup', handleMouseEnd, true);
-                    drawingPropertiesDragRef.current = null;
-                  };
-
-                  const handleMouseMove = (mouseEvent: MouseEvent): void => {
-                    updatePanelPosition(mouseEvent.clientX, mouseEvent.clientY);
-                  };
-
-                  const handleMouseEnd = (): void => {
-                    window.removeEventListener('pointermove', handlePointerMove, true);
-                    window.removeEventListener('pointerup', handlePointerEnd, true);
-                    window.removeEventListener('pointercancel', handlePointerEnd, true);
-                    window.removeEventListener('mousemove', handleMouseMove, true);
-                    window.removeEventListener('mouseup', handleMouseEnd, true);
-                    drawingPropertiesDragRef.current = null;
-                  };
-
-                  window.addEventListener('pointermove', handlePointerMove, true);
-                  window.addEventListener('pointerup', handlePointerEnd, true);
-                  window.addEventListener('pointercancel', handlePointerEnd, true);
-                  window.addEventListener('mousemove', handleMouseMove, true);
-                  window.addEventListener('mouseup', handleMouseEnd, true);
-                }}
+                onPointerDown={(event) => handleDrawingPanelPointerDown('appearance', event)}
               >
                 <span aria-hidden="true" class="text-slate-500">
                   ⠿
@@ -1777,11 +1851,9 @@ export function ChartCanvas({
               </div>
               <button
                 type="button"
-                aria-label="Cerrar editor de dibujo"
+                aria-label="Ocultar panel de estilo"
                 data-testid="drawing-editor-close"
-                onClick={() => {
-                  updateDrawingSelection([]);
-                }}
+                onClick={() => handleDrawingPanelVisibilityChange('appearance', false)}
                 class="grid size-6 shrink-0 place-items-center rounded text-xs text-slate-400 hover:bg-white/10 hover:text-white"
               >
                 ×
