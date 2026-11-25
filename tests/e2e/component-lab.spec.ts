@@ -60,6 +60,23 @@ test('opens the component lab and explores drawing tools and style templates', a
   await page.getByTestId('drawing-template-name').fill('Resistance');
   await page.getByTestId('drawing-template-save').click();
   await expect(page.getByTestId('drawing-template-select')).toHaveValue(/component-lab-/);
+
+  await page.goto('/component-lab/drawings/coordinates');
+  await expect(page.getByRole('heading', { name: 'Drawing Coordinates Panel' })).toBeVisible();
+  await expect(page.getByTestId('drawing-coordinates-playground')).toBeVisible();
+  await expect(page.getByTestId('drawing-coordinate-panel')).toHaveAttribute(
+    'data-hydrated',
+    'true',
+  );
+  await page.getByTestId('drawing-start-price').fill('42500');
+  await expect(page.getByTestId('drawing-coordinate-state')).toContainText('Inicio: 42500');
+  await page.getByTestId('drawing-coordinate-type').selectOption('horizontal-line');
+  await expect(page.getByTestId('drawing-horizontal-price')).toHaveValue('42500');
+  await page.getByTestId('drawing-horizontal-price').fill('43000');
+  await expect(page.getByTestId('drawing-coordinate-state')).toContainText('Inicio: 43000');
+  await page.getByTestId('drawing-coordinate-close').click();
+  await page.getByTestId('drawing-coordinate-reopen').click();
+  await expect(page.getByTestId('drawing-coordinate-panel')).toBeVisible();
 });
 
 test('exposes button variants and sizes in the playground', async ({ page }) => {
