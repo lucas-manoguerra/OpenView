@@ -20,6 +20,7 @@ describe('OKX Spot instrument discovery', () => {
             baseCcy: 'BTC',
             quoteCcy: 'USDT',
             state: 'live',
+            tickSz: '0.01',
           },
           {
             instId: 'ETH-BTC',
@@ -53,6 +54,7 @@ describe('OKX Spot instrument discovery', () => {
         symbol: 'BTC/USDT',
         baseAsset: 'BTC',
         quoteAsset: 'USDT',
+        priceIncrement: 0.01,
       },
       {
         id: 'ETH-BTC',
