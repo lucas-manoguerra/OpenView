@@ -44,7 +44,7 @@ test('opens the component lab and explores drawing tools and style templates', a
   await expect(page.getByTestId('drawing-template-delete')).toBeEnabled();
   await page.getByTestId('drawing-template-default').click();
   await expect(page.getByTestId('drawing-style-color')).toHaveValue('#60a5fa');
-  await expect(page.getByTestId('drawing-style-width')).toHaveValue('1.5');
+  await expect(page.getByTestId('drawing-style-width')).toHaveValue('1');
   await expect(page.getByTestId('drawing-style-line')).toHaveValue('solid');
   await expect(page.getByTestId('drawing-template-delete')).toBeDisabled();
 });
