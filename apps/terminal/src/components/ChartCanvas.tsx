@@ -1957,48 +1957,48 @@ export function ChartCanvas({
             {selectedDrawing !== null &&
               selectedDrawingsShareType &&
               selectedDrawing.type === 'rectangle' && (
-              <div
-                class="mt-3 space-y-2 border-t border-white/10 pt-3"
-                data-testid="drawing-rectangle-properties"
-              >
-                <div class="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-2">
-                  <label htmlFor="drawing-fill-color" class="text-[10px] text-slate-400">
-                    Color de relleno
+                <div
+                  class="mt-3 space-y-2 border-t border-white/10 pt-3"
+                  data-testid="drawing-rectangle-properties"
+                >
+                  <div class="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-2">
+                    <label htmlFor="drawing-fill-color" class="text-[10px] text-slate-400">
+                      Color de relleno
+                    </label>
+                    <input
+                      id="drawing-fill-color"
+                      type="color"
+                      aria-label="Color de relleno"
+                      data-testid="drawing-fill-color"
+                      value={selectedDrawing.fillColor ?? selectedDrawing.color}
+                      onInput={(event) =>
+                        handleSelectedDrawingUpdate({ fillColor: event.currentTarget.value })
+                      }
+                      class="h-7 w-10 cursor-pointer rounded border border-white/10 bg-transparent p-0.5"
+                    />
+                  </div>
+                  <label class="flex items-center justify-between gap-3 text-[10px] text-slate-400">
+                    Opacidad del relleno
+                    <input
+                      type="range"
+                      aria-label="Opacidad del relleno"
+                      data-testid="drawing-fill-opacity"
+                      min="0"
+                      max="100"
+                      step="5"
+                      value={String(Math.round((selectedDrawing.fillOpacity ?? 0) * 100))}
+                      onInput={(event) =>
+                        handleSelectedDrawingUpdate({
+                          fillOpacity: Number(event.currentTarget.value) / 100,
+                        })
+                      }
+                      class="w-28 accent-blue-400"
+                    />
+                    <span class="w-8 text-right tabular-nums text-slate-300">
+                      {Math.round((selectedDrawing.fillOpacity ?? 0) * 100)}%
+                    </span>
                   </label>
-                  <input
-                    id="drawing-fill-color"
-                    type="color"
-                    aria-label="Color de relleno"
-                    data-testid="drawing-fill-color"
-                    value={selectedDrawing.fillColor ?? selectedDrawing.color}
-                    onInput={(event) =>
-                      handleSelectedDrawingUpdate({ fillColor: event.currentTarget.value })
-                    }
-                    class="h-7 w-10 cursor-pointer rounded border border-white/10 bg-transparent p-0.5"
-                  />
                 </div>
-                <label class="flex items-center justify-between gap-3 text-[10px] text-slate-400">
-                  Opacidad del relleno
-                  <input
-                    type="range"
-                    aria-label="Opacidad del relleno"
-                    data-testid="drawing-fill-opacity"
-                    min="0"
-                    max="100"
-                    step="5"
-                    value={String(Math.round((selectedDrawing.fillOpacity ?? 0) * 100))}
-                    onInput={(event) =>
-                      handleSelectedDrawingUpdate({
-                        fillOpacity: Number(event.currentTarget.value) / 100,
-                      })
-                    }
-                    class="w-28 accent-blue-400"
-                  />
-                  <span class="w-8 text-right tabular-nums text-slate-300">
-                    {Math.round((selectedDrawing.fillOpacity ?? 0) * 100)}%
-                  </span>
-                </label>
-              </div>
             )}
             {selectedDrawing !== null &&
               selectedDrawingsShareType &&
