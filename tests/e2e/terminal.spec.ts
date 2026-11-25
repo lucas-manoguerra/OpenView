@@ -2372,7 +2372,7 @@ test('selects drawings with Shift and moves and deletes the group together', asy
   };
 
   await drawLine(0.28, 0.4);
-  await drawLine(0.6, 0.72);
+  await drawLine(0.46, 0.56);
   await expect(canvas).toHaveAttribute('data-drawing-count', '2');
 
   const firstMidpoint = {
@@ -2381,7 +2381,7 @@ test('selects drawings with Shift and moves and deletes the group together', asy
   };
   const secondAnchor = {
     x: bounds.x + bounds.width * 0.28,
-    y: bounds.y + bounds.height * 0.6,
+    y: bounds.y + bounds.height * 0.46,
   };
 
   await page.getByTestId('drawing-tool-select').click();
