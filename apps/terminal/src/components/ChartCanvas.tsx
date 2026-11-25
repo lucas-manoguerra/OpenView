@@ -10,6 +10,13 @@ import {
   type DrawingStyleTemplate,
 } from '../drawings/drawing-style-templates';
 import {
+  DEFAULT_DRAWING_TOOL_PREFERENCES,
+  loadBrowserDrawingToolPreferences,
+  saveBrowserDrawingToolPreferences,
+  type DrawingToolPreferences,
+  type DrawingToolType,
+} from '../drawings/drawing-tool-preferences';
+import {
   attachCanvasPointerEvents,
   type CanvasDrawingEditGesture,
   type CanvasDrawingGroupEditGesture,
@@ -285,6 +292,11 @@ export function ChartCanvas({
   const [selectedDrawingTemplateId, setSelectedDrawingTemplateId] = useState('builtin-blue');
   const [newDrawingTemplateName, setNewDrawingTemplateName] = useState('');
   const [drawingTemplateError, setDrawingTemplateError] = useState<string | null>(null);
+  const [drawingToolPreferences, setDrawingToolPreferences] = useState<DrawingToolPreferences>(
+    DEFAULT_DRAWING_TOOL_PREFERENCES,
+  );
+  const [drawingToolPreferencesLoaded, setDrawingToolPreferencesLoaded] = useState(false);
+  const [quickDrawingTemplatesOpen, setQuickDrawingTemplatesOpen] = useState(false);
   const [autoScale, setAutoScale] = useState(true);
   const [priceScaleLocked, setPriceScaleLocked] = useState(false);
   const [priceScaleInverted, setPriceScaleInverted] = useState(false);
@@ -292,6 +304,7 @@ export function ChartCanvas({
   const chartTypeRef = useRef<ChartType>(chartType);
   const indicatorsRef = useRef<readonly ChartIndicatorSeries[]>([]);
   const drawingToolRef = useRef<CanvasDrawingTool>(drawingTool);
+  const drawingToolPreferencesRef = useRef<DrawingToolPreferences>(drawingToolPreferences);
   const drawingsRef = useRef<readonly ChartRenderDrawing[]>(drawings);
   const selectedDrawingIdRef = useRef<string | null>(selectedDrawingId);
   const selectedDrawingIdsRef = useRef<readonly string[]>(selectedDrawingIds);
@@ -307,6 +320,7 @@ export function ChartCanvas({
   priceScaleModeRef.current = priceScaleMode;
   chartTypeRef.current = chartType;
   drawingToolRef.current = drawingTool;
+  drawingToolPreferencesRef.current = drawingToolPreferences;
   drawingsRef.current = drawings;
   selectedDrawingIdRef.current = selectedDrawingId;
   selectedDrawingIdsRef.current = selectedDrawingIds;
@@ -550,9 +564,7 @@ export function ChartCanvas({
                       timestamp: endTimestamp,
                       price: gesture.end.price,
                     }),
-              color: '#60a5fa',
-              lineWidth: 1.5,
-              lineStyle: 'solid',
+              ...drawingToolPreferencesRef.current[gesture.type],
             });
             commitDrawingsRef.current([...drawingsRef.current, drawing]);
           },
@@ -790,7 +802,31 @@ export function ChartCanvas({
     );
   };
 
+  const ensureDrawingToolPreferencesLoaded = (): void => {
+    if (drawingToolPreferencesLoaded) {
+      return;
+    }
+
+    const preferences = loadBrowserDrawingToolPreferences();
+    drawingToolPreferencesRef.current = preferences;
+    setDrawingToolPreferences(preferences);
+    setDrawingToolPreferencesLoaded(true);
+  };
+
+  const ensureDrawingTemplatesLoaded = (): void => {
+    if (drawingTemplatesLoaded) {
+      return;
+    }
+
+    setCustomDrawingTemplates(loadBrowserDrawingStyleTemplates());
+    setDrawingTemplatesLoaded(true);
+  };
+
   const handleDrawingToolChange = (nextTool: CanvasDrawingTool): void => {
+    if (nextTool !== 'cursor' && nextTool !== 'select') {
+      ensureDrawingToolPreferencesLoaded();
+    }
+
     drawingToolRef.current = nextTool;
     setDrawingTool(nextTool);
   };
@@ -798,24 +834,95 @@ export function ChartCanvas({
   const handleSelectedDrawingUpdate = (
     updates: Partial<Pick<ChartRenderDrawing, 'color' | 'lineWidth' | 'lineStyle'>>,
   ): void => {
+    ensureDrawingToolPreferencesLoaded();
     const selectedIds = new Set(selectedDrawingIdsRef.current);
+    const selectedToolTypes = new Set<DrawingToolType>(
+      drawingsRef.current
+        .filter((drawing) => selectedIds.has(drawing.id))
+        .map((drawing) => drawing.type),
+    );
 
-    if (selectedIds.size === 0) {
+    if (selectedIds.size === 0 && drawingTool !== 'cursor' && drawingTool !== 'select') {
+      selectedToolTypes.add(drawingTool);
+    }
+
+    if (selectedIds.size > 0) {
+      const nextDrawings = drawingsRef.current.map((drawing) =>
+        selectedIds.has(drawing.id) ? Object.freeze({ ...drawing, ...updates }) : drawing,
+      );
+      commitDrawingsRef.current(nextDrawings);
+    }
+
+    if (selectedToolTypes.size > 0) {
+      const nextPreferences = { ...drawingToolPreferencesRef.current };
+
+      for (const tool of selectedToolTypes) {
+        nextPreferences[tool] = Object.freeze({
+          ...nextPreferences[tool],
+          ...updates,
+        });
+      }
+
+      const frozenPreferences = Object.freeze(nextPreferences);
+      drawingToolPreferencesRef.current = frozenPreferences;
+      setDrawingToolPreferences(frozenPreferences);
+      setDrawingToolPreferencesLoaded(true);
+      saveBrowserDrawingToolPreferences(frozenPreferences);
+    }
+  };
+
+  const handleSelectedDrawingAnchorUpdate = (
+    target: 'start' | 'end',
+    updates: Partial<ChartRenderDrawing['start']>,
+  ): void => {
+    if (
+      selectedDrawingIdRef.current === null ||
+      selectedDrawingIdsRef.current.length !== 1 ||
+      (updates.price !== undefined && !Number.isFinite(updates.price)) ||
+      (updates.timestamp !== undefined &&
+        (!Number.isFinite(updates.timestamp) || updates.timestamp <= 0))
+    ) {
       return;
     }
 
-    const nextDrawings = drawingsRef.current.map((drawing) =>
-      selectedIds.has(drawing.id) ? Object.freeze({ ...drawing, ...updates }) : drawing,
-    );
+    const selectedId = selectedDrawingIdRef.current;
+    const nextDrawings = drawingsRef.current.map((drawing) => {
+      if (drawing.id !== selectedId || (target === 'end' && drawing.end === null)) {
+        return drawing;
+      }
+
+      if (target === 'start') {
+        return Object.freeze({
+          ...drawing,
+          start: Object.freeze({ ...drawing.start, ...updates }),
+        });
+      }
+
+      return Object.freeze({
+        ...drawing,
+        end: Object.freeze({ ...drawing.end!, ...updates }),
+      });
+    });
+
     commitDrawingsRef.current(nextDrawings);
   };
 
-  const handleToggleDrawingTemplates = (): void => {
-    if (!drawingTemplatesLoaded) {
-      setCustomDrawingTemplates(loadBrowserDrawingStyleTemplates());
-      setDrawingTemplatesLoaded(true);
-    }
+  const handleQuickDrawingTemplateApply = (template: DrawingStyleTemplate): void => {
+    setSelectedDrawingTemplateId(template.id);
+    handleSelectedDrawingUpdate({
+      color: template.color,
+      lineWidth: template.lineWidth,
+      lineStyle: template.lineStyle,
+    });
+  };
 
+  const toLocalDateTimeValue = (timestamp: number): string => {
+    const date = new Date(timestamp);
+    return new Date(timestamp - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+  };
+
+  const handleToggleDrawingTemplates = (): void => {
+    ensureDrawingTemplatesLoaded();
     setDrawingTemplatesExpanded(!drawingTemplatesExpanded);
     setDrawingTemplateError(null);
   };
@@ -971,6 +1078,8 @@ export function ChartCanvas({
 
   const selectedDrawing = drawings.find((drawing) => drawing.id === selectedDrawingId) ?? null;
   const drawingStyleTemplates = [...BUILT_IN_DRAWING_STYLE_TEMPLATES, ...customDrawingTemplates];
+  const selectedDrawingHasSingleSelection =
+    selectedDrawing !== null && selectedDrawingIds.length === 1;
 
   return (
     <div class="grid h-[390px] min-h-[340px] w-full grid-cols-[38px_minmax(0,1fr)] bg-[#0b0f17]">
@@ -1007,6 +1116,63 @@ export function ChartCanvas({
         >
           ◉
         </button>
+        <div class="relative z-30">
+          <button
+            type="button"
+            aria-label="Plantillas rápidas de dibujo"
+            aria-expanded={quickDrawingTemplatesOpen}
+            title="Plantillas rápidas de dibujo"
+            data-testid="drawing-template-quick-toggle"
+            onClick={() => {
+              ensureDrawingTemplatesLoaded();
+              setQuickDrawingTemplatesOpen(!quickDrawingTemplatesOpen);
+            }}
+            class="grid size-8 place-items-center rounded text-sm text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-100"
+          >
+            ◈
+          </button>
+          {quickDrawingTemplatesOpen && (
+            <div
+              data-testid="drawing-template-quick-menu"
+              class="absolute left-full top-0 ml-2 w-48 rounded-xl border border-white/10 bg-[#101723]/98 p-2 shadow-2xl"
+            >
+              <div class="mb-2 px-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                Estilos rápidos
+              </div>
+              <div class="space-y-1">
+                {drawingStyleTemplates.map((template) => (
+                  <button
+                    type="button"
+                    key={template.id}
+                    data-testid={'drawing-template-quick-' + template.id}
+                    disabled={
+                      selectedDrawingIds.length === 0 &&
+                      (drawingTool === 'cursor' || drawingTool === 'select')
+                    }
+                    onClick={() => handleQuickDrawingTemplateApply(template)}
+                    class={
+                      'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[10px] transition-colors ' +
+                      (selectedDrawingTemplateId === template.id
+                        ? 'bg-blue-500/15 text-blue-100'
+                        : 'text-slate-300 hover:bg-white/5') +
+                      ' disabled:cursor-not-allowed disabled:opacity-30'
+                    }
+                  >
+                    <span
+                      class="size-2.5 shrink-0 rounded-full border border-white/20"
+                      style={{ backgroundColor: template.color }}
+                    />
+                    <span class="min-w-0 flex-1 truncate">{template.name}</span>
+                    <span class="text-[9px] text-slate-500">{template.lineWidth}px</span>
+                  </button>
+                ))}
+              </div>
+              <p class="mt-2 border-t border-white/10 px-1 pt-2 text-[9px] leading-relaxed text-slate-500">
+                Aplica el estilo a la selección o cambia el predeterminado de la herramienta activa.
+              </p>
+            </div>
+          )}
+        </div>
         <button
           type="button"
           aria-label="Línea de tendencia"
@@ -1154,6 +1320,18 @@ export function ChartCanvas({
           data-indicator-count={renderIndicators.length}
           data-drawing-count={drawings.length}
           data-selected-drawing-id={selectedDrawingId ?? ''}
+          data-selected-drawing-type={selectedDrawing?.type ?? ''}
+          data-selected-drawing-start-price={
+            selectedDrawing === null ? '' : String(selectedDrawing.start.price)
+          }
+          data-selected-drawing-end-price={
+            selectedDrawing?.end === null || selectedDrawing === null
+              ? ''
+              : String(selectedDrawing.end.price)
+          }
+          data-selected-drawing-start-timestamp={
+            selectedDrawing === null ? '' : String(selectedDrawing.start.timestamp)
+          }
           data-selected-drawing-count={selectedDrawingIds.length}
           data-selected-drawing-ids={selectedDrawingIds.join(',')}
           data-selected-drawing-color={selectedDrawing?.color ?? ''}
@@ -1361,6 +1539,131 @@ export function ChartCanvas({
             Ver todo
           </button>
         </fieldset>
+        {selectedDrawingHasSingleSelection && selectedDrawing !== null && (
+          <section
+            data-testid="drawing-coordinate-panel"
+            aria-label="Coordenadas del dibujo"
+            class="absolute left-3 top-14 z-20 w-56 rounded-xl border border-white/10 bg-[#101723]/95 p-3 shadow-xl backdrop-blur"
+          >
+            <div class="mb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+              {selectedDrawing.type === 'horizontal-line'
+                ? 'Nivel de precio'
+                : selectedDrawing.type === 'vertical-line'
+                  ? 'Marca temporal'
+                  : selectedDrawing.type === 'rectangle'
+                    ? 'Límites del rectángulo'
+                    : 'Puntos de anclaje'}
+            </div>
+            {selectedDrawing.type === 'horizontal-line' && (
+              <label class="grid grid-cols-[1fr_auto] items-center gap-2 text-[10px] text-slate-400">
+                Precio
+                <input
+                  type="number"
+                  step="any"
+                  aria-label="Precio de la línea horizontal"
+                  data-testid="drawing-horizontal-price"
+                  value={String(selectedDrawing.start.price)}
+                  onChange={(event) =>
+                    handleSelectedDrawingAnchorUpdate('start', {
+                      price: Number(event.currentTarget.value),
+                    })
+                  }
+                  class="w-28 rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-right text-[10px] text-slate-200 outline-none focus:border-blue-400"
+                />
+              </label>
+            )}
+            {selectedDrawing.type === 'vertical-line' && (
+              <label class="grid grid-cols-1 gap-1 text-[10px] text-slate-400">
+                Fecha y hora local
+                <input
+                  type="datetime-local"
+                  aria-label="Fecha y hora de la línea vertical"
+                  data-testid="drawing-vertical-time"
+                  value={toLocalDateTimeValue(selectedDrawing.start.timestamp)}
+                  onChange={(event) =>
+                    handleSelectedDrawingAnchorUpdate('start', {
+                      timestamp: new Date(event.currentTarget.value).getTime(),
+                    })
+                  }
+                  class="w-full rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-[10px] text-slate-200 outline-none focus:border-blue-400"
+                />
+              </label>
+            )}
+            {(selectedDrawing.type === 'trend-line' || selectedDrawing.type === 'ray') &&
+              selectedDrawing.end !== null && (
+                <div class="space-y-2">
+                  <label class="grid grid-cols-[1fr_auto] items-center gap-2 text-[10px] text-slate-400">
+                    Precio inicial
+                    <input
+                      type="number"
+                      step="any"
+                      aria-label="Precio inicial del dibujo"
+                      data-testid="drawing-start-price"
+                      value={String(selectedDrawing.start.price)}
+                      onChange={(event) =>
+                        handleSelectedDrawingAnchorUpdate('start', {
+                          price: Number(event.currentTarget.value),
+                        })
+                      }
+                      class="w-28 rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-right text-[10px] text-slate-200 outline-none focus:border-blue-400"
+                    />
+                  </label>
+                  <label class="grid grid-cols-[1fr_auto] items-center gap-2 text-[10px] text-slate-400">
+                    Precio final
+                    <input
+                      type="number"
+                      step="any"
+                      aria-label="Precio final del dibujo"
+                      data-testid="drawing-end-price"
+                      value={String(selectedDrawing.end.price)}
+                      onChange={(event) =>
+                        handleSelectedDrawingAnchorUpdate('end', {
+                          price: Number(event.currentTarget.value),
+                        })
+                      }
+                      class="w-28 rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-right text-[10px] text-slate-200 outline-none focus:border-blue-400"
+                    />
+                  </label>
+                </div>
+              )}
+            {selectedDrawing.type === 'rectangle' && selectedDrawing.end !== null && (
+              <div class="space-y-2">
+                <label class="grid grid-cols-[1fr_auto] items-center gap-2 text-[10px] text-slate-400">
+                  Precio del primer punto
+                  <input
+                    type="number"
+                    step="any"
+                    aria-label="Precio del primer punto del rectángulo"
+                    data-testid="drawing-rectangle-start-price"
+                    value={String(selectedDrawing.start.price)}
+                    onChange={(event) =>
+                      handleSelectedDrawingAnchorUpdate('start', {
+                        price: Number(event.currentTarget.value),
+                      })
+                    }
+                    class="w-28 rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-right text-[10px] text-slate-200 outline-none focus:border-blue-400"
+                  />
+                </label>
+                <label class="grid grid-cols-[1fr_auto] items-center gap-2 text-[10px] text-slate-400">
+                  Precio del segundo punto
+                  <input
+                    type="number"
+                    step="any"
+                    aria-label="Precio del segundo punto del rectángulo"
+                    data-testid="drawing-rectangle-end-price"
+                    value={String(selectedDrawing.end.price)}
+                    onChange={(event) =>
+                      handleSelectedDrawingAnchorUpdate('end', {
+                        price: Number(event.currentTarget.value),
+                      })
+                    }
+                    class="w-28 rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-right text-[10px] text-slate-200 outline-none focus:border-blue-400"
+                  />
+                </label>
+              </div>
+            )}
+          </section>
+        )}
         {selectedDrawing !== null && (
           <div
             ref={drawingPropertiesPanelRef}

@@ -1680,6 +1680,67 @@ test('saves and reapplies custom drawing style templates across reloads', async 
     .toContain('"templates":[]');
 });
 
+test('uses quick drawing templates and contextual coordinate controls', async ({ page }) => {
+  await page.goto('/');
+
+  const canvas = page.getByRole('img', {
+    name: /Gráfico interactivo de velas y volumen para BTC \/ USDT/,
+  });
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+
+  const bounds = await canvas.boundingBox();
+  expect(bounds).not.toBeNull();
+
+  if (bounds === null) {
+    throw new Error('The chart canvas must have a visible bounding box.');
+  }
+
+  await page.getByTestId('drawing-tool-horizontal-line').click();
+  await page.getByTestId('drawing-template-quick-toggle').click();
+  await expect(page.getByTestId('drawing-template-quick-menu')).toBeVisible();
+  await page.getByTestId('drawing-template-quick-builtin-red-dashed').click();
+
+  await expect
+    .poll(() =>
+      page.evaluate(() => localStorage.getItem('openview.chart.drawing-tool-preferences') ?? ''),
+    )
+    .toContain('horizontal-line');
+
+  const horizontalY = bounds.y + bounds.height * 0.4;
+  await page.mouse.move(bounds.x + bounds.width * 0.5, horizontalY);
+  await page.mouse.down();
+  await page.mouse.up();
+  await expect(canvas).toHaveAttribute('data-drawing-count', '1');
+
+  await page.getByTestId('drawing-tool-select').click();
+  await page.mouse.click(bounds.x + bounds.width * 0.5, horizontalY);
+  await expect(canvas).toHaveAttribute('data-selected-drawing-type', 'horizontal-line');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-color', '#ef5350');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-width', '2');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-line-style', 'dashed');
+
+  const horizontalPrice = page.getByTestId('drawing-horizontal-price');
+  await expect(horizontalPrice).toBeVisible();
+  await horizontalPrice.fill('123.45');
+  await horizontalPrice.press('Enter');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-start-price', '123.45');
+
+  await page.getByTestId('drawing-tool-vertical-line').click();
+  const verticalX = bounds.x + bounds.width * 0.68;
+  await page.mouse.move(verticalX, bounds.y + bounds.height * 0.35);
+  await page.mouse.down();
+  await page.mouse.move(verticalX, bounds.y + bounds.height * 0.65);
+  await page.mouse.up();
+  await expect(canvas).toHaveAttribute('data-drawing-count', '2');
+
+  await page.getByTestId('drawing-tool-select').click();
+  await page.mouse.click(verticalX, bounds.y + bounds.height * 0.5);
+  await expect(canvas).toHaveAttribute('data-selected-drawing-type', 'vertical-line');
+  await expect(page.getByTestId('drawing-vertical-time')).toBeVisible();
+});
+
 test('renders timestamp based time labels instead of logical bar indices', async ({ page }) => {
   await page.addInitScript(() => {
     const labels: string[] = [];
