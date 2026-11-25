@@ -9,10 +9,10 @@ import type { ChartCoordinate, ChartDataPoint } from './chart-frame';
 import {
   hitTestChartDrawing,
   selectChartDrawingsWithinArea,
+  updateChartDrawing,
   type ChartDrawingHit,
   type ChartDrawingSelectionArea,
 } from './drawing-geometry';
-import { updateChartDrawing } from './drawing-geometry';
 import {
   updateChartRenderScene,
   type ChartRenderDrawing,
