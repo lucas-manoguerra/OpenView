@@ -26,7 +26,18 @@ export function DrawingPropertiesPanelPlayground() {
 
   const updateStyle = (
     updates: Partial<
-      Pick<ChartRenderDrawing, 'color' | 'lineWidth' | 'lineStyle' | 'fillColor' | 'fillOpacity' | 'extendStart' | 'extendEnd' | 'startStyle' | 'endStyle'>
+      Pick<
+        ChartRenderDrawing,
+        | 'color'
+        | 'lineWidth'
+        | 'lineStyle'
+        | 'fillColor'
+        | 'fillOpacity'
+        | 'extendStart'
+        | 'extendEnd'
+        | 'startStyle'
+        | 'endStyle'
+      >
     >,
   ) => {
     setDrawing((current) => ({ ...current, ...updates }));
@@ -58,8 +69,8 @@ export function DrawingPropertiesPanelPlayground() {
       setDrawing((current) => ({
         ...current,
         color: DEFAULT_DRAWING.color,
-        lineWidth: DEFAULT_DRAWING.lineWidth,
-        lineStyle: DEFAULT_DRAWING.lineStyle,
+        lineWidth: 1,
+        lineStyle: 'solid',
       }));
       return;
     }
