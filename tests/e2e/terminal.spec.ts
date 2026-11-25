@@ -1727,7 +1727,7 @@ test('selects multiple drawings with Ctrl click and marquee, then moves them tog
   await page.keyboard.down('Control');
   await page.mouse.move(
     marqueeBounds.x + marqueeBounds.width * 0.22,
-    marqueeBounds.y + marqueeBounds.height * 0.2,
+    marqueeBounds.y + marqueeBounds.height * 0.24,
   );
   await page.mouse.down();
   await expect(canvas).toHaveAttribute('data-last-pointer-control', 'true');
@@ -2405,18 +2405,18 @@ test('selects drawings with Control and moves and deletes the group together', a
     await page.mouse.up();
   };
 
-  await drawLine(0.18, 0.26);
+  await drawLine(0.26, 0.34);
   await expect(canvas).toHaveAttribute('data-drawing-count', '1');
-  await drawLine(0.38, 0.46);
+  await drawLine(0.42, 0.5);
   await expect(canvas).toHaveAttribute('data-drawing-count', '2');
 
   const firstMidpoint = {
     x: bounds.x + bounds.width * 0.4,
-    y: bounds.y + bounds.height * 0.22,
+    y: bounds.y + bounds.height * 0.3,
   };
   const secondBody = {
     x: bounds.x + bounds.width * 0.4,
-    y: bounds.y + bounds.height * 0.42,
+    y: bounds.y + bounds.height * 0.46,
   };
 
   await page.getByTestId('drawing-tool-select').click();
