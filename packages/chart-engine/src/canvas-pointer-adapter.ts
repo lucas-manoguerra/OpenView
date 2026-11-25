@@ -1,5 +1,13 @@
-import { chartCoordinateToDataPoint, type ChartDataPoint } from './chart-frame';
-import { hitTestChartDrawing, type ChartDrawingHit } from './drawing-geometry';
+import {
+  chartCoordinateToDataPoint,
+  type ChartCoordinate,
+  type ChartDataPoint,
+} from './chart-frame';
+import {
+  hitTestChartDrawing,
+  type ChartDrawingHit,
+  type ChartDrawingSelectionArea,
+} from './drawing-geometry';
 import {
   resolveChartDrawingMagnetMode,
   snapChartDrawingPointToOhlc,
@@ -37,6 +45,11 @@ export type CanvasDrawingGroupEditGesture = Readonly<{
   current: ChartDataPoint;
 }>;
 
+export type CanvasDrawingAreaSelection = Readonly<{
+  start: ChartCoordinate;
+  current: ChartCoordinate;
+}>;
+
 export type CanvasPointerAdapterOptions = Readonly<{
   getAutoScalePriceRange?: () => NumericRange | null;
   getDrawingTool?: () => CanvasDrawingTool;
@@ -54,6 +67,8 @@ export type CanvasPointerAdapterOptions = Readonly<{
   onDrawingSelectionChange?: (drawingIds: readonly string[]) => void;
   onDrawingEdit?: (gesture: CanvasDrawingEditGesture) => void;
   onDrawingGroupEdit?: (gesture: CanvasDrawingGroupEditGesture) => void;
+  onDrawingAreaSelectionChange?: (selection: CanvasDrawingAreaSelection | null) => void;
+  onDrawingAreaSelectionComplete?: (area: ChartDrawingSelectionArea) => void;
   onDrawingDelete?: (drawingId: string) => void;
   onDrawingDeleteMany?: (drawingIds: readonly string[]) => void;
 }>;
@@ -85,6 +100,7 @@ export const attachCanvasPointerEvents = (
   let drawingStart: ChartDataPoint | null = null;
   let activeDrawingEdit: CanvasDrawingEditGesture | null = null;
   let activeDrawingGroupEdit: CanvasDrawingGroupEditGesture | null = null;
+  let activeDrawingAreaSelection: CanvasDrawingAreaSelection | null = null;
 
   const snapDrawingPoint = (point: ChartDataPoint, event: PointerEvent): ChartDataPoint => {
     const configuredMode = options.getDrawingMagnetMode?.() ?? 'off';
@@ -152,8 +168,18 @@ export const attachCanvasPointerEvents = (
         controller.snapshot.frame,
       );
       const selectedIds = getSelectedDrawingIds();
+      const multiSelectModifier = event.ctrlKey || event.metaKey;
 
-      if (event.shiftKey) {
+      if (multiSelectModifier && hit === null) {
+        activeDrawingAreaSelection = Object.freeze({ start: position, current: position });
+        options.onDrawingAreaSelectionChange?.(activeDrawingAreaSelection);
+        activePointerId = event.pointerId;
+        event.preventDefault();
+        canvas.setPointerCapture(event.pointerId);
+        return;
+      }
+
+      if (multiSelectModifier || event.shiftKey) {
         if (hit !== null) {
           const nextSelection = selectedIds.includes(hit.drawingId)
             ? selectedIds.filter((drawingId) => drawingId !== hit.drawingId)
@@ -228,6 +254,16 @@ export const attachCanvasPointerEvents = (
       return;
     }
 
+    if (activeDrawingAreaSelection !== null) {
+      activeDrawingAreaSelection = Object.freeze({
+        ...activeDrawingAreaSelection,
+        current: getCanvasPosition(canvas, event),
+      });
+      options.onDrawingAreaSelectionChange?.(activeDrawingAreaSelection);
+      event.preventDefault();
+      return;
+    }
+
     if (
       activeDrawingTool !== null ||
       activeDrawingEdit !== null ||
@@ -241,6 +277,31 @@ export const attachCanvasPointerEvents = (
 
   const handlePointerUp = (event: PointerEvent): void => {
     if (activePointerId === null || event.pointerId !== activePointerId) {
+      return;
+    }
+
+    if (activeDrawingAreaSelection !== null) {
+      const position = getCanvasPosition(canvas, event);
+      const selection = Object.freeze({
+        ...activeDrawingAreaSelection,
+        current: position,
+      });
+      const distance = Math.hypot(
+        selection.current.x - selection.start.x,
+        selection.current.y - selection.start.y,
+      );
+
+      if (distance >= 6) {
+        options.onDrawingAreaSelectionComplete?.({
+          start: selection.start,
+          end: selection.current,
+        });
+      }
+
+      activeDrawingAreaSelection = null;
+      options.onDrawingAreaSelectionChange?.(null);
+      event.preventDefault();
+      releaseActivePointer();
       return;
     }
 
@@ -314,6 +375,13 @@ export const attachCanvasPointerEvents = (
 
   const handlePointerCancel = (event: PointerEvent): void => {
     if (activePointerId === null || event.pointerId !== activePointerId) {
+      return;
+    }
+
+    if (activeDrawingAreaSelection !== null) {
+      activeDrawingAreaSelection = null;
+      options.onDrawingAreaSelectionChange?.(null);
+      releaseActivePointer();
       return;
     }
 
