@@ -192,7 +192,10 @@ describe('canvas pointer event adapter', () => {
         y: frame.layout.plotArea.y + 120,
       };
 
-      dispatch('pointerdown', createPointerEvent({ clientX: 100 + start.x, clientY: 50 + start.y }));
+      dispatch(
+        'pointerdown',
+        createPointerEvent({ clientX: 100 + start.x, clientY: 50 + start.y }),
+      );
       dispatch('pointerup', createPointerEvent({ clientX: 100 + end.x, clientY: 50 + end.y }));
     };
 
@@ -227,7 +230,10 @@ describe('canvas pointer event adapter', () => {
         y: frame.layout.plotArea.y + 120,
       };
 
-      dispatch('pointerdown', createPointerEvent({ clientX: 100 + start.x, clientY: 50 + start.y }));
+      dispatch(
+        'pointerdown',
+        createPointerEvent({ clientX: 100 + start.x, clientY: 50 + start.y }),
+      );
       dispatch('pointerup', createPointerEvent({ clientX: 100 + end.x, clientY: 50 + end.y }));
     };
 
