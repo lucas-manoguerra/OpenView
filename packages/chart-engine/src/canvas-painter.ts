@@ -1036,7 +1036,8 @@ const drawDrawings = (context: CanvasRenderingContext2D, scene: ChartRenderScene
         color: drawing.color,
         hovered: hoveredTarget === 'end',
       });
-    }  }
+    }
+  }
 
   for (const handle of selectionHandles) {
     context.beginPath();
