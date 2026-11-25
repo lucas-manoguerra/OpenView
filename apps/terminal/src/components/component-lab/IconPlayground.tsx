@@ -1,17 +1,19 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useCallback, useState } from 'preact/hooks';
 import { Icon, iconRegistry, type IconName } from '../ui/Icon';
 
 const iconNames = Object.keys(iconRegistry) as IconName[];
 
 export function IconPlayground() {
-  const [hydrated, setHydrated] = useState(false);
   const [size, setSize] = useState(18);
-  useEffect(() => setHydrated(true), []);
+  const setPlaygroundRef = useCallback((element: HTMLDivElement | null) => {
+    if (element) element.dataset.hydrated = 'true';
+  }, []);
   const [strokeWidth, setStrokeWidth] = useState(1.8);
 
   return (
     <div class="space-y-6" data-testid="icons-playground"
-      data-hydrated={hydrated ? "true" : "false"}>
+      data-hydrated="false"
+      ref={setPlaygroundRef}>
       <section class="space-y-3">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <h2 class="text-sm font-semibold text-[#d1d4dc]">Propiedades</h2>
