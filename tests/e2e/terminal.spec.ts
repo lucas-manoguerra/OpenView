@@ -1564,7 +1564,9 @@ test('selects drawings with Shift and moves and deletes the group together', asy
   await expect(canvas).toHaveAttribute('data-selected-drawing-count', '2');
   await expect(canvas).toHaveAttribute('data-selected-drawing-ids', 'drawing-1,drawing-2');
 
-  const beforeGroupMove = await canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL());
+  const beforeGroupMove = await canvas.evaluate((element: HTMLCanvasElement) =>
+    element.toDataURL(),
+  );
   await page.mouse.move(firstMidpoint.x, firstMidpoint.y);
   await page.mouse.down();
   await page.mouse.move(firstMidpoint.x + 35, firstMidpoint.y - 18);
