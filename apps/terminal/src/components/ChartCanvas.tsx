@@ -10,6 +10,14 @@ import {
   type DrawingStyleTemplate,
 } from '../drawings/drawing-style-templates';
 import {
+  DEFAULT_DRAWING_TOOL_PREFERENCES,
+  DRAWING_TOOL_TYPES,
+  loadBrowserDrawingToolPreferences,
+  saveBrowserDrawingToolPreferences,
+  type DrawingToolPreferences,
+  type DrawingToolType,
+} from '../drawings/drawing-tool-preferences';
+import {
   attachCanvasPointerEvents,
   type CanvasDrawingEditGesture,
   type CanvasDrawingGroupEditGesture,
@@ -285,6 +293,9 @@ export function ChartCanvas({
   const [selectedDrawingTemplateId, setSelectedDrawingTemplateId] = useState('builtin-blue');
   const [newDrawingTemplateName, setNewDrawingTemplateName] = useState('');
   const [drawingTemplateError, setDrawingTemplateError] = useState<string | null>(null);
+  const [drawingToolPreferences, setDrawingToolPreferences] =
+    useState<DrawingToolPreferences>(DEFAULT_DRAWING_TOOL_PREFERENCES);
+  const [drawingToolPreferencesLoaded, setDrawingToolPreferencesLoaded] = useState(false);
   const [autoScale, setAutoScale] = useState(true);
   const [priceScaleLocked, setPriceScaleLocked] = useState(false);
   const [priceScaleInverted, setPriceScaleInverted] = useState(false);
@@ -292,6 +303,7 @@ export function ChartCanvas({
   const chartTypeRef = useRef<ChartType>(chartType);
   const indicatorsRef = useRef<readonly ChartIndicatorSeries[]>([]);
   const drawingToolRef = useRef<CanvasDrawingTool>(drawingTool);
+  const drawingToolPreferencesRef = useRef<DrawingToolPreferences>(drawingToolPreferences);
   const drawingsRef = useRef<readonly ChartRenderDrawing[]>(drawings);
   const selectedDrawingIdRef = useRef<string | null>(selectedDrawingId);
   const selectedDrawingIdsRef = useRef<readonly string[]>(selectedDrawingIds);
@@ -307,6 +319,7 @@ export function ChartCanvas({
   priceScaleModeRef.current = priceScaleMode;
   chartTypeRef.current = chartType;
   drawingToolRef.current = drawingTool;
+  drawingToolPreferencesRef.current = drawingToolPreferences;
   drawingsRef.current = drawings;
   selectedDrawingIdRef.current = selectedDrawingId;
   selectedDrawingIdsRef.current = selectedDrawingIds;
@@ -550,9 +563,7 @@ export function ChartCanvas({
                       timestamp: endTimestamp,
                       price: gesture.end.price,
                     }),
-              color: '#60a5fa',
-              lineWidth: 1.5,
-              lineStyle: 'solid',
+              ...drawingToolPreferencesRef.current[gesture.type],
             });
             commitDrawingsRef.current([...drawingsRef.current, drawing]);
           },
@@ -790,7 +801,31 @@ export function ChartCanvas({
     );
   };
 
+  const ensureDrawingToolPreferencesLoaded = (): void => {
+    if (drawingToolPreferencesLoaded) {
+      return;
+    }
+
+    const preferences = loadBrowserDrawingToolPreferences();
+    drawingToolPreferencesRef.current = preferences;
+    setDrawingToolPreferences(preferences);
+    setDrawingToolPreferencesLoaded(true);
+  };
+
+  const ensureDrawingTemplatesLoaded = (): void => {
+    if (drawingTemplatesLoaded) {
+      return;
+    }
+
+    setCustomDrawingTemplates(loadBrowserDrawingStyleTemplates());
+    setDrawingTemplatesLoaded(true);
+  };
+
   const handleDrawingToolChange = (nextTool: CanvasDrawingTool): void => {
+    if (nextTool !== 'cursor' && nextTool !== 'select') {
+      ensureDrawingToolPreferencesLoaded();
+    }
+
     drawingToolRef.current = nextTool;
     setDrawingTool(nextTool);
   };
@@ -799,23 +834,87 @@ export function ChartCanvas({
     updates: Partial<Pick<ChartRenderDrawing, 'color' | 'lineWidth' | 'lineStyle'>>,
   ): void => {
     const selectedIds = new Set(selectedDrawingIdsRef.current);
+    const selectedToolTypes = new Set<DrawingToolType>(
+      drawingsRef.current
+        .filter((drawing) => selectedIds.has(drawing.id))
+        .map((drawing) => drawing.type),
+    );
 
-    if (selectedIds.size === 0) {
+    if (selectedIds.size === 0 && drawingTool !== 'cursor' && drawingTool !== 'select') {
+      selectedToolTypes.add(drawingTool);
+    }
+
+    if (selectedIds.size > 0) {
+      const nextDrawings = drawingsRef.current.map((drawing) =>
+        selectedIds.has(drawing.id) ? Object.freeze({ ...drawing, ...updates }) : drawing,
+      );
+      commitDrawingsRef.current(nextDrawings);
+    }
+
+    if (selectedToolTypes.size > 0) {
+      const nextPreferences = { ...drawingToolPreferencesRef.current };
+
+      for (const tool of selectedToolTypes) {
+        nextPreferences[tool] = Object.freeze({
+          ...nextPreferences[tool],
+          ...updates,
+        });
+      }
+
+      const frozenPreferences = Object.freeze(nextPreferences);
+      drawingToolPreferencesRef.current = frozenPreferences;
+      setDrawingToolPreferences(frozenPreferences);
+      setDrawingToolPreferencesLoaded(true);
+      saveBrowserDrawingToolPreferences(frozenPreferences);
+    }
+  };
+
+  const handleSelectedDrawingAnchorUpdate = (
+    target: 'start' | 'end',
+    updates: Partial<ChartRenderDrawing['start']>,
+  ): void => {
+    if (selectedDrawingIdRef.current === null || selectedDrawingIdsRef.current.length !== 1) {
       return;
     }
 
-    const nextDrawings = drawingsRef.current.map((drawing) =>
-      selectedIds.has(drawing.id) ? Object.freeze({ ...drawing, ...updates }) : drawing,
-    );
+    const selectedId = selectedDrawingIdRef.current;
+    const nextDrawings = drawingsRef.current.map((drawing) => {
+      if (drawing.id !== selectedId || (target === 'end' && drawing.end === null)) {
+        return drawing;
+      }
+
+      if (target === 'start') {
+        return Object.freeze({
+          ...drawing,
+          start: Object.freeze({ ...drawing.start, ...updates }),
+        });
+      }
+
+      return Object.freeze({
+        ...drawing,
+        end: Object.freeze({ ...drawing.end!, ...updates }),
+      });
+    });
+
     commitDrawingsRef.current(nextDrawings);
   };
 
-  const handleToggleDrawingTemplates = (): void => {
-    if (!drawingTemplatesLoaded) {
-      setCustomDrawingTemplates(loadBrowserDrawingStyleTemplates());
-      setDrawingTemplatesLoaded(true);
-    }
+  const handleQuickDrawingTemplateApply = (template: DrawingStyleTemplate): void => {
+    setSelectedDrawingTemplateId(template.id);
+    handleSelectedDrawingUpdate({
+      color: template.color,
+      lineWidth: template.lineWidth,
+      lineStyle: template.lineStyle,
+    });
+  };
 
+  const toLocalDateTimeValue = (timestamp: number): string => {
+    const date = new Date(timestamp);
+    return new Date(timestamp - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+  };
+
+  const handleToggleDrawingTemplates = (): void => {
+    ensureDrawingTemplatesLoaded();
     setDrawingTemplatesExpanded(!drawingTemplatesExpanded);
     setDrawingTemplateError(null);
   };
@@ -971,6 +1070,7 @@ export function ChartCanvas({
 
   const selectedDrawing = drawings.find((drawing) => drawing.id === selectedDrawingId) ?? null;
   const drawingStyleTemplates = [...BUILT_IN_DRAWING_STYLE_TEMPLATES, ...customDrawingTemplates];
+  const selectedDrawingHasSingleSelection = selectedDrawing !== null && selectedDrawingIds.length === 1;
 
   return (
     <div class="grid h-[390px] min-h-[340px] w-full grid-cols-[38px_minmax(0,1fr)] bg-[#0b0f17]">
