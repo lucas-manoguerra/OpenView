@@ -121,7 +121,6 @@ export {
   selectChartDrawingsWithinArea,
   updateChartDrawing,
   type ChartDrawingHit,
-  type ChartDrawingHit,
   type ChartDrawingSelectionArea,
 } from './drawing-geometry';
 export {
