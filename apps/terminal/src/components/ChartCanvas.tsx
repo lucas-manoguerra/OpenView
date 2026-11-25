@@ -11,7 +11,6 @@ import {
 } from '../drawings/drawing-style-templates';
 import {
   DEFAULT_DRAWING_TOOL_PREFERENCES,
-  DRAWING_TOOL_TYPES,
   loadBrowserDrawingToolPreferences,
   saveBrowserDrawingToolPreferences,
   type DrawingToolPreferences,
@@ -833,6 +832,7 @@ export function ChartCanvas({
   const handleSelectedDrawingUpdate = (
     updates: Partial<Pick<ChartRenderDrawing, 'color' | 'lineWidth' | 'lineStyle'>>,
   ): void => {
+    ensureDrawingToolPreferencesLoaded();
     const selectedIds = new Set(selectedDrawingIdsRef.current);
     const selectedToolTypes = new Set<DrawingToolType>(
       drawingsRef.current
@@ -873,7 +873,12 @@ export function ChartCanvas({
     target: 'start' | 'end',
     updates: Partial<ChartRenderDrawing['start']>,
   ): void => {
-    if (selectedDrawingIdRef.current === null || selectedDrawingIdsRef.current.length !== 1) {
+    if (
+      selectedDrawingIdRef.current === null ||
+      selectedDrawingIdsRef.current.length !== 1 ||
+      (updates.price !== undefined && !Number.isFinite(updates.price)) ||
+      (updates.timestamp !== undefined && (!Number.isFinite(updates.timestamp) || updates.timestamp <= 0))
+    ) {
       return;
     }
 
@@ -1304,6 +1309,18 @@ export function ChartCanvas({
           data-indicator-count={renderIndicators.length}
           data-drawing-count={drawings.length}
           data-selected-drawing-id={selectedDrawingId ?? ''}
+          data-selected-drawing-type={selectedDrawing?.type ?? ''}
+          data-selected-drawing-start-price={
+            selectedDrawing === null ? '' : String(selectedDrawing.start.price)
+          }
+          data-selected-drawing-end-price={
+            selectedDrawing?.end === null || selectedDrawing === null
+              ? ''
+              : String(selectedDrawing.end.price)
+          }
+          data-selected-drawing-start-timestamp={
+            selectedDrawing === null ? '' : String(selectedDrawing.start.timestamp)
+          }
           data-selected-drawing-count={selectedDrawingIds.length}
           data-selected-drawing-ids={selectedDrawingIds.join(',')}
           data-selected-drawing-color={selectedDrawing?.color ?? ''}
