@@ -97,8 +97,7 @@ const findClosestIndicatorPoint = (
       ? right
       : right === undefined
         ? left
-        : Math.abs(left.logicalIndex - logicalIndex) <=
-            Math.abs(right.logicalIndex - logicalIndex)
+        : Math.abs(left.logicalIndex - logicalIndex) <= Math.abs(right.logicalIndex - logicalIndex)
           ? left
           : right;
 
@@ -186,10 +185,7 @@ export const snapChartDrawingPointToOhlc = (
     }
   }
 
-  if (
-    nearestCandidate === null ||
-    (mode === 'weak' && nearestDistance > weakTolerance)
-  ) {
+  if (nearestCandidate === null || (mode === 'weak' && nearestDistance > weakTolerance)) {
     return point;
   }
 
