@@ -1219,5 +1219,4 @@ describe('canvas pointer event adapter', () => {
 
     expect(hoverHits.at(-1)).toBeNull();
   });
-
 });
