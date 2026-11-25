@@ -30,7 +30,7 @@ const createStyle = (
 ): DrawingToolStyle => Object.freeze({ color, lineWidth, lineStyle });
 
 export const DEFAULT_DRAWING_TOOL_PREFERENCES: DrawingToolPreferences = Object.freeze({
-  'trend-line': createStyle('#60a5fa'),
+  'trend-line': createStyle('#60a5fa', 1, 'solid'),
   ray: createStyle('#60a5fa'),
   'horizontal-line': createStyle('#f4c542'),
   'vertical-line': createStyle('#ab47bc', 1.5, 'dashed'),
