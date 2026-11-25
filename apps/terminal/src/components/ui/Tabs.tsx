@@ -50,8 +50,8 @@ export function Tabs({
 
     event.preventDefault();
     const nextTab = enabledTabs[nextIndex];
-    const nextValue = nextTab.dataset.tabValue;
-    if (!nextValue) return;
+    const nextValue = nextTab?.dataset.tabValue;
+    if (!nextTab || !nextValue) return;
     selectTab(nextValue);
     nextTab.focus();
   };
