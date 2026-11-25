@@ -1621,6 +1621,7 @@ test('hides drawings without deleting them and restores their selection', async 
   await expect(canvas).toHaveAttribute('data-drawing-count', '1');
   await expect(canvas).toHaveAttribute('data-renderable-drawing-count', '1');
 
+  await page.getByTestId('drawing-tool-select').click();
   await page.mouse.click(middleX, middleY);
   await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-1');
 });
