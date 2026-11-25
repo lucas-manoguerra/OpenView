@@ -1376,7 +1376,11 @@ test('draws geometric annotations and supports undo, redo and clearing', async (
   const drawingIds = (await canvas.getAttribute('data-drawing-ids'))?.split(',') ?? [];
   expect(drawingIds).toHaveLength(2);
   expect(new Set(drawingIds).size).toBe(2);
-  expect(drawingIds.every((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))).toBe(true);
+  expect(
+    drawingIds.every((id) =>
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id),
+    ),
+  ).toBe(true);
 
   await page.getByTestId('drawing-tool-horizontal-line').click();
   await page.mouse.click(bounds.x + bounds.width * 0.64, bounds.y + bounds.height * 0.5);
