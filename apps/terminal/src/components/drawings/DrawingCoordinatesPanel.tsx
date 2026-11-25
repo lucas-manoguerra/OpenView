@@ -7,17 +7,12 @@ type DrawingCoordinatesPanelProps = Readonly<{
   panelRef: (element: HTMLElement | null) => void;
   onDragStart: (event: PointerEvent) => void;
   onClose: () => void;
-  onAnchorUpdate: (
-    target: 'start' | 'end',
-    updates: Partial<ChartRenderDrawing['start']>,
-  ) => void;
+  onAnchorUpdate: (target: 'start' | 'end', updates: Partial<ChartRenderDrawing['start']>) => void;
 }>;
 
 const toLocalDateTimeValue = (timestamp: number): string => {
   const date = new Date(timestamp);
-  return new Date(timestamp - date.getTimezoneOffset() * 60_000)
-    .toISOString()
-    .slice(0, 16);
+  return new Date(timestamp - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 };
 
 export function DrawingCoordinatesPanel({
