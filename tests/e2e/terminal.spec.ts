@@ -1560,7 +1560,9 @@ test('selects drawings with Shift and moves and deletes the group together', asy
   await page.mouse.click(firstMidpoint.x, firstMidpoint.y);
   await expect(canvas).toHaveAttribute('data-selected-drawing-count', '1');
 
-  await page.mouse.click(secondMidpoint.x, secondMidpoint.y, { modifiers: ['Shift'] });
+  await page.keyboard.down('Shift');
+  await page.mouse.click(secondMidpoint.x, secondMidpoint.y);
+  await page.keyboard.up('Shift');
   await expect(canvas).toHaveAttribute('data-selected-drawing-count', '2');
   await expect(canvas).toHaveAttribute('data-selected-drawing-ids', 'drawing-1,drawing-2');
 
