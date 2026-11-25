@@ -85,6 +85,7 @@ test('navigates TradingView tabs and dropdown menus with keyboard and pointer', 
   await page.getByRole('link', { name: 'Navigation · Tabs & Menus' }).click();
   await expect(page).toHaveURL(/navigation$/);
   await expect(page.getByRole('heading', { name: 'Tabs & Menus' })).toBeVisible();
+  await expect(page.getByTestId('navigation-playground')).toHaveAttribute('data-hydrated', 'true');
 
   const chartTab = page.getByRole('tab', { name: 'Gráfico' });
   const detailsTab = page.getByRole('tab', { name: 'Detalles' });
