@@ -45,7 +45,8 @@ import {
   createChartFrame,
   createChartInteractionController,
   createChartRenderScene,
-  createCanvasRenderer,
+  createChart,
+  type ChartApi,
   getTimestampAtLogicalIndex,
   selectChartDrawingsWithinArea,
   updateChartDrawing,
@@ -547,12 +548,29 @@ export function ChartCanvas({
       return;
     }
 
-    const renderer = createCanvasRenderer(canvas);
+    let chartApi: ChartApi | null = null;
     let currentCandles = renderDataRef.current.candles;
     let controller: ChartInteractionController | null = null;
     let scene: ChartRenderScene | null = null;
     let pointerAdapter: CanvasPointerAdapter | null = null;
     let lastSize: CanvasResize | null = null;
+
+    const publishScene = (nextScene: ChartRenderScene): void => {
+      scene = nextScene;
+      if (chartApi === null) {
+        chartApi = createChart({ surface: canvas, initialScene: nextScene });
+        if (lastSize !== null) {
+          chartApi.execute({
+            type: 'resize',
+            width: lastSize.width,
+            height: lastSize.height,
+            devicePixelRatio: lastSize.devicePixelRatio,
+          });
+        }
+        return;
+      }
+      chartApi.execute({ type: 'set-scene', scene: nextScene });
+    };
 
     const handleControllerChange = (snapshot: ChartInteractionSnapshot): void => {
       if (scene === null) {
@@ -563,7 +581,7 @@ export function ChartCanvas({
         frame: snapshot.frame,
         crosshair: snapshot.crosshair,
       });
-      renderer.setScene(scene);
+      publishScene(scene);
       canvas.dataset['rightOffset'] = String(snapshot.frame.timeScale.rightOffset);
       canvas.dataset['followLatest'] = String(snapshot.frame.timeScale.rightOffset >= 0);
       canvas.dataset['navigationMode'] =
@@ -588,7 +606,12 @@ export function ChartCanvas({
       }
 
       lastSize = size;
-      renderer.resize(size.width, size.height, size.devicePixelRatio);
+      chartApi?.execute({
+        type: 'resize',
+        width: size.width,
+        height: size.height,
+        devicePixelRatio: size.devicePixelRatio,
+      });
 
       if (size.width <= 0 || size.height <= 0) {
         return;
@@ -623,7 +646,7 @@ export function ChartCanvas({
         });
         controller = interactionController;
         interactionController.setPriceScaleLocked(priceScaleLockedRef.current);
-        renderer.setScene(scene);
+        publishScene(scene);
         canvas.dataset['rightOffset'] = String(frame.timeScale.rightOffset);
         canvas.dataset['followLatest'] = String(frame.timeScale.rightOffset >= 0);
         canvas.dataset['navigationMode'] =
@@ -650,7 +673,7 @@ export function ChartCanvas({
             canvas.style.cursor = hit === null ? '' : hit.target === 'body' ? 'move' : 'crosshair';
             if (scene !== null) {
               scene = updateChartRenderScene(scene, { hoveredDrawingHit: hit });
-              renderer.setScene(scene);
+              publishScene(scene);
             }
           },
           onDrawingAreaSelectionChange: (selection: CanvasDrawingAreaSelection | null): void => {
@@ -703,7 +726,7 @@ export function ChartCanvas({
               scene = updateChartRenderScene(scene, {
                 drawings: getRenderableDrawings(drawingsRef.current),
               });
-              renderer.setScene(scene);
+              publishScene(scene);
               return;
             }
 
@@ -727,7 +750,7 @@ export function ChartCanvas({
             scene = updateChartRenderScene(scene, {
               drawings: getRenderableDrawings(previewDrawings),
             });
-            renderer.setScene(scene);
+            publishScene(scene);
           },
           onDrawingGroupEditPreview: (gesture: CanvasDrawingGroupEditGesture | null): void => {
             if (scene === null) {
@@ -738,7 +761,7 @@ export function ChartCanvas({
               scene = updateChartRenderScene(scene, {
                 drawings: getRenderableDrawings(drawingsRef.current),
               });
-              renderer.setScene(scene);
+              publishScene(scene);
               return;
             }
 
@@ -757,7 +780,7 @@ export function ChartCanvas({
             scene = updateChartRenderScene(scene, {
               drawings: getRenderableDrawings(previewDrawings),
             });
-            renderer.setScene(scene);
+            publishScene(scene);
           },
           onDrawingEdit: (gesture: CanvasDrawingEditGesture): void => {
             const drawing = drawingsRef.current.find(
@@ -891,7 +914,7 @@ export function ChartCanvas({
         if (autoScaleRef.current) {
           controller.fitPriceScale(getVisiblePriceRange(controller, currentCandles));
         }
-        renderer.setScene(scene);
+        publishScene(scene);
       },
       setPriceScaleMode: (nextMode: PriceScaleMode): void => {
         if (controller === null || lastSize === null || currentCandles.length === 0) {
@@ -917,7 +940,7 @@ export function ChartCanvas({
           selectedDrawingIdsRef.current,
         );
         controller.setFrame(frame);
-        renderer.setScene(scene);
+        publishScene(scene);
       },
       setIndicators: (nextIndicators: readonly ChartIndicatorSeries[]): void => {
         if (scene === null) {
@@ -925,7 +948,7 @@ export function ChartCanvas({
         }
 
         scene = updateChartRenderScene(scene, { indicators: nextIndicators });
-        renderer.setScene(scene);
+        publishScene(scene);
       },
       setDrawings: (nextDrawings: readonly ChartRenderDrawing[]): void => {
         if (scene === null) {
@@ -933,7 +956,7 @@ export function ChartCanvas({
         }
 
         scene = updateChartRenderScene(scene, { drawings: nextDrawings });
-        renderer.setScene(scene);
+        publishScene(scene);
       },
       setSelectedDrawingId: (drawingId: string | null): void => {
         if (scene === null) {
@@ -941,7 +964,7 @@ export function ChartCanvas({
         }
 
         scene = updateChartRenderScene(scene, { selectedDrawingId: drawingId });
-        renderer.setScene(scene);
+        publishScene(scene);
       },
       setSelectedDrawingIds: (drawingIds: readonly string[]): void => {
         if (scene === null) {
@@ -949,7 +972,7 @@ export function ChartCanvas({
         }
 
         scene = updateChartRenderScene(scene, { selectedDrawingIds: drawingIds });
-        renderer.setScene(scene);
+        publishScene(scene);
       },
       setChartType: (nextChartType: ChartType): void => {
         if (scene === null) {
@@ -957,7 +980,7 @@ export function ChartCanvas({
         }
 
         scene = updateChartRenderScene(scene, { chartType: nextChartType });
-        renderer.setScene(scene);
+        publishScene(scene);
       },
       fitContent: (mode: PriceScaleMode): void => {
         if (controller === null || lastSize === null || currentCandles.length === 0) {
@@ -984,7 +1007,7 @@ export function ChartCanvas({
           selectedDrawingIdsRef.current,
         );
         controller.setFrame(frame);
-        renderer.setScene(scene);
+        publishScene(scene);
       },
       fitPriceScale: (): void => {
         if (controller !== null && currentCandles.length > 0) {
@@ -1014,7 +1037,8 @@ export function ChartCanvas({
       destroy: (): void => {
         pointerAdapter?.destroy();
         resizeAdapter.destroy();
-        renderer.destroy();
+        chartApi?.destroy();
+        chartApi = null;
         delete canvas.dataset['chartReady'];
       },
     });
