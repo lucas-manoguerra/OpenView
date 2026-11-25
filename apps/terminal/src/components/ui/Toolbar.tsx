@@ -77,8 +77,7 @@ export function Toolbar({
     >
       {groups.map((group, index) => (
         <div key={group.id} class="contents">
-          <div
-            role="group"
+          <fieldset
             aria-label={group.label}
             class={[
               'flex',
@@ -108,7 +107,7 @@ export function Toolbar({
                 </Tooltip>
               );
             })}
-          </div>
+          </fieldset>
           {index < groups.length - 1 ? (
             <span
               aria-hidden="true"
