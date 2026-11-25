@@ -6,14 +6,17 @@ const iconNames = Object.keys(iconRegistry) as IconName[];
 export function IconPlayground() {
   const [size, setSize] = useState(18);
   const setPlaygroundRef = useCallback((element: HTMLDivElement | null) => {
-    if (element) element.dataset.hydrated = 'true';
+    if (element) element.dataset['hydrated'] = 'true';
   }, []);
   const [strokeWidth, setStrokeWidth] = useState(1.8);
 
   return (
-    <div class="space-y-6" data-testid="icons-playground"
+    <div
+      class="space-y-6"
+      data-testid="icons-playground"
       data-hydrated="false"
-      ref={setPlaygroundRef}>
+      ref={setPlaygroundRef}
+    >
       <section class="space-y-3">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <h2 class="text-sm font-semibold text-[#d1d4dc]">Propiedades</h2>
