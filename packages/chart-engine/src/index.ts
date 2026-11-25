@@ -133,6 +133,7 @@ export {
   createChart,
   type ChartApi,
   type ChartCommand,
+  type ChartDrawingEditPreview,
   type ChartEvent,
   type ChartSnapshot,
   type CreateChartOptions,
