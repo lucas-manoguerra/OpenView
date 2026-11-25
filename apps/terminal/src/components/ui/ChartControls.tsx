@@ -33,11 +33,7 @@ export function TimeframeSelector({
   const quickOptions = options.filter((option) => quickValues.includes(option.value));
 
   return (
-    <fieldset
-      aria-label={label}
-      data-testid={testId}
-      class="flex min-w-0 items-center gap-1"
-    >
+    <fieldset aria-label={label} data-testid={testId} class="flex min-w-0 items-center gap-1">
       <legend class="sr-only">{label}</legend>
       <div class="flex min-w-0 items-center gap-0.5 overflow-x-auto">
         {quickOptions.map((option) => (
