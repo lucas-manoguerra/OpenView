@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useId, useRef, useState } from 'preact/hooks';
 
 export type DropdownMenuItem = {
   id: string;
@@ -21,6 +21,7 @@ export function DropdownMenu({
   align = 'start',
 }: DropdownMenuProps) {
   const [open, setOpen] = useState(false);
+  const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -67,7 +68,7 @@ export function DropdownMenu({
     else return;
 
     event.preventDefault();
-    enabledItems[nextIndex].focus();
+    enabledItems[nextIndex]?.focus();
   };
 
   return (
@@ -77,7 +78,7 @@ export function DropdownMenu({
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-controls="tradingview-dropdown-menu"
+        aria-controls={menuId}
         onClick={() => setOpen((current) => !current)}
         onKeyDown={(event) => {
           if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
@@ -102,7 +103,7 @@ export function DropdownMenu({
       {open ? (
         <div
           ref={menuRef}
-          id="tradingview-dropdown-menu"
+          id={menuId}
           role="menu"
           aria-label={label}
           onKeyDown={handleMenuKeyDown}
