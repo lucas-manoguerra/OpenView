@@ -1,8 +1,7 @@
 import type { JSX } from 'preact';
-import { Icon } from './Icon';
+import { Icon, type IconName } from './Icon';
 import { IconButton } from './IconButton';
 import { Tooltip } from './Tooltip';
-import type { IconName } from './Icon';
 
 export type ToolbarItem = {
   id: string;
