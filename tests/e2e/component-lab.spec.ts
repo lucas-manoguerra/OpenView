@@ -25,6 +25,7 @@ test('exposes button variants and sizes in the playground', async ({ page }) => 
 
 test('updates interactive button state and accessible counter feedback', async ({ page }) => {
   await page.goto('/component-lab/core/buttons');
+  await expect(page.getByTestId('buttons-playground')).toHaveAttribute('data-hydrated', 'true');
 
   const counter = page.getByText('Clicks: 0');
   await expect(counter).toBeVisible();
@@ -38,6 +39,7 @@ test('updates interactive button state and accessible counter feedback', async (
 
 test('toggles icon button active state and loading state', async ({ page }) => {
   await page.goto('/component-lab/core/buttons');
+  await expect(page.getByTestId('buttons-playground')).toHaveAttribute('data-hydrated', 'true');
 
   const addButton = page.getByRole('button', { name: 'Añadir al gráfico' });
   await expect(addButton).toHaveAttribute('aria-pressed', 'false');
@@ -83,6 +85,7 @@ test('navigates TradingView tabs and dropdown menus with keyboard and pointer', 
   await page.getByRole('link', { name: 'Navigation · Tabs & Menus' }).click();
   await expect(page).toHaveURL(/navigation$/);
   await expect(page.getByRole('heading', { name: 'Tabs & Menus' })).toBeVisible();
+  await expect(page.getByTestId('navigation-playground')).toHaveAttribute('data-hydrated', 'true');
 
   const chartTab = page.getByRole('tab', { name: 'Gráfico' });
   const detailsTab = page.getByRole('tab', { name: 'Detalles' });
@@ -145,4 +148,23 @@ test('opens modal dialogs with focus containment, Escape and focus restoration',
   await trigger.click();
   await page.mouse.click(12, 12);
   await expect(dialog).toBeHidden();
+});
+
+test('inspects the centralized Lucide icon catalog and its accessible variants', async ({
+  page,
+}) => {
+  await page.goto('/component-lab/core/icons');
+
+  await expect(page.getByRole('heading', { name: 'Icons' })).toBeVisible();
+  await expect(page.getByTestId('icons-playground')).toHaveAttribute('data-hydrated', 'true');
+  await expect(page.getByTestId('icon-item')).toHaveCount(38);
+  await expect(page.getByTestId('icons-current-size')).toHaveText('18px · stroke 1.8');
+
+  await page.getByLabel('Tamaño del icono').selectOption('28');
+  await expect(page.getByTestId('icons-current-size')).toHaveText('28px · stroke 1.8');
+
+  await page.getByLabel('Grosor del trazo').selectOption('2.2');
+  await expect(page.getByTestId('icons-current-size')).toHaveText('28px · stroke 2.2');
+
+  await expect(page.getByRole('img', { name: 'Tendencia alcista' })).toBeVisible();
 });

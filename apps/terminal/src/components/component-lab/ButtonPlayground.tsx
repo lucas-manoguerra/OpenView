@@ -1,13 +1,21 @@
-import { useState } from 'preact/hooks';
+import { useCallback, useState } from 'preact/hooks';
 import { Badge, Button, Divider, IconButton, Tooltip } from '../ui';
 
 export function ButtonPlayground() {
+  const setPlaygroundRef = useCallback((element: HTMLDivElement | null) => {
+    if (element) element.dataset['hydrated'] = 'true';
+  }, []);
   const [count, setCount] = useState(0);
   const [active, setActive] = useState(false);
   const [loading, setLoading] = useState(false);
 
   return (
-    <div class="space-y-6">
+    <div
+      class="space-y-6"
+      data-testid="buttons-playground"
+      data-hydrated="false"
+      ref={setPlaygroundRef}
+    >
       <section class="space-y-3">
         <div class="flex items-center justify-between">
           <h2 class="text-sm font-semibold text-[#d1d4dc]">Variantes</h2>
