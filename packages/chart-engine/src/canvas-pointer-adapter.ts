@@ -43,11 +43,13 @@ export type CanvasPointerAdapterOptions = Readonly<{
   getDrawingMagnetMode?: () => ChartDrawingMagnetMode;
   getSnapToIndicators?: () => boolean;
   getIndicators?: () => readonly ChartIndicatorSeries[];
+  getKeepDrawing?: () => boolean;
   getDrawings?: () => readonly ChartRenderDrawing[];
   getCandles?: () => readonly ChartRenderCandle[];
   getSelectedDrawingId?: () => string | null;
   getSelectedDrawingIds?: () => readonly string[];
   onDrawingComplete?: (drawing: CanvasDrawingGesture) => void;
+  onDrawingToolExit?: () => void;
   onDrawingSelect?: (drawingId: string | null) => void;
   onDrawingSelectionChange?: (drawingIds: readonly string[]) => void;
   onDrawingEdit?: (gesture: CanvasDrawingEditGesture) => void;
@@ -297,6 +299,9 @@ export const attachCanvasPointerEvents = (
         start: drawingStart,
         end: clickTool ? null : end,
       });
+      if (!(options.getKeepDrawing?.() ?? false)) {
+        options.onDrawingToolExit?.();
+      }
       drawingStart = null;
       activeDrawingTool = null;
       releaseActivePointer();

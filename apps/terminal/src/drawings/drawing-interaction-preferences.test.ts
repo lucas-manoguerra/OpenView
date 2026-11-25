@@ -19,22 +19,28 @@ class MemoryStorage {
 }
 
 describe('drawing interaction preferences', () => {
-  it('defaults to magnet mode off and indicator snapping disabled', () => {
+  it('defaults to magnet and keep-drawing modes off', () => {
     expect(DEFAULT_DRAWING_INTERACTION_PREFERENCES).toEqual({
       magnetMode: 'off',
       snapToIndicators: false,
+      keepDrawing: false,
     });
   });
 
-  it('restores supported magnet modes and optional indicator snapping', () => {
+  it('restores supported modes and optional drawing preferences', () => {
     expect(
       restoreDrawingInteractionPreferences(JSON.stringify({ version: 1, magnetMode: 'weak' })),
-    ).toEqual({ magnetMode: 'weak', snapToIndicators: false });
+    ).toEqual({ magnetMode: 'weak', snapToIndicators: false, keepDrawing: false });
     expect(
       restoreDrawingInteractionPreferences(
-        JSON.stringify({ version: 1, magnetMode: 'strong', snapToIndicators: true }),
+        JSON.stringify({
+          version: 1,
+          magnetMode: 'strong',
+          snapToIndicators: true,
+          keepDrawing: true,
+        }),
       ),
-    ).toEqual({ magnetMode: 'strong', snapToIndicators: true });
+    ).toEqual({ magnetMode: 'strong', snapToIndicators: true, keepDrawing: true });
   });
 
   it('falls back for malformed or unsupported preferences', () => {
@@ -47,17 +53,19 @@ describe('drawing interaction preferences', () => {
     ).toBe(DEFAULT_DRAWING_INTERACTION_PREFERENCES);
   });
 
-  it('persists and restores both interaction preferences through storage', () => {
+  it('persists and restores all drawing interaction preferences through storage', () => {
     const storage = new MemoryStorage();
 
     saveDrawingInteractionPreferences(storage, {
       magnetMode: 'strong',
       snapToIndicators: true,
+      keepDrawing: true,
     });
 
     expect(loadDrawingInteractionPreferences(storage)).toEqual({
       magnetMode: 'strong',
       snapToIndicators: true,
+      keepDrawing: true,
     });
   });
 
@@ -79,6 +87,7 @@ describe('drawing interaction preferences', () => {
       saveDrawingInteractionPreferences(blockedStorage, {
         magnetMode: 'weak',
         snapToIndicators: false,
+        keepDrawing: false,
       }),
     ).not.toThrow();
   });

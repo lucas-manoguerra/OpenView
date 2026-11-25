@@ -166,6 +166,84 @@ describe('canvas pointer event adapter', () => {
     expect(capturedPointers.has(7)).toBe(false);
   });
 
+  it('returns to the cursor after a drawing when keep drawing is disabled', () => {
+    const { canvas, dispatch } = createCanvasTarget();
+    const frame = createChartFrame(900, 500, { min: 90, max: 120 }, 99);
+    const controller = createChartInteractionController(frame);
+    const gestures: CanvasDrawingGesture[] = [];
+    let drawingTool: 'trend-line' | 'cursor' = 'trend-line';
+    const onDrawingToolExit = vi.fn(() => {
+      drawingTool = 'cursor';
+    });
+    attachCanvasPointerEvents(canvas, controller, {
+      getDrawingTool: () => drawingTool,
+      getKeepDrawing: () => false,
+      onDrawingComplete: (drawing) => gestures.push(drawing),
+      onDrawingToolExit,
+    });
+
+    const draw = (offset: number): void => {
+      const start = {
+        x: frame.layout.plotArea.x + 40 + offset,
+        y: frame.layout.plotArea.y + 60,
+      };
+      const end = {
+        x: frame.layout.plotArea.x + 140 + offset,
+        y: frame.layout.plotArea.y + 120,
+      };
+
+      dispatch(
+        'pointerdown',
+        createPointerEvent({ clientX: 100 + start.x, clientY: 50 + start.y }),
+      );
+      dispatch('pointerup', createPointerEvent({ clientX: 100 + end.x, clientY: 50 + end.y }));
+    };
+
+    draw(0);
+    draw(180);
+
+    expect(gestures).toHaveLength(1);
+    expect(onDrawingToolExit).toHaveBeenCalledOnce();
+    expect(drawingTool).toBe('cursor');
+  });
+
+  it('keeps the active drawing tool for consecutive objects when keep drawing is enabled', () => {
+    const { canvas, dispatch } = createCanvasTarget();
+    const frame = createChartFrame(900, 500, { min: 90, max: 120 }, 99);
+    const controller = createChartInteractionController(frame);
+    const gestures: CanvasDrawingGesture[] = [];
+    const onDrawingToolExit = vi.fn();
+    attachCanvasPointerEvents(canvas, controller, {
+      getDrawingTool: () => 'trend-line',
+      getKeepDrawing: () => true,
+      onDrawingComplete: (drawing) => gestures.push(drawing),
+      onDrawingToolExit,
+    });
+
+    const draw = (offset: number): void => {
+      const start = {
+        x: frame.layout.plotArea.x + 40 + offset,
+        y: frame.layout.plotArea.y + 60,
+      };
+      const end = {
+        x: frame.layout.plotArea.x + 140 + offset,
+        y: frame.layout.plotArea.y + 120,
+      };
+
+      dispatch(
+        'pointerdown',
+        createPointerEvent({ clientX: 100 + start.x, clientY: 50 + start.y }),
+      );
+      dispatch('pointerup', createPointerEvent({ clientX: 100 + end.x, clientY: 50 + end.y }));
+    };
+
+    draw(0);
+    draw(180);
+
+    expect(gestures).toHaveLength(2);
+    expect(onDrawingToolExit).not.toHaveBeenCalled();
+  });
+
   it('creates a horizontal line on click without requiring a drag', () => {
     const { canvas, dispatch } = createCanvasTarget();
     const frame = createChartFrame(900, 500, { min: 90, max: 120 }, 99);

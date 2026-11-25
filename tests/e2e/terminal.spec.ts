@@ -1437,6 +1437,7 @@ test('persists the TradingView drawing magnet preference', async ({ page }) => {
     version: 1,
     magnetMode: 'weak',
     snapToIndicators: true,
+    keepDrawing: false,
   });
 
   await page.reload();
@@ -1454,6 +1455,78 @@ test('persists the TradingView drawing magnet preference', async ({ page }) => {
     'aria-checked',
     'true',
   );
+});
+
+test('returns to the cursor by default and keeps the tool active when requested', async ({
+  page,
+}) => {
+  await page.goto('/');
+
+  const canvas = page.getByRole('img', {
+    name: /Gráfico interactivo de velas y volumen para BTC \/ USDT/,
+  });
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+
+  const drawTrendLine = async (offset: number): Promise<void> => {
+    const bounds = await canvas.boundingBox();
+
+    if (bounds === null) {
+      throw new Error('The chart canvas must have a visible bounding box.');
+    }
+
+    const startX = bounds.x + bounds.width * 0.3 + offset;
+    const startY = bounds.y + bounds.height * 0.34;
+    const endX = bounds.x + bounds.width * 0.56 + offset;
+    const endY = bounds.y + bounds.height * 0.6;
+
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.mouse.move(endX, endY);
+    await page.mouse.up();
+  };
+
+  const trendLineTool = page.getByTestId('drawing-tool-trend-line');
+
+  await trendLineTool.click();
+  await expect(trendLineTool).toHaveAttribute('aria-pressed', 'true');
+  await drawTrendLine(0);
+  await expect(canvas).toHaveAttribute('data-drawing-count', '1');
+  await expect(trendLineTool).toHaveAttribute('aria-pressed', 'false');
+
+  await page.getByTestId('keep-drawing-toggle').click();
+  await expect(canvas).toHaveAttribute('data-keep-drawing', 'true');
+  const savedPreferences = await page.evaluate(() => {
+    const serialized = window.localStorage.getItem(
+      'openview.chart.drawing-interaction-preferences',
+    );
+
+    return serialized === null ? null : JSON.parse(serialized);
+  });
+  expect(savedPreferences).toEqual({
+    version: 1,
+    magnetMode: 'off',
+    snapToIndicators: false,
+    keepDrawing: true,
+  });
+
+  await trendLineTool.click();
+  await drawTrendLine(90);
+  await expect(canvas).toHaveAttribute('data-drawing-count', '2');
+  await expect(trendLineTool).toHaveAttribute('aria-pressed', 'true');
+
+  await page.reload();
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+  await trendLineTool.click();
+  await expect(canvas).toHaveAttribute('data-keep-drawing', 'true');
+  await expect(trendLineTool).toHaveAttribute('aria-pressed', 'true');
+  const drawingCountAfterReload = Number(await canvas.getAttribute('data-drawing-count'));
+  await drawTrendLine(160);
+  await expect(canvas).toHaveAttribute('data-drawing-count', String(drawingCountAfterReload + 1));
+  await expect(trendLineTool).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('selects, moves, edits and deletes a drawing individually', async ({ page }) => {
