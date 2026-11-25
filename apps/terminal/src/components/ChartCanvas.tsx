@@ -329,6 +329,7 @@ export function ChartCanvas({
   const keepDrawingRef = useRef(keepDrawing);
   const drawingsVisibleRef = useRef(drawingsVisible);
   const drawingsRef = useRef<readonly ChartRenderDrawing[]>(drawings);
+  const renderableDrawingsRef = useRef<readonly ChartRenderDrawing[]>(drawings);
   const selectedDrawingIdRef = useRef<string | null>(selectedDrawingId);
   const selectedDrawingIdsRef = useRef<readonly string[]>(selectedDrawingIds);
   const drawingUndoStackRef = useRef<readonly (readonly ChartRenderDrawing[])[]>([]);
@@ -352,11 +353,16 @@ export function ChartCanvas({
   keepDrawingRef.current = keepDrawing;
   drawingsVisibleRef.current = drawingsVisible;
   drawingsRef.current = drawings;
+  renderableDrawingsRef.current = drawingsVisible ? drawings : [];
   selectedDrawingIdRef.current = selectedDrawingId;
   selectedDrawingIdsRef.current = selectedDrawingIds;
   const getRenderableDrawings = (
     source: readonly ChartRenderDrawing[] = drawingsRef.current,
-  ): readonly ChartRenderDrawing[] => (drawingsVisibleRef.current ? source : []);
+  ): readonly ChartRenderDrawing[] => {
+    const renderable = drawingsVisibleRef.current ? source : [];
+    renderableDrawingsRef.current = renderable;
+    return renderable;
+  };
   commitDrawingsRef.current = (nextDrawings): void => {
     const previousDrawings = drawingsRef.current;
     const nextUndoStack = [...drawingUndoStackRef.current, previousDrawings].slice(-50);
@@ -596,7 +602,7 @@ export function ChartCanvas({
           getSnapToIndicators: () => snapToIndicatorsRef.current,
           getIndicators: () => indicatorsRef.current,
           getKeepDrawing: () => keepDrawingRef.current,
-          getDrawings: () => getRenderableDrawings(),
+          getDrawings: () => renderableDrawingsRef.current,
           getCandles: () => currentCandles,
           getSelectedDrawingId: () => selectedDrawingIdRef.current,
           getSelectedDrawingIds: () => selectedDrawingIdsRef.current,
@@ -1230,8 +1236,9 @@ export function ChartCanvas({
   const handleToggleDrawingsVisibility = (): void => {
     const nextVisible = !drawingsVisibleRef.current;
     drawingsVisibleRef.current = nextVisible;
+    renderableDrawingsRef.current = nextVisible ? drawingsRef.current : [];
     setDrawingsVisible(nextVisible);
-    runtimeRef.current?.setDrawings(getRenderableDrawings());
+    runtimeRef.current?.setDrawings(renderableDrawingsRef.current);
 
     if (!nextVisible) {
       updateDrawingSelection([]);
@@ -1806,6 +1813,7 @@ export function ChartCanvas({
           data-chart-type={chartType}
           data-indicator-count={renderIndicators.length}
           data-drawing-count={drawings.length}
+          data-renderable-drawing-count={renderableDrawingsRef.current.length}
           data-drawings-locked={String(allDrawingsLocked)}
           data-drawings-visible={String(drawingsVisible)}
           data-drawing-magnet-mode={drawingMagnetMode}
