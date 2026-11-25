@@ -1329,6 +1329,10 @@ export function ChartCanvas({
                     const maxTop = Math.max(0, parent.clientHeight - currentPanel.offsetHeight);
                     const nextLeft = Math.max(0, Math.min(maxLeft, left + clientX - event.clientX));
                     const nextTop = Math.max(0, Math.min(maxTop, top + clientY - event.clientY));
+                    currentPanel.style.left = String(nextLeft) + 'px';
+                    currentPanel.style.top = String(nextTop) + 'px';
+                    currentPanel.style.right = 'auto';
+                    currentPanel.style.bottom = 'auto';
                     setDrawingPanelPosition({ left: nextLeft, top: nextTop });
                   };
 
@@ -1343,9 +1347,11 @@ export function ChartCanvas({
                       return;
                     }
 
-                    window.removeEventListener('pointermove', handlePointerMove);
-                    window.removeEventListener('pointerup', handlePointerEnd);
-                    window.removeEventListener('pointercancel', handlePointerEnd);
+                    window.removeEventListener('pointermove', handlePointerMove, true);
+                    window.removeEventListener('pointerup', handlePointerEnd, true);
+                    window.removeEventListener('pointercancel', handlePointerEnd, true);
+                    window.removeEventListener('mousemove', handleMouseMove, true);
+                    window.removeEventListener('mouseup', handleMouseEnd, true);
                     drawingPropertiesDragRef.current = null;
                   };
 
@@ -1354,19 +1360,19 @@ export function ChartCanvas({
                   };
 
                   const handleMouseEnd = (): void => {
-                    window.removeEventListener('mousemove', handleMouseMove);
-                    window.removeEventListener('mouseup', handleMouseEnd);
+                    window.removeEventListener('pointermove', handlePointerMove, true);
+                    window.removeEventListener('pointerup', handlePointerEnd, true);
+                    window.removeEventListener('pointercancel', handlePointerEnd, true);
+                    window.removeEventListener('mousemove', handleMouseMove, true);
+                    window.removeEventListener('mouseup', handleMouseEnd, true);
                     drawingPropertiesDragRef.current = null;
                   };
 
-                  if (event.pointerType === 'mouse') {
-                    window.addEventListener('mousemove', handleMouseMove);
-                    window.addEventListener('mouseup', handleMouseEnd);
-                  } else {
-                    window.addEventListener('pointermove', handlePointerMove);
-                    window.addEventListener('pointerup', handlePointerEnd);
-                    window.addEventListener('pointercancel', handlePointerEnd);
-                  }
+                  window.addEventListener('pointermove', handlePointerMove, true);
+                  window.addEventListener('pointerup', handlePointerEnd, true);
+                  window.addEventListener('pointercancel', handlePointerEnd, true);
+                  window.addEventListener('mousemove', handleMouseMove, true);
+                  window.addEventListener('mouseup', handleMouseEnd, true);
                 }}
               >
                 <span aria-hidden="true" class="text-slate-500">
