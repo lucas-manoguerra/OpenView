@@ -2407,8 +2407,8 @@ test('selects drawings with Control and moves and deletes the group together', a
       throw new Error('The chart canvas must remain visible while drawing.');
     }
 
-    const startX = currentBounds.x + currentBounds.width * 0.28;
-    const endX = currentBounds.x + currentBounds.width * 0.52;
+    const startX = currentBounds.x + currentBounds.width * 0.58;
+    const endX = currentBounds.x + currentBounds.width * 0.78;
     await page.mouse.move(startX, currentBounds.y + currentBounds.height * startY);
     await page.mouse.down();
     await page.mouse.move(endX, currentBounds.y + currentBounds.height * endY);
@@ -2428,7 +2428,7 @@ test('selects drawings with Control and moves and deletes the group together', a
   }
 
   const firstMidpoint = {
-    x: selectionBounds.x + selectionBounds.width * 0.4,
+    x: selectionBounds.x + selectionBounds.width * 0.68,
     y: selectionBounds.y + selectionBounds.height * 0.3,
   };
   const secondBody = {
