@@ -19,12 +19,14 @@ const createMockContext = (): Readonly<{
   calls: RecordedCall[];
 }> => {
   const calls: RecordedCall[] = [];
+  let currentStrokeStyle = '#000000';
   const record = (name: string, ...args: unknown[]): void => {
     calls.push({ name, args });
   };
   const context = {
     fillStyle: '#000000',
-    strokeStyle: '#000000',
+    get strokeStyle() { return currentStrokeStyle; },
+    set strokeStyle(value: string) { currentStrokeStyle = value; },
     lineWidth: 1,
     globalAlpha: 1,
     font: '10px sans-serif',
@@ -41,7 +43,7 @@ const createMockContext = (): Readonly<{
     moveTo: (...args: number[]) => record('moveTo', ...args),
     lineTo: (...args: number[]) => record('lineTo', ...args),
     arc: (...args: number[]) => record('arc', ...args),
-    stroke: () => record('stroke'),
+    stroke: () => record('stroke', currentStrokeStyle),
     fillText: (...args: [string, number, number]) => record('fillText', ...args),
     rect: (...args: number[]) => record('rect', ...args),
     clip: () => record('clip'),
@@ -578,8 +580,10 @@ describe('canvas chart painter', () => {
 
     drawChartScene(context, scene);
 
+    const drawingColors = new Set(['#60a5fa', '#f4c542']);
     const lastDrawingStroke = calls.reduce(
-      (lastIndex, call, index) => (call.name === 'stroke' ? index : lastIndex),
+      (lastIndex, call, index) =>
+        call.name === 'stroke' && drawingColors.has(String(call.args[0])) ? index : lastIndex,
       -1,
     );
     const firstSelectionHandle = calls.findIndex(
