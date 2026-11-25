@@ -167,7 +167,6 @@ describe('chart public API', () => {
     chart.destroy();
   });
 
-
   it('queries visible drawing hits and area selection through chart-owned scene state', () => {
     const { surface } = createSurface();
     const candles = [
@@ -207,10 +206,12 @@ describe('chart public API', () => {
 
     chart.execute({ type: 'set-drawings', drawings: [{ ...drawing, visible: false }] });
     expect(chart.hitTestDrawing(point)).toBeNull();
-    expect(chart.selectDrawingsWithinArea({
-      start: { x: point.x - 2, y: point.y - 2 },
-      end: { x: point.x + 2, y: point.y + 2 },
-    })).toEqual([]);
+    expect(
+      chart.selectDrawingsWithinArea({
+        start: { x: point.x - 2, y: point.y - 2 },
+        end: { x: point.x + 2, y: point.y + 2 },
+      }),
+    ).toEqual([]);
 
     chart.execute({ type: 'set-drawings-visible', visible: false });
     expect(chart.hitTestDrawing(point)).toBeNull();
