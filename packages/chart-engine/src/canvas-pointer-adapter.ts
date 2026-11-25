@@ -84,10 +84,7 @@ export const attachCanvasPointerEvents = (
 
   const snapDrawingPoint = (point: ChartDataPoint, event: PointerEvent): ChartDataPoint => {
     const configuredMode = options.getDrawingMagnetMode?.() ?? 'off';
-    const mode = resolveChartDrawingMagnetMode(
-      configuredMode,
-      event.ctrlKey || event.metaKey,
-    );
+    const mode = resolveChartDrawingMagnetMode(configuredMode, event.ctrlKey || event.metaKey);
 
     return snapChartDrawingPointToOhlc(
       point,
@@ -165,8 +162,7 @@ export const attachCanvasPointerEvents = (
         emitDrawingSelection(nextSelection);
 
         const rawOrigin = chartCoordinateToDataPoint(position, controller.snapshot.frame);
-        const origin =
-          hit.target === 'body' ? rawOrigin : snapDrawingPoint(rawOrigin, event);
+        const origin = hit.target === 'body' ? rawOrigin : snapDrawingPoint(rawOrigin, event);
 
         if (hit.target === 'body' && nextSelection.length > 1) {
           activeDrawingGroupEdit = {
