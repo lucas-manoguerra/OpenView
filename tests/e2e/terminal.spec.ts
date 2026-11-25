@@ -1326,6 +1326,49 @@ test('exposes auto, lock and inverted price scale controls', async ({ page }) =>
   await expect(lockScale).toHaveAttribute('aria-pressed', 'false');
 });
 
+test('draws time-anchored trend and horizontal lines and clears them', async ({ page }) => {
+  await page.goto('/');
+
+  const canvas = page.getByRole('img', {
+    name: /Gráfico interactivo de velas y volumen para BTC \/ USDT/,
+  });
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+
+  const bounds = await canvas.boundingBox();
+  expect(bounds).not.toBeNull();
+
+  if (bounds === null) {
+    throw new Error('The chart canvas must have a visible bounding box.');
+  }
+
+  const trendLineTool = page.getByTestId('drawing-tool-trend-line');
+  await trendLineTool.click();
+  await expect(trendLineTool).toHaveAttribute('aria-pressed', 'true');
+
+  const startX = bounds.x + bounds.width * 0.32;
+  const startY = bounds.y + bounds.height * 0.38;
+  const endX = bounds.x + bounds.width * 0.58;
+  const endY = bounds.y + bounds.height * 0.55;
+
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await page.mouse.move(endX, endY);
+  await page.mouse.up();
+
+  await expect(canvas).toHaveAttribute('data-drawing-count', '1');
+
+  const horizontalLineTool = page.getByTestId('drawing-tool-horizontal-line');
+  await horizontalLineTool.click();
+  await expect(horizontalLineTool).toHaveAttribute('aria-pressed', 'true');
+  await page.mouse.click(bounds.x + bounds.width * 0.64, bounds.y + bounds.height * 0.62);
+  await expect(canvas).toHaveAttribute('data-drawing-count', '2');
+
+  await page.getByTestId('drawing-clear-all').click();
+  await expect(canvas).toHaveAttribute('data-drawing-count', '0');
+});
+
 test('renders timestamp based time labels instead of logical bar indices', async ({ page }) => {
   await page.addInitScript(() => {
     const labels: string[] = [];

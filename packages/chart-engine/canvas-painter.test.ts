@@ -6,6 +6,7 @@ import {
   DEFAULT_CHART_THEME,
   drawChartScene,
   type ChartRenderCandle,
+  type ChartRenderDrawing,
 } from './src/canvas-painter';
 
 type RecordedCall = Readonly<{
@@ -216,6 +217,72 @@ describe('canvas chart painter', () => {
           ],
         },
       ]),
+    ).toThrow(RangeError);
+  });
+
+  it('renders time-anchored trend lines and price-anchored horizontal lines', () => {
+    const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 10);
+    const drawings: readonly ChartRenderDrawing[] = [
+      {
+        id: 'trend-1',
+        type: 'trend-line',
+        start: { timestamp: 1_700_000_000_000, price: 100 },
+        end: { timestamp: 1_700_000_120_000, price: 110 },
+        color: '#60a5fa',
+      },
+      {
+        id: 'horizontal-1',
+        type: 'horizontal-line',
+        start: { timestamp: 1_700_000_060_000, price: 105 },
+        end: null,
+        color: '#f4c542',
+      },
+    ];
+    const scene = createChartRenderScene(frame, createCandles(), null, 'candles', [], drawings);
+    const { context, calls } = createMockContext();
+
+    drawChartScene(context, scene);
+
+    expect(scene.drawings).toHaveLength(2);
+    expect(Object.isFrozen(scene.drawings)).toBe(true);
+    expect(Object.isFrozen(scene.drawings[0]?.start)).toBe(true);
+    expect(calls.filter((call) => call.name === 'stroke').length).toBeGreaterThan(2);
+    expect(calls.filter((call) => call.name === 'lineTo').length).toBeGreaterThan(5);
+  });
+
+  it('preserves drawings through scene updates and rejects invalid annotations', () => {
+    const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 10);
+    const drawings: readonly ChartRenderDrawing[] = [
+      {
+        id: 'horizontal-1',
+        type: 'horizontal-line',
+        start: { timestamp: 1_700_000_060_000, price: 105 },
+        end: null,
+        color: '#f4c542',
+      },
+    ];
+    const scene = createChartRenderScene(frame, createCandles(), null, 'candles', [], drawings);
+    const updated = updateChartRenderScene(scene, { crosshair: { x: 120, y: 140 } });
+
+    expect(updated.drawings).toBe(scene.drawings);
+    expect(updateChartRenderScene(updated, { drawings: updated.drawings })).toBe(updated);
+    expect(() =>
+      createChartRenderScene(
+        frame,
+        createCandles(),
+        null,
+        'candles',
+        [],
+        [
+          {
+            id: 'trend-invalid',
+            type: 'trend-line',
+            start: { timestamp: 1_700_000_000_000, price: 100 },
+            end: null,
+            color: '#60a5fa',
+          },
+        ],
+      ),
     ).toThrow(RangeError);
   });
 

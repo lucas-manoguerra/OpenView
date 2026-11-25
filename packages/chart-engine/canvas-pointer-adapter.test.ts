@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createChartFrame } from './src/chart-frame';
+import { chartCoordinateToDataPoint, createChartFrame } from './src/chart-frame';
 import { createChartInteractionController } from './src/chart-interaction';
-import { attachCanvasPointerEvents } from './src/canvas-pointer-adapter';
+import { attachCanvasPointerEvents, type CanvasDrawingGesture } from './src/canvas-pointer-adapter';
 
 type Listener = EventListenerOrEventListenerObject;
 
@@ -123,6 +123,84 @@ describe('canvas pointer event adapter', () => {
     expect(controller.snapshot.dragging).toBe(true);
     expect(capturedPointers.has(7)).toBe(true);
     expect(event.preventDefault).toHaveBeenCalledOnce();
+  });
+
+  it('creates a time-and-price anchored trend line without panning the chart', () => {
+    const { canvas, dispatch, capturedPointers } = createCanvasTarget();
+    const frame = createChartFrame(900, 500, { min: 90, max: 120 }, 99);
+    const controller = createChartInteractionController(frame);
+    const gestures: CanvasDrawingGesture[] = [];
+    attachCanvasPointerEvents(canvas, controller, {
+      getDrawingTool: () => 'trend-line',
+      onDrawingComplete: (drawing) => gestures.push(drawing),
+    });
+    const start = {
+      x: frame.layout.plotArea.x + 40,
+      y: frame.layout.plotArea.y + 60,
+    };
+    const end = {
+      x: frame.layout.plotArea.x + 180,
+      y: frame.layout.plotArea.y + 120,
+    };
+
+    dispatch('pointerdown', createPointerEvent({ clientX: 100 + start.x, clientY: 50 + start.y }));
+    dispatch('pointermove', createPointerEvent({ clientX: 100 + end.x, clientY: 50 + end.y }));
+    dispatch('pointerup', createPointerEvent({ clientX: 100 + end.x, clientY: 50 + end.y }));
+
+    expect(gestures).toHaveLength(1);
+    expect(gestures[0]).toEqual({
+      type: 'trend-line',
+      start: chartCoordinateToDataPoint(start, frame),
+      end: chartCoordinateToDataPoint(end, frame),
+    });
+    expect(controller.snapshot.frame.timeScale.rightOffset).toBe(frame.timeScale.rightOffset);
+    expect(capturedPointers.has(7)).toBe(false);
+  });
+
+  it('creates a horizontal line on click without requiring a drag', () => {
+    const { canvas, dispatch } = createCanvasTarget();
+    const frame = createChartFrame(900, 500, { min: 90, max: 120 }, 99);
+    const controller = createChartInteractionController(frame);
+    const gestures: CanvasDrawingGesture[] = [];
+    attachCanvasPointerEvents(canvas, controller, {
+      getDrawingTool: () => 'horizontal-line',
+      onDrawingComplete: (drawing) => gestures.push(drawing),
+    });
+    const point = {
+      x: frame.layout.plotArea.x + 140,
+      y: frame.layout.plotArea.y + 80,
+    };
+
+    dispatch('pointerdown', createPointerEvent({ clientX: 100 + point.x, clientY: 50 + point.y }));
+    dispatch('pointerup', createPointerEvent({ clientX: 100 + point.x, clientY: 50 + point.y }));
+
+    expect(gestures).toEqual([
+      {
+        type: 'horizontal-line',
+        start: chartCoordinateToDataPoint(point, frame),
+        end: null,
+      },
+    ]);
+    expect(controller.snapshot.dragging).toBe(false);
+  });
+
+  it('does not create a drawing when its pointer gesture is cancelled', () => {
+    const { canvas, dispatch, capturedPointers } = createCanvasTarget();
+    const controller = createChartInteractionController(
+      createChartFrame(900, 500, { min: 90, max: 120 }, 99),
+    );
+    const gestures: CanvasDrawingGesture[] = [];
+    attachCanvasPointerEvents(canvas, controller, {
+      getDrawingTool: () => 'trend-line',
+      onDrawingComplete: (drawing) => gestures.push(drawing),
+    });
+
+    dispatch('pointerdown', createPointerEvent());
+    dispatch('pointercancel', createPointerEvent());
+
+    expect(gestures).toEqual([]);
+    expect(capturedPointers.has(7)).toBe(false);
+    expect(controller.snapshot.dragging).toBe(false);
   });
 
   it('pans during captured pointer movement and releases capture on pointer up', () => {
