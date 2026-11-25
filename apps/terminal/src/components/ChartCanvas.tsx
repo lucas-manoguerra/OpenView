@@ -1475,9 +1475,9 @@ export function ChartCanvas({
               class="size-[18px]"
               fill="none"
               stroke="currentColor"
-              stroke-width="1.7"
-              stroke-linecap="round"
-              stroke-linejoin="round"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
               <path d="M6 20V10.5a6 6 0 0 1 12 0V20" />
               <path d="M10 20v-9.5a2 2 0 0 1 4 0V20" />
