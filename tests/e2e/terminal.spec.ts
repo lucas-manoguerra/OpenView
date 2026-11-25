@@ -2400,12 +2400,18 @@ test('selects drawings with Control and moves and deletes the group together', a
   }
 
   const drawLine = async (startY: number, endY: number) => {
-    const startX = bounds.x + bounds.width * 0.28;
-    const endX = bounds.x + bounds.width * 0.52;
     await page.getByTestId('drawing-tool-trend-line').click();
-    await page.mouse.move(startX, bounds.y + bounds.height * startY);
+    const currentBounds = await canvas.boundingBox();
+
+    if (currentBounds === null) {
+      throw new Error('The chart canvas must remain visible while drawing.');
+    }
+
+    const startX = currentBounds.x + currentBounds.width * 0.28;
+    const endX = currentBounds.x + currentBounds.width * 0.52;
+    await page.mouse.move(startX, currentBounds.y + currentBounds.height * startY);
     await page.mouse.down();
-    await page.mouse.move(endX, bounds.y + bounds.height * endY);
+    await page.mouse.move(endX, currentBounds.y + currentBounds.height * endY);
     await page.mouse.up();
   };
 
@@ -2414,16 +2420,22 @@ test('selects drawings with Control and moves and deletes the group together', a
   await drawLine(0.42, 0.5);
   await expect(canvas).toHaveAttribute('data-drawing-count', '2');
 
+  await page.getByTestId('drawing-tool-select').click();
+  const selectionBounds = await canvas.boundingBox();
+
+  if (selectionBounds === null) {
+    throw new Error('The chart canvas must remain visible before selecting drawings.');
+  }
+
   const firstMidpoint = {
-    x: bounds.x + bounds.width * 0.4,
-    y: bounds.y + bounds.height * 0.3,
+    x: selectionBounds.x + selectionBounds.width * 0.4,
+    y: selectionBounds.y + selectionBounds.height * 0.3,
   };
   const secondBody = {
-    x: bounds.x + bounds.width * 0.4,
-    y: bounds.y + bounds.height * 0.46,
+    x: selectionBounds.x + selectionBounds.width * 0.4,
+    y: selectionBounds.y + selectionBounds.height * 0.46,
   };
 
-  await page.getByTestId('drawing-tool-select').click();
   await page.mouse.click(secondBody.x, secondBody.y);
   await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-2');
 
