@@ -1,6 +1,6 @@
 import type { ComponentChildren, JSX } from 'preact';
 
-export type IconButtonProps = Omit<JSX.HTMLAttributes<HTMLButtonElement>, 'size'> & {
+export type IconButtonProps = Omit<JSX.ButtonHTMLAttributes<HTMLButtonElement>, 'size'> & {
   label: string;
   size?: 'small' | 'medium' | 'large';
   active?: boolean;
