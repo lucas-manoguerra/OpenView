@@ -5,10 +5,7 @@ import {
   type ChartObjectOrderAction,
   type ChartObjectOrderItem,
 } from './chart-object-order';
-import {
-  updateChartRenderScene,
-  type ChartRenderScene,
-} from './canvas-painter';
+import { updateChartRenderScene, type ChartRenderScene } from './canvas-painter';
 import {
   createCanvasRenderer,
   type CanvasRenderer,
@@ -78,10 +75,7 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
     renderer.setScene(updateChartRenderScene(scene, { objectOrder }));
   };
 
-  renderer.resize(
-    scene.frame.layout.bounds.width,
-    scene.frame.layout.bounds.height,
-  );
+  renderer.resize(scene.frame.layout.bounds.width, scene.frame.layout.bounds.height);
   render();
 
   return Object.freeze({
