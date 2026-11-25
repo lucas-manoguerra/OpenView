@@ -112,6 +112,31 @@ describe('chart public API', () => {
     chart.destroy();
   });
 
+  it('preserves chart-owned drawings and selection when the host updates the scene', () => {
+    const { surface } = createSurface();
+    const chart = createChart({
+      surface,
+      initialScene: createScene(),
+      renderer: { scheduler: { requestFrame: () => 1, cancelFrame: () => {} } },
+    });
+    const drawing = {
+      id: 'drawing-1',
+      type: 'trend-line' as const,
+      start: { timestamp: 1, price: 2 },
+      end: { timestamp: 2, price: 3 },
+      color: '#ffffff',
+    };
+
+    chart.execute({ type: 'set-drawings', drawings: [drawing] });
+    chart.execute({ type: 'set-drawing-selection', drawingIds: ['drawing-1'] });
+    chart.execute({ type: 'set-scene', scene: createScene() });
+
+    expect(chart.exportSnapshot().scene.drawings).toHaveLength(1);
+    expect(chart.exportSnapshot().scene.selectedDrawingId).toBe('drawing-1');
+    expect(chart.exportSnapshot().scene.selectedDrawingIds).toEqual(['drawing-1']);
+    chart.destroy();
+  });
+
   it('hides drawings from rendering without deleting chart-owned drawing state', () => {
     const { surface } = createSurface();
     const drawing = {
