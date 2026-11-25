@@ -7,7 +7,7 @@ test('opens the isolated component lab and navigates to the core controls', asyn
   await expect(page.getByRole('heading', { name: 'Component Lab' })).toBeVisible();
   await page.getByRole('link', { name: 'Buttons & Controls' }).first().click();
 
-  await expect(page).toHaveURL(/\/component-lab\/core\/buttons$/);
+  await expect(page).toHaveURL(/buttons$/);
   await expect(page.getByRole('heading', { name: 'Buttons & Controls' })).toBeVisible();
 });
 
@@ -53,7 +53,7 @@ test('inspects form controls in isolation and updates their values', async ({ pa
   await page.goto('/component-lab');
 
   await page.getByRole('link', { name: 'Forms · Inputs & Selects' }).click();
-  await expect(page).toHaveURL(/\/component-lab\/forms$/);
+  await expect(page).toHaveURL(/forms$/);
   await expect(page.getByRole('heading', { name: 'Inputs & Selects' })).toBeVisible();
 
   const symbolInput = page.getByTestId('forms-symbol-input');
@@ -73,4 +73,40 @@ test('inspects form controls in isolation and updates their values', async ({ pa
   await expect(page.getByLabel('Con error')).toHaveAttribute('aria-invalid', 'true');
   await expect(page.getByText('Formato de símbolo no válido.')).toBeVisible();
   await expect(page.getByRole('textbox', { name: 'Deshabilitado' })).toBeDisabled();
+});
+
+test('navigates TradingView tabs and dropdown menus with keyboard and pointer', async ({
+  page,
+}) => {
+  await page.goto('/component-lab');
+
+  await page.getByRole('link', { name: 'Navigation · Tabs & Menus' }).click();
+  await expect(page).toHaveURL(/navigation$/);
+  await expect(page.getByRole('heading', { name: 'Tabs & Menus' })).toBeVisible();
+
+  const chartTab = page.getByRole('tab', { name: 'Gráfico' });
+  const detailsTab = page.getByRole('tab', { name: 'Detalles' });
+  await expect(chartTab).toHaveAttribute('aria-selected', 'true');
+  await chartTab.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(detailsTab).toHaveAttribute('aria-selected', 'true');
+  await expect(detailsTab).toBeFocused();
+  await expect(page.getByRole('tabpanel')).toContainText('Información resumida');
+
+  const menuTrigger = page.getByRole('button', { name: 'Diseño' });
+  await menuTrigger.click();
+  const menu = page.getByRole('menu', { name: 'Diseño' });
+  await expect(menu).toBeVisible();
+  const saveItem = page.getByRole('menuitem', { name: 'Guardar diseño' });
+  await expect(saveItem).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(page.getByRole('menuitem', { name: 'Duplicar diseño' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+  await expect(menuTrigger).toBeFocused();
+
+  await menuTrigger.click();
+  await page.getByRole('menuitem', { name: 'Guardar diseño' }).click();
+  await expect(page.getByTestId('navigation-menu-action')).toHaveText('save-layout');
+  await expect(menu).toBeHidden();
 });

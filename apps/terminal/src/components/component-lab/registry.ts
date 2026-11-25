@@ -21,8 +21,8 @@ export const componentLabRegistry: readonly ComponentLabEntry[] = [
     name: 'Navigation',
     family: 'Navigation',
     route: '/component-lab/navigation',
-    status: 'planned',
-    description: 'Topbar, tabs, menús y sidebar.',
+    status: 'available',
+    description: 'Tabs accesibles y menús desplegables con navegación por teclado.',
   },
   {
     id: 'trading',
