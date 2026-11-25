@@ -320,7 +320,6 @@ export const hitTestChartDrawing = (
 
   const selectedIds = new Set(selectedDrawingIds);
 
-  // Keep selected control points editable even when another drawing's body overlaps them.
   for (let index = drawings.length - 1; index >= 0; index -= 1) {
     const drawing = drawings[index];
 
