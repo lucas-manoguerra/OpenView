@@ -18,3 +18,5 @@ export { Tabs } from './Tabs';
 export type { TabItem, TabsProps } from './Tabs';
 export { Dialog } from './Dialog';
 export type { DialogProps } from './Dialog';
+export { Icon, iconRegistry } from './Icon';
+export type { IconName, IconProps, IconSize } from './Icon';
