@@ -169,15 +169,17 @@ export const attachCanvasPointerEvents = (
     }
 
     if (drawingTool === 'select') {
-      const hit = options.hitTestDrawing?.(position, 8) ??
-        hitTestChartDrawing(
-          position,
-          options.getDrawings?.() ?? [],
-          options.getCandles?.() ?? [],
-          controller.snapshot.frame,
-          8,
-          getSelectedDrawingIds(),
-        );
+      const hit =
+        options.hitTestDrawing !== undefined
+          ? options.hitTestDrawing(position, 8)
+          : hitTestChartDrawing(
+              position,
+              options.getDrawings?.() ?? [],
+              options.getCandles?.() ?? [],
+              controller.snapshot.frame,
+              8,
+              getSelectedDrawingIds(),
+            );
       const selectedIds = getSelectedDrawingIds();
       const multiSelectModifier = event.ctrlKey || event.metaKey;
 
@@ -302,15 +304,17 @@ export const attachCanvasPointerEvents = (
 
     const position = getCanvasPosition(canvas, event);
     if ((options.getDrawingTool?.() ?? 'cursor') === 'select') {
-      const hit = options.hitTestDrawing?.(position, 8) ??
-        hitTestChartDrawing(
-          position,
-          options.getDrawings?.() ?? [],
-          options.getCandles?.() ?? [],
-          controller.snapshot.frame,
-          8,
-          getSelectedDrawingIds(),
-        );
+      const hit =
+        options.hitTestDrawing !== undefined
+          ? options.hitTestDrawing(position, 8)
+          : hitTestChartDrawing(
+              position,
+              options.getDrawings?.() ?? [],
+              options.getCandles?.() ?? [],
+              controller.snapshot.frame,
+              8,
+              getSelectedDrawingIds(),
+            );
       options.onDrawingHover?.(hit);
     } else {
       options.onDrawingHover?.(null);
