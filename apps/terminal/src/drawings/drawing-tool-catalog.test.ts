@@ -22,9 +22,9 @@ describe('TradingView drawing tool catalog', () => {
   });
 
   it('marks only currently implemented geometry tools as available', () => {
-    const available = DRAWING_TOOL_CATALOG
-      .filter((tool) => tool.availability === 'implemented')
-      .map((tool) => tool.id);
+    const available = DRAWING_TOOL_CATALOG.filter(
+      (tool) => tool.availability === 'implemented',
+    ).map((tool) => tool.id);
 
     expect(available).toEqual([
       'trend-line',
