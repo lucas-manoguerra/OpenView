@@ -2405,17 +2405,17 @@ test('selects drawings with Control and moves and deletes the group together', a
     await page.mouse.up();
   };
 
-  await drawLine(0.28, 0.4);
-  await drawLine(0.46, 0.56);
+  await drawLine(0.22, 0.3);
+  await drawLine(0.42, 0.5);
   await expect(canvas).toHaveAttribute('data-drawing-count', '2');
 
   const firstMidpoint = {
     x: bounds.x + bounds.width * 0.4,
-    y: bounds.y + bounds.height * 0.34,
+    y: bounds.y + bounds.height * 0.26,
   };
   const secondBody = {
     x: bounds.x + bounds.width * 0.4,
-    y: bounds.y + bounds.height * 0.52,
+    y: bounds.y + bounds.height * 0.46,
   };
 
   await page.getByTestId('drawing-tool-select').click();
