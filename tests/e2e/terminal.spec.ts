@@ -2439,7 +2439,9 @@ test('selects drawings with Control and moves and deletes the group together', a
   await page.mouse.click(secondEnd.x, secondEnd.y);
   await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-2');
 
-  await page.mouse.click(firstEnd.x, firstEnd.y, { modifiers: ['Control'] });
+  await page.keyboard.down('Control');
+  await page.mouse.click(firstEnd.x, firstEnd.y);
+  await page.keyboard.up('Control');
   await expect(canvas).toHaveAttribute('data-selected-drawing-count', '2');
   await expect(canvas).toHaveAttribute('data-selected-drawing-ids', 'drawing-1,drawing-2');
 
