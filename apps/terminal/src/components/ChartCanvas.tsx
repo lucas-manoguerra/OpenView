@@ -724,69 +724,16 @@ export function ChartCanvas({
             updateDrawingSelection([]);
           },
           onDrawingEditPreview: (gesture: CanvasDrawingEditGesture | null): void => {
-            if (scene === null) {
-              return;
-            }
-
-            if (gesture === null) {
-              scene = updateChartRenderScene(scene, {
-                drawings: drawingsRef.current,
-              });
-              publishScene(scene);
-              return;
-            }
-
-            const drawing = drawingsRef.current.find(
-              (candidate) => candidate.id === gesture.drawingId,
-            );
-            if (drawing === undefined) {
-              return;
-            }
-
-            const previewDrawing = updateChartDrawing(
-              drawing,
-              gesture.target,
-              gesture.origin,
-              gesture.current,
-              currentCandles,
-            );
-            const previewDrawings = drawingsRef.current.map((candidate) =>
-              candidate.id === gesture.drawingId ? previewDrawing : candidate,
-            );
-            scene = updateChartRenderScene(scene, {
-              drawings: previewDrawings,
+            chartApi?.execute({
+              type: 'set-drawing-edit-preview',
+              gesture: gesture === null ? null : { kind: 'single', ...gesture },
             });
-            publishScene(scene);
           },
           onDrawingGroupEditPreview: (gesture: CanvasDrawingGroupEditGesture | null): void => {
-            if (scene === null) {
-              return;
-            }
-
-            if (gesture === null) {
-              scene = updateChartRenderScene(scene, {
-                drawings: drawingsRef.current,
-              });
-              publishScene(scene);
-              return;
-            }
-
-            const selectedIds = new Set(gesture.drawingIds);
-            const previewDrawings = drawingsRef.current.map((drawing) =>
-              selectedIds.has(drawing.id)
-                ? updateChartDrawing(
-                    drawing,
-                    'body',
-                    gesture.origin,
-                    gesture.current,
-                    currentCandles,
-                  )
-                : drawing,
-            );
-            scene = updateChartRenderScene(scene, {
-              drawings: previewDrawings,
+            chartApi?.execute({
+              type: 'set-drawing-edit-preview',
+              gesture: gesture === null ? null : { kind: 'group', ...gesture },
             });
-            publishScene(scene);
           },
           onDrawingEdit: (gesture: CanvasDrawingEditGesture): void => {
             const drawing = drawingsRef.current.find(

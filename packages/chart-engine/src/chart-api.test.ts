@@ -114,6 +114,69 @@ describe('chart public API', () => {
     chart.destroy();
   });
 
+  it('renders single and grouped drawing edit previews without mutating canonical state', () => {
+    const { surface } = createSurface();
+    const candles = [
+      { timestamp: 1, open: 2, high: 4, low: 1, close: 3, volume: 10, logicalIndex: 0 },
+      { timestamp: 2, open: 3, high: 5, low: 2, close: 4, volume: 12, logicalIndex: 1 },
+    ];
+    const frame = createChartFrame(320, 240, { min: 0, max: 10 }, 1);
+    const chart = createChart({
+      surface,
+      initialScene: createChartRenderScene(frame, candles),
+      renderer: { scheduler: { requestFrame: () => 1, cancelFrame: () => {} } },
+    });
+    const drawing = {
+      id: 'drawing-preview',
+      type: 'trend-line' as const,
+      start: { timestamp: 1, price: 2 },
+      end: { timestamp: 2, price: 3 },
+      color: '#ffffff',
+    };
+    chart.execute({ type: 'set-drawings', drawings: [drawing] });
+    const canonical = chart.exportSnapshot().scene.drawings;
+
+    chart.execute({
+      type: 'set-drawing-edit-preview',
+      gesture: {
+        kind: 'single',
+        drawingId: drawing.id,
+        target: 'end',
+        origin: { logicalIndex: 1, price: 3 },
+        current: { logicalIndex: 1, price: 4 },
+      },
+    });
+    expect(chart.exportSnapshot().scene.drawings).toEqual(canonical);
+
+    chart.execute({
+      type: 'set-drawing-edit-preview',
+      gesture: {
+        kind: 'group',
+        drawingIds: [drawing.id],
+        origin: { logicalIndex: 0, price: 2 },
+        current: { logicalIndex: 1, price: 3 },
+      },
+    });
+    expect(chart.exportSnapshot().scene.drawings).toEqual(canonical);
+
+    chart.execute({ type: 'set-drawing-edit-preview', gesture: null });
+    expect(chart.exportSnapshot().scene.drawings).toEqual(canonical);
+
+    chart.execute({
+      type: 'set-drawing-edit-preview',
+      gesture: {
+        kind: 'single',
+        drawingId: drawing.id,
+        target: 'end',
+        origin: { logicalIndex: 1, price: 3 },
+        current: { logicalIndex: 1, price: 4 },
+      },
+    });
+    chart.execute({ type: 'set-drawings', drawings: [{ ...drawing, color: '#ff0000' }] });
+    expect(chart.exportSnapshot().scene.drawings[0]?.color).toBe('#ff0000');
+    chart.destroy();
+  });
+
   it('preserves chart-owned drawings and selection when the host updates the scene', () => {
     const { surface } = createSurface();
     const chart = createChart({
