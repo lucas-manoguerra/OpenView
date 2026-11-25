@@ -2,7 +2,32 @@ import type { ComponentChildren, JSX } from 'preact';
 
 export type TextFieldSize = 'small' | 'medium' | 'large';
 
-export type TextFieldProps = Omit<JSX.IntrinsicElements['input'], 'size' | 'role'> & {
+export type TextFieldInputType =
+  | 'button'
+  | 'checkbox'
+  | 'color'
+  | 'date'
+  | 'datetime-local'
+  | 'email'
+  | 'file'
+  | 'hidden'
+  | 'image'
+  | 'month'
+  | 'number'
+  | 'password'
+  | 'radio'
+  | 'range'
+  | 'reset'
+  | 'search'
+  | 'submit'
+  | 'tel'
+  | 'text'
+  | 'time'
+  | 'url'
+  | 'week';
+
+export type TextFieldProps = Omit<JSX.IntrinsicElements['input'], 'size' | 'role' | 'type'> & {
+  type?: TextFieldInputType;
   label?: string;
   hint?: string;
   error?: string;
