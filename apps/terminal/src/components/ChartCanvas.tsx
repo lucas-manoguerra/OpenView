@@ -1285,7 +1285,9 @@ export function ChartCanvas({
       return;
     }
 
-    const templateTool = selectedDrawing?.type ?? (drawingTool === 'cursor' || drawingTool === 'select' ? null : drawingTool);
+    const templateTool =
+      selectedDrawing?.type ??
+      (drawingTool === 'cursor' || drawingTool === 'select' ? null : drawingTool);
     if (templateTool === null) return;
     const template = createDrawingStyleTemplate(
       'custom-' + crypto.randomUUID(),
@@ -1544,9 +1546,14 @@ export function ChartCanvas({
   );
   const allDrawingsLocked =
     drawings.length > 0 && drawings.every((drawing) => drawing.locked === true);
-  const activeTemplateTool = selectedDrawing?.type ?? (drawingTool === 'cursor' || drawingTool === 'select' ? null : drawingTool);
-  const drawingStyleTemplates = customDrawingTemplates.filter((template) => template.tool === activeTemplateTool);
-  const activeDefaultStyle = activeTemplateTool === null ? null : DEFAULT_DRAWING_TOOL_PREFERENCES[activeTemplateTool];
+  const activeTemplateTool =
+    selectedDrawing?.type ??
+    (drawingTool === 'cursor' || drawingTool === 'select' ? null : drawingTool);
+  const drawingStyleTemplates = customDrawingTemplates.filter(
+    (template) => template.tool === activeTemplateTool,
+  );
+  const activeDefaultStyle =
+    activeTemplateTool === null ? null : DEFAULT_DRAWING_TOOL_PREFERENCES[activeTemplateTool];
   const selectedDrawingHasSingleSelection =
     selectedDrawing !== null && selectedDrawingIds.length === 1;
   const selectedDrawingsShareType =
@@ -2873,7 +2880,7 @@ export function ChartCanvas({
                     class="w-full rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-[10px] text-slate-200 outline-none focus:border-blue-400"
                   >
                     {activeDefaultStyle !== null && <option value="default">Default</option>}
-                  {drawingStyleTemplates.map((template) => (
+                    {drawingStyleTemplates.map((template) => (
                       <option key={template.id} value={template.id}>
                         {template.name}
                       </option>
@@ -2889,7 +2896,9 @@ export function ChartCanvas({
                       Aplicar
                     </button>
                     {customDrawingTemplates.some(
-                      (template) => template.id === selectedDrawingTemplateId && template.tool === activeTemplateTool,
+                      (template) =>
+                        template.id === selectedDrawingTemplateId &&
+                        template.tool === activeTemplateTool,
                     ) && (
                       <button
                         type="button"
