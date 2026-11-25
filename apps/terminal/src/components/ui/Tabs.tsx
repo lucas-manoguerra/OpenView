@@ -30,10 +30,8 @@ export function Tabs({ tabs, defaultValue, value, onChange, id = 'tradingview-ta
 
   const enabledTabs = tabs.filter((tab) => !tab.disabled);
 
-  const handleKeyDown = (event: KeyboardEvent) => {
-    const currentIndex = enabledTabs.findIndex(
-      (tab) => `${id}-tab-${tab.id}` === (event.target as HTMLElement).id,
-    );
+  const handleTabKeyDown = (event: KeyboardEvent, currentTabId: string) => {
+    const currentIndex = enabledTabs.findIndex((tab) => tab.id === currentTabId);
     if (currentIndex < 0 || enabledTabs.length === 0) return;
 
     let nextIndex = currentIndex;
@@ -57,7 +55,6 @@ export function Tabs({ tabs, defaultValue, value, onChange, id = 'tradingview-ta
         id={id}
         role="tablist"
         aria-label="Secciones"
-        onKeyDown={handleKeyDown}
         class="flex min-w-0 items-center gap-1 border-b border-[#2a2e39]"
       >
         {tabs.map((tab) => {
@@ -74,6 +71,7 @@ export function Tabs({ tabs, defaultValue, value, onChange, id = 'tradingview-ta
               tabIndex={selected ? 0 : -1}
               disabled={tab.disabled}
               onClick={() => selectTab(tab.id)}
+              onKeyDown={(event) => handleTabKeyDown(event, tab.id)}
               class={[
                 'relative -mb-px inline-flex h-9 items-center px-3 text-xs font-medium transition-colors',
                 'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[#2962ff]',
