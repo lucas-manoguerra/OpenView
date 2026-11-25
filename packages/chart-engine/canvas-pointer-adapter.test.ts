@@ -676,6 +676,7 @@ describe('canvas pointer event adapter', () => {
     let selectedIds: readonly string[] = [];
     const selections: string[][] = [];
     const groupEdits: CanvasDrawingGroupEditGesture[] = [];
+    const groupPreviews: (CanvasDrawingGroupEditGesture | null)[] = [];
     const deletedGroups: string[][] = [];
     attachCanvasPointerEvents(canvas, controller, {
       getDrawingTool: () => 'select',
@@ -687,6 +688,7 @@ describe('canvas pointer event adapter', () => {
         selections.push([...ids]);
       },
       onDrawingGroupEdit: (gesture) => groupEdits.push(gesture),
+      onDrawingGroupEditPreview: (gesture) => groupPreviews.push(gesture),
       onDrawingDeleteMany: (drawingIds) => deletedGroups.push([...drawingIds]),
     });
 
@@ -720,9 +722,24 @@ describe('canvas pointer event adapter', () => {
 
     const movedBody = { x: firstBody.x + 35, y: firstBody.y - 18 };
     dispatch('pointerdown', pointerEvent(firstBody));
+    dispatch('pointermove', pointerEvent(movedBody));
+
+    expect(groupPreviews).toHaveLength(1);
+    expect(groupPreviews[0]).toMatchObject({
+      drawingIds: ['trend-1', 'trend-2'],
+      current: chartCoordinateToDataPoint(
+        {
+          x: Math.max(frame.layout.plotArea.x, Math.min(frame.layout.plotArea.x + frame.layout.plotArea.width, movedBody.x)),
+          y: Math.max(frame.layout.plotArea.y, Math.min(frame.layout.plotArea.y + frame.layout.plotArea.height, movedBody.y)),
+        },
+        frame,
+      ),
+    });
+    expect(groupEdits).toEqual([]);
     dispatch('pointerup', pointerEvent(movedBody));
 
     expect(groupEdits).toHaveLength(1);
+    expect(groupPreviews.at(-1)).toBeNull();
     expect(groupEdits[0]?.drawingIds).toEqual(['trend-1', 'trend-2']);
     const boundedMovedBody = {
       x: Math.max(
