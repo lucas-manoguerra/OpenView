@@ -647,8 +647,7 @@ export function ChartCanvas({
             updateDrawingSelection(drawingIds);
           },
           onDrawingHover: (hit: ChartDrawingHit | null): void => {
-            canvas.style.cursor =
-              hit === null ? '' : hit.target === 'body' ? 'move' : 'crosshair';
+            canvas.style.cursor = hit === null ? '' : hit.target === 'body' ? 'move' : 'crosshair';
           },
           onDrawingAreaSelectionChange: (selection: CanvasDrawingAreaSelection | null): void => {
             setDrawingSelectionArea(selection);
