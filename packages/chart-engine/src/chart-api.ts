@@ -140,10 +140,19 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
           scene.selectedDrawingId !== null && drawingIds.has(scene.selectedDrawingId)
             ? scene.selectedDrawingId
             : (selectedDrawingIds[selectedDrawingIds.length - 1] ?? null);
+        const hoveredDrawingHit =
+          scene.hoveredDrawingHit !== null &&
+          drawingIds.has(scene.hoveredDrawingHit.drawingId) &&
+          command.drawings.some(
+            (drawing) => drawing.id === scene.hoveredDrawingHit?.drawingId && drawing.visible !== false,
+          )
+            ? scene.hoveredDrawingHit
+            : null;
         scene = updateChartRenderScene(scene, {
           drawings: command.drawings,
           selectedDrawingId,
           selectedDrawingIds,
+          hoveredDrawingHit,
         });
         objectOrder = reconcileChartObjectOrder(objectOrder, getAvailableObjects(scene));
         render();
@@ -171,13 +180,20 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
       }
 
       if (command.type === 'set-drawing-hover') {
+        const hitIsVisible =
+          command.hit !== null &&
+          drawingsVisible &&
+          scene.drawings.some(
+            (drawing) => drawing.id === command.hit?.drawingId && drawing.visible !== false,
+          );
+        const nextHit = hitIsVisible ? command.hit : null;
         if (
-          scene.hoveredDrawingHit?.drawingId === command.hit?.drawingId &&
-          scene.hoveredDrawingHit?.target === command.hit?.target
+          scene.hoveredDrawingHit?.drawingId === nextHit?.drawingId &&
+          scene.hoveredDrawingHit?.target === nextHit?.target
         ) {
           return;
         }
-        scene = updateChartRenderScene(scene, { hoveredDrawingHit: command.hit });
+        scene = updateChartRenderScene(scene, { hoveredDrawingHit: nextHit });
         render();
         emit(Object.freeze({ type: 'scene-changed', scene }));
         return;
