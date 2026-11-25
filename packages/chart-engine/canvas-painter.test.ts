@@ -547,6 +547,48 @@ describe('canvas chart painter', () => {
     ).toBe(4);
   });
 
+  it('renders selected handles above later overlapping drawings', () => {
+    const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 10);
+    const drawings: readonly ChartRenderDrawing[] = [
+      {
+        id: 'selected-underneath',
+        type: 'trend-line',
+        start: { timestamp: 1_700_000_000_000, price: 100 },
+        end: { timestamp: 1_700_000_120_000, price: 110 },
+        color: '#60a5fa',
+      },
+      {
+        id: 'overlapping-top',
+        type: 'trend-line',
+        start: { timestamp: 1_700_000_000_000, price: 110 },
+        end: { timestamp: 1_700_000_120_000, price: 100 },
+        color: '#f4c542',
+      },
+    ];
+    const scene = createChartRenderScene(
+      frame,
+      createCandles(),
+      null,
+      'candles',
+      [],
+      drawings,
+      'selected-underneath',
+    );
+    const { context, calls } = createMockContext();
+
+    drawChartScene(context, scene);
+
+    const lastDrawingStroke = calls.reduce(
+      (lastIndex, call, index) => (call.name === 'stroke' ? index : lastIndex),
+      -1,
+    );
+    const firstSelectionHandle = calls.findIndex(
+      (call) => call.name === 'arc' && (call.args[2] === 6 || call.args[2] === 7),
+    );
+
+    expect(firstSelectionHandle).toBeGreaterThan(lastDrawingStroke);
+  });
+
   it('renders handles for every drawing in a multi-selection', () => {
     const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 10);
     const drawings: readonly ChartRenderDrawing[] = [
