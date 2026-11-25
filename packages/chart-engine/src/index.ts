@@ -34,6 +34,7 @@ export {
   type CanvasPointerAdapter,
   type CanvasDrawingEditGesture,
   type CanvasDrawingGroupEditGesture,
+  type CanvasDrawingAreaSelection,
   type CanvasDrawingGesture,
   type CanvasDrawingTool,
 } from './canvas-pointer-adapter';
@@ -116,8 +117,10 @@ export {
   getLogicalIndexAtTimestamp,
   getTimestampAtLogicalIndex,
   hitTestChartDrawing,
+  selectChartDrawingsWithinArea,
   updateChartDrawing,
   type ChartDrawingHit,
+  type ChartDrawingSelectionArea,
 } from './drawing-geometry';
 export {
   resolveChartDrawingMagnetMode,

@@ -3,6 +3,11 @@ import type { ChartRenderCandle, ChartRenderDrawing } from './canvas-painter';
 import { priceToCoordinate } from './price-scale';
 import { logicalIndexToCoordinate } from './time-scale';
 
+export type ChartDrawingSelectionArea = Readonly<{
+  start: ChartCoordinate;
+  end: ChartCoordinate;
+}>;
+
 export type ChartDrawingHit = Readonly<{
   drawingId: string;
   target: 'start' | 'end' | 'body';
@@ -339,6 +344,45 @@ export const hitTestChartDrawing = (
   }
 
   return null;
+};
+
+export const selectChartDrawingsWithinArea = (
+  area: ChartDrawingSelectionArea,
+  drawings: readonly ChartRenderDrawing[],
+  candles: readonly ChartRenderCandle[],
+  frame: ChartFrame,
+): readonly string[] => {
+  const left = Math.min(area.start.x, area.end.x);
+  const right = Math.max(area.start.x, area.end.x);
+  const top = Math.min(area.start.y, area.end.y);
+  const bottom = Math.max(area.start.y, area.end.y);
+
+  if (![left, right, top, bottom].every(Number.isFinite)) {
+    throw new RangeError('Drawing selection area coordinates must be finite.');
+  }
+
+  const contains = (point: ChartCoordinate): boolean =>
+    point.x >= left && point.x <= right && point.y >= top && point.y <= bottom;
+
+  const selectedIds: string[] = [];
+
+  for (const drawing of drawings) {
+    if (drawing.locked === true) {
+      continue;
+    }
+
+    const coordinates = getDrawingCoordinates(drawing, candles, frame);
+
+    if (
+      coordinates !== null &&
+      contains(coordinates.start) &&
+      (coordinates.end === null || contains(coordinates.end))
+    ) {
+      selectedIds.push(drawing.id);
+    }
+  }
+
+  return Object.freeze(selectedIds);
 };
 
 export const updateChartDrawing = (

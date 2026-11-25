@@ -34,6 +34,7 @@ import {
   attachCanvasPointerEvents,
   type CanvasDrawingEditGesture,
   type CanvasDrawingGroupEditGesture,
+  type CanvasDrawingAreaSelection,
   type CanvasDrawingGesture,
   type CanvasDrawingTool,
   attachCanvasResizeObserver,
@@ -42,6 +43,7 @@ import {
   createChartRenderScene,
   createCanvasRenderer,
   getTimestampAtLogicalIndex,
+  selectChartDrawingsWithinArea,
   updateChartDrawing,
   calculateExponentialMovingAverage,
   calculateSimpleMovingAverage,
@@ -59,6 +61,7 @@ import {
   type ChartIndicatorSeries,
   type ChartRenderDrawing,
   type ChartDrawingMagnetMode,
+  type ChartDrawingSelectionArea,
   type NumericRange,
   type PriceScaleMode,
 } from '@openview/chart-engine';
@@ -284,6 +287,8 @@ export function ChartCanvas({
   const [drawings, setDrawings] = useState<readonly ChartRenderDrawing[]>([]);
   const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null);
   const [selectedDrawingIds, setSelectedDrawingIds] = useState<readonly string[]>([]);
+  const [drawingSelectionArea, setDrawingSelectionArea] =
+    useState<CanvasDrawingAreaSelection | null>(null);
   const [drawingUndoCount, setDrawingUndoCount] = useState(0);
   const [drawingRedoCount, setDrawingRedoCount] = useState(0);
   const [drawingPanelLayout, setDrawingPanelLayout] = useState<DrawingPanelLayout>(
@@ -608,6 +613,19 @@ export function ChartCanvas({
           getSelectedDrawingIds: () => selectedDrawingIdsRef.current,
           onDrawingSelectionChange: (drawingIds: readonly string[]): void => {
             updateDrawingSelection(drawingIds);
+          },
+          onDrawingAreaSelectionChange: (selection: CanvasDrawingAreaSelection | null): void => {
+            setDrawingSelectionArea(selection);
+          },
+          onDrawingAreaSelectionComplete: (area: ChartDrawingSelectionArea): void => {
+            updateDrawingSelection(
+              selectChartDrawingsWithinArea(
+                area,
+                renderableDrawingsRef.current,
+                currentCandles,
+                interactionController.snapshot.frame,
+              ),
+            );
           },
           onDrawingGroupEdit: (gesture: CanvasDrawingGroupEditGesture): void => {
             const selectedIds = new Set(gesture.drawingIds);
@@ -1807,7 +1825,7 @@ export function ChartCanvas({
           aria-label={
             'Gráfico interactivo de velas y volumen para ' +
             symbol +
-            '. Arrastrar el gráfico para desplazar el tiempo, arrastrar el eje de precios para desplazar los precios, usar la rueda sobre cada área para acercar y hacer doble clic en el eje de precios para autoajustar.'
+            '. Arrastrar el gráfico para desplazar el tiempo, arrastrar el eje de precios para desplazar los precios, usar la rueda sobre cada área para acercar, hacer doble clic en el eje de precios para autoajustar y mantener Ctrl o Command para seleccionar varios dibujos o marcar un área.'
           }
           data-candles-count={renderCandles.length}
           data-chart-type={chartType}
@@ -1854,6 +1872,19 @@ export function ChartCanvas({
           data-drawing-redo-count={drawingRedoCount}
           data-interval={interval}
         />
+        {drawingSelectionArea !== null && (
+          <div
+            aria-hidden="true"
+            data-testid="drawing-selection-marquee"
+            class="pointer-events-none absolute z-20 border border-blue-400 bg-blue-400/10"
+            style={{
+              left: Math.min(drawingSelectionArea.start.x, drawingSelectionArea.current.x),
+              top: Math.min(drawingSelectionArea.start.y, drawingSelectionArea.current.y),
+              width: Math.abs(drawingSelectionArea.current.x - drawingSelectionArea.start.x),
+              height: Math.abs(drawingSelectionArea.current.y - drawingSelectionArea.start.y),
+            }}
+          />
+        )}
         <span ref={bindDataUpdate} class="hidden" aria-hidden="true" />
         <span ref={bindIndicatorsUpdate} class="hidden" aria-hidden="true" />
         <div class="pointer-events-none absolute left-4 top-3 flex items-center gap-2">
