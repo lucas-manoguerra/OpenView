@@ -1,10 +1,15 @@
 import type { ChartDataPoint, ChartFrame } from './chart-frame';
-import type { ChartRenderCandle } from './canvas-painter';
+import type { ChartIndicatorSeries, ChartRenderCandle } from './canvas-painter';
 import { priceToCoordinate } from './price-scale';
 
 export type ChartDrawingMagnetMode = 'off' | 'weak' | 'strong';
 
 const DEFAULT_WEAK_MAGNET_TOLERANCE = 12;
+
+type MagnetCandidate = Readonly<{
+  logicalIndex: number;
+  price: number;
+}>;
 
 const findClosestCandle = (
   logicalIndex: number,
@@ -52,6 +57,56 @@ const findClosestCandle = (
     : right;
 };
 
+const findClosestIndicatorPoint = (
+  logicalIndex: number,
+  points: ChartIndicatorSeries['points'],
+): MagnetCandidate | null => {
+  if (points.length === 0) {
+    return null;
+  }
+
+  let lower = 0;
+  let upper = points.length - 1;
+
+  while (lower <= upper) {
+    const middle = Math.floor((lower + upper) / 2);
+    const candidate = points[middle];
+
+    if (candidate === undefined) {
+      return null;
+    }
+
+    if (candidate.logicalIndex === logicalIndex) {
+      return Object.freeze({
+        logicalIndex: candidate.logicalIndex,
+        price: candidate.value,
+      });
+    }
+
+    if (candidate.logicalIndex < logicalIndex) {
+      lower = middle + 1;
+    } else {
+      upper = middle - 1;
+    }
+  }
+
+  const left = points[upper];
+  const right = points[lower];
+  const closest =
+    left === undefined
+      ? right
+      : right === undefined
+        ? left
+        : Math.abs(left.logicalIndex - logicalIndex) <=
+            Math.abs(right.logicalIndex - logicalIndex)
+          ? left
+          : right;
+
+  return closest === undefined
+    ? null
+    : Object.freeze({ logicalIndex: closest.logicalIndex, price: closest.value });
+};
+
 export const resolveChartDrawingMagnetMode = (
   configuredMode: ChartDrawingMagnetMode,
   modifierPressed: boolean,
@@ -69,6 +124,8 @@ export const snapChartDrawingPointToOhlc = (
   frame: ChartFrame,
   mode: ChartDrawingMagnetMode,
   weakTolerance = DEFAULT_WEAK_MAGNET_TOLERANCE,
+  indicators: readonly ChartIndicatorSeries[] = [],
+  snapToIndicators = false,
 ): ChartDataPoint => {
   if (
     !Number.isFinite(point.logicalIndex) ||
@@ -89,22 +146,39 @@ export const snapChartDrawingPointToOhlc = (
     return point;
   }
 
-  const candidatePrices = [candle.open, candle.high, candle.low, candle.close];
+  const candidates: MagnetCandidate[] = [
+    { logicalIndex: candle.logicalIndex, price: candle.open },
+    { logicalIndex: candle.logicalIndex, price: candle.high },
+    { logicalIndex: candle.logicalIndex, price: candle.low },
+    { logicalIndex: candle.logicalIndex, price: candle.close },
+  ];
+
+  if (snapToIndicators) {
+    for (const indicator of indicators) {
+      const candidate = findClosestIndicatorPoint(candle.logicalIndex, indicator.points);
+
+      if (candidate !== null) {
+        candidates.push(candidate);
+      }
+    }
+  }
+
   const pointerY = frame.layout.plotArea.y + priceToCoordinate(point.price, frame.priceScale);
-  let nearestPrice: number | null = null;
+  let nearestCandidate: MagnetCandidate | null = null;
   let nearestDistance = Number.POSITIVE_INFINITY;
 
-  for (const price of candidatePrices) {
-    if (!Number.isFinite(price)) {
+  for (const candidate of candidates) {
+    if (!Number.isFinite(candidate.price)) {
       continue;
     }
 
     try {
-      const candidateY = frame.layout.plotArea.y + priceToCoordinate(price, frame.priceScale);
+      const candidateY =
+        frame.layout.plotArea.y + priceToCoordinate(candidate.price, frame.priceScale);
       const candidateDistance = Math.abs(candidateY - pointerY);
 
       if (candidateDistance < nearestDistance) {
-        nearestPrice = price;
+        nearestCandidate = candidate;
         nearestDistance = candidateDistance;
       }
     } catch {
@@ -112,12 +186,15 @@ export const snapChartDrawingPointToOhlc = (
     }
   }
 
-  if (nearestPrice === null || (mode === 'weak' && nearestDistance > weakTolerance)) {
+  if (
+    nearestCandidate === null ||
+    (mode === 'weak' && nearestDistance > weakTolerance)
+  ) {
     return point;
   }
 
   return Object.freeze({
-    logicalIndex: candle.logicalIndex,
-    price: nearestPrice,
+    logicalIndex: nearestCandidate.logicalIndex,
+    price: nearestCandidate.price,
   });
 };
