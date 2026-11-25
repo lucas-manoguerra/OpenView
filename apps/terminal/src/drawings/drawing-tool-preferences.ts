@@ -91,10 +91,7 @@ export const restoreDrawingToolPreferences = (
     const preferences = Object.fromEntries(
       DRAWING_TOOL_TYPES.map((tool) => [
         tool,
-        restoreStyle(
-          Reflect.get(savedTools, tool),
-          DEFAULT_DRAWING_TOOL_PREFERENCES[tool],
-        ),
+        restoreStyle(Reflect.get(savedTools, tool), DEFAULT_DRAWING_TOOL_PREFERENCES[tool]),
       ]),
     ) as Record<DrawingToolType, DrawingToolStyle>;
 
@@ -154,8 +151,6 @@ const getBrowserStorage = (): StringStorage | null => {
 export const loadBrowserDrawingToolPreferences = (): DrawingToolPreferences =>
   loadDrawingToolPreferences(getBrowserStorage());
 
-export const saveBrowserDrawingToolPreferences = (
-  preferences: DrawingToolPreferences,
-): void => {
+export const saveBrowserDrawingToolPreferences = (preferences: DrawingToolPreferences): void => {
   saveDrawingToolPreferences(getBrowserStorage(), preferences);
 };
