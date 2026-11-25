@@ -3,7 +3,7 @@ import type { ComponentChildren, JSX } from 'preact';
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 export type ButtonSize = 'small' | 'medium' | 'large';
 
-export type ButtonProps = Omit<JSX.HTMLAttributes<HTMLButtonElement>, 'size'> & {
+export type ButtonProps = Omit<JSX.ButtonHTMLAttributes<HTMLButtonElement>, 'size'> & {
   variant?: ButtonVariant;
   size?: ButtonSize;
   fullWidth?: boolean;
