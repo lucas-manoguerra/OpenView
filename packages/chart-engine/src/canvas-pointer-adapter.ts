@@ -360,10 +360,14 @@ export const attachCanvasPointerEvents = (
           });
         }
       }
+      const wasGroupEdit = activeDrawingGroupEdit !== null;
       activeDrawingEdit = null;
       activeDrawingGroupEdit = null;
-      options.onDrawingEditPreview?.(null);
-      options.onDrawingGroupEditPreview?.(null);
+      if (wasGroupEdit) {
+        options.onDrawingGroupEditPreview?.(null);
+      } else {
+        options.onDrawingEditPreview?.(null);
+      }
       releaseActivePointer();
       return;
     }
