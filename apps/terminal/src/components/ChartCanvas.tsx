@@ -2,6 +2,11 @@ import { useCallback, useMemo, useRef, useState } from 'preact/hooks';
 import type { Candle } from '@openview/market-domain';
 import type { CandleInterval } from '@openview/market-data';
 import {
+  ChartTypeSelector,
+  PriceScaleSelector,
+  type ChartControlOption,
+} from './ui';
+import {
   DEFAULT_DRAWING_INTERACTION_PREFERENCES,
   loadBrowserDrawingInteractionPreferences,
   saveBrowserDrawingInteractionPreferences,
@@ -109,6 +114,20 @@ const INDICATOR_OPTIONS = Object.freeze([
   { id: 'ema-20', label: 'EMA 20', method: 'ema', period: 20, color: '#42a5f5' },
   { id: 'ema-50', label: 'EMA 50', method: 'ema', period: 50, color: '#ab47bc' },
 ] as const);
+
+const CHART_TYPE_OPTIONS: readonly ChartControlOption[] = [
+  { value: 'candles', label: 'Velas' },
+  { value: 'bars', label: 'Barras' },
+  { value: 'line', label: 'Línea' },
+  { value: 'area', label: 'Área' },
+];
+
+const PRICE_SCALE_OPTIONS: readonly ChartControlOption[] = [
+  { value: 'linear', label: 'Lin', ariaLabel: 'Escala linear' },
+  { value: 'logarithmic', label: 'Log', ariaLabel: 'Escala logarithmic' },
+  { value: 'percentage', label: '%', ariaLabel: 'Escala percentage' },
+  { value: 'indexed-to-100', label: '100', ariaLabel: 'Escala indexed-to-100' },
+];
 
 const createRenderCandles = (candles: readonly Candle[]): readonly ChartRenderCandle[] =>
   Object.freeze(
@@ -2275,21 +2294,14 @@ export function ChartCanvas({
         )}
         <fieldset class="absolute right-3 top-3 z-10 flex flex-wrap items-center justify-end gap-1 rounded-lg border border-white/10 bg-[#101723]/95 p-1 shadow-lg">
           <legend class="sr-only">Controles del gráfico</legend>
-          <label class="flex items-center gap-1 px-1 text-[10px] text-slate-400">
-            <span class="sr-only">Tipo de gráfico</span>
-            <select
-              value={chartType}
-              aria-label="Tipo de gráfico"
-              data-testid="chart-type-select"
-              onChange={(event) => handleChartTypeChange(event.currentTarget.value as ChartType)}
-              class="max-w-24 rounded bg-transparent px-1 py-1 text-[10px] text-slate-200 outline-none"
-            >
-              <option value="candles">Velas</option>
-              <option value="bars">Barras</option>
-              <option value="line">Línea</option>
-              <option value="area">Área</option>
-            </select>
-          </label>
+          <ChartTypeSelector
+            value={chartType}
+            options={CHART_TYPE_OPTIONS}
+            onChange={(nextType) => handleChartTypeChange(nextType as ChartType)}
+            testId="chart-type-select"
+            showLabel={false}
+            variant="chart-overlay"
+          />
           <details class="relative" data-testid="chart-indicators-menu">
             <summary class="cursor-pointer list-none rounded px-2 py-1 text-[10px] text-slate-300 transition-colors hover:bg-white/5">
               Indicadores
@@ -2317,26 +2329,13 @@ export function ChartCanvas({
             </div>
           </details>
           <span class="mx-0.5 h-4 w-px bg-white/10" />
-          {(
-            [
-              ['linear', 'Lin'],
-              ['logarithmic', 'Log'],
-              ['percentage', '%'],
-              ['indexed-to-100', '100'],
-            ] as const
-          ).map(([mode, label]) => (
-            <button
-              type="button"
-              disabled={renderCandles.length === 0}
-              aria-label={`Escala ${mode}`}
-              aria-pressed={priceScaleMode === mode}
-              data-testid={`price-scale-${mode}`}
-              onClick={() => handlePriceScaleModeChange(mode)}
-              class={`rounded px-2 py-1 text-[10px] transition-colors ${priceScaleMode === mode ? 'bg-blue-500/20 text-blue-200' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}
-            >
-              {label}
-            </button>
-          ))}
+          <PriceScaleSelector
+            value={priceScaleMode}
+            options={PRICE_SCALE_OPTIONS}
+            onChange={(mode) => handlePriceScaleModeChange(mode as PriceScaleMode)}
+            disabled={renderCandles.length === 0}
+            variant="chart-overlay"
+          />
           <button
             type="button"
             disabled={renderCandles.length === 0}
