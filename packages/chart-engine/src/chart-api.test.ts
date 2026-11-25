@@ -200,6 +200,11 @@ describe('chart public API', () => {
     chart.execute({ type: 'set-drawing-hover', hit });
     chart.execute({ type: 'set-drawings', drawings: [] });
     expect(chart.exportSnapshot().scene.hoveredDrawingHit).toBeNull();
+
+    chart.execute({ type: 'set-drawings', drawings: [drawing] });
+    chart.execute({ type: 'set-drawing-hover', hit });
+    chart.execute({ type: 'set-drawings-visible', visible: false });
+    expect(chart.exportSnapshot().scene.hoveredDrawingHit).toBeNull();
     chart.destroy();
   });
 
