@@ -48,6 +48,7 @@ export type ChartRenderDrawing = Readonly<{
   startStyle?: ChartDrawingEndpointStyle;
   endStyle?: ChartDrawingEndpointStyle;
   locked?: boolean;
+  visible?: boolean;
 }>;
 
 export type ChartRenderScene = Readonly<{
@@ -183,6 +184,7 @@ const normalizeChartDrawings = (
       const startStyle = drawing.startStyle ?? 'none';
       const endStyle = drawing.endStyle ?? 'none';
       const locked = drawing.locked ?? false;
+      const visible = drawing.visible ?? true;
 
       if (
         typeof fillColor !== 'string' ||
@@ -192,6 +194,10 @@ const normalizeChartDrawings = (
         fillOpacity > 1
       ) {
         throw new RangeError('Chart drawing fill color and opacity must be valid.');
+      }
+
+      if (typeof visible !== 'boolean') {
+        throw new RangeError('Chart drawing visibility must be a boolean.');
       }
 
       if (typeof extendStart !== 'boolean' || typeof extendEnd !== 'boolean') {
@@ -221,6 +227,7 @@ const normalizeChartDrawings = (
         startStyle,
         endStyle,
         locked,
+        visible,
       });
     }),
   );
@@ -867,6 +874,10 @@ const drawDrawings = (context: CanvasRenderingContext2D, scene: ChartRenderScene
   context.clip();
 
   for (const drawing of scene.drawings) {
+    if (drawing.visible === false) {
+      continue;
+    }
+
     const startIndex = getLogicalIndexAtTimestamp(drawing.start.timestamp, scene.candles);
 
     if (startIndex === null) {
