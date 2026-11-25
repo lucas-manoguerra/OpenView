@@ -696,9 +696,7 @@ export function ChartCanvas({
             setDrawingSelectionArea(selection);
           },
           onDrawingAreaSelectionComplete: (area: ChartDrawingSelectionArea): void => {
-            updateDrawingSelection(
-              chartApi?.selectDrawingsWithinArea(area) ?? [],
-            );
+            updateDrawingSelection(chartApi?.selectDrawingsWithinArea(area) ?? []);
           },
           onDrawingGroupEdit: (gesture: CanvasDrawingGroupEditGesture): void => {
             const selectedIds = new Set(gesture.drawingIds);
