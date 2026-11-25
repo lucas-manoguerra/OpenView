@@ -2147,15 +2147,9 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
     JSON.stringify(coordinatePointerTarget),
   ).toBe(true);
 
-  await page.mouse.move(
-    coordinateDragPoint.x,
-    coordinateDragPoint.y,
-  );
+  await page.mouse.move(coordinateDragPoint.x, coordinateDragPoint.y);
   await page.mouse.down();
-  await page.mouse.move(
-    coordinateDragPoint.x + 38,
-    coordinateDragPoint.y + 24,
-  );
+  await page.mouse.move(coordinateDragPoint.x + 38, coordinateDragPoint.y + 24);
   await page.mouse.up();
 
   const coordinateAfterDrag = await coordinatePanel.boundingBox();
