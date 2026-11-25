@@ -354,9 +354,9 @@ export function DrawingPropertiesPanel({
             </div>
             {templateError !== null && (
                 <p role="alert" class="text-[10px] text-rose-300">
-                {templateError}
-              </p>
-            )}
+                  {templateError}
+                </p>
+              )}
             <p class="text-[9px] leading-relaxed text-slate-500">
               Las plantillas personalizadas se guardan en este navegador y se aplican a toda la
               selección.
