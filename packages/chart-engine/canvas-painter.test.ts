@@ -19,12 +19,18 @@ const createMockContext = (): Readonly<{
   calls: RecordedCall[];
 }> => {
   const calls: RecordedCall[] = [];
+  let currentStrokeStyle = '#000000';
   const record = (name: string, ...args: unknown[]): void => {
     calls.push({ name, args });
   };
   const context = {
     fillStyle: '#000000',
-    strokeStyle: '#000000',
+    get strokeStyle() {
+      return currentStrokeStyle;
+    },
+    set strokeStyle(value: string) {
+      currentStrokeStyle = value;
+    },
     lineWidth: 1,
     globalAlpha: 1,
     font: '10px sans-serif',
@@ -41,7 +47,7 @@ const createMockContext = (): Readonly<{
     moveTo: (...args: number[]) => record('moveTo', ...args),
     lineTo: (...args: number[]) => record('lineTo', ...args),
     arc: (...args: number[]) => record('arc', ...args),
-    stroke: () => record('stroke'),
+    stroke: () => record('stroke', currentStrokeStyle),
     fillText: (...args: [string, number, number]) => record('fillText', ...args),
     rect: (...args: number[]) => record('rect', ...args),
     clip: () => record('clip'),
@@ -545,6 +551,49 @@ describe('canvas chart painter', () => {
       selectedContext.calls.filter((call) => call.name === 'arc').length -
         normalContext.calls.filter((call) => call.name === 'arc').length,
     ).toBe(4);
+  });
+
+  it('renders selected handles above later overlapping drawings', () => {
+    const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 10);
+    const drawings: readonly ChartRenderDrawing[] = [
+      {
+        id: 'selected-underneath',
+        type: 'trend-line',
+        start: { timestamp: 1_700_000_000_000, price: 100 },
+        end: { timestamp: 1_700_000_120_000, price: 110 },
+        color: '#60a5fa',
+      },
+      {
+        id: 'overlapping-top',
+        type: 'trend-line',
+        start: { timestamp: 1_700_000_000_000, price: 110 },
+        end: { timestamp: 1_700_000_120_000, price: 100 },
+        color: '#f4c542',
+      },
+    ];
+    const scene = createChartRenderScene(
+      frame,
+      createCandles(),
+      null,
+      'candles',
+      [],
+      drawings,
+      'selected-underneath',
+    );
+    const { context, calls } = createMockContext();
+
+    drawChartScene(context, scene);
+
+    const drawingColors = new Set(['#60a5fa', '#f4c542']);
+    const drawingStrokeIndexes = calls.flatMap((call, index) =>
+      call.name === 'stroke' && drawingColors.has(String(call.args[0])) ? [index] : [],
+    );
+    const lastDrawingStroke = drawingStrokeIndexes[1] ?? -1;
+    const firstSelectionHandle = calls.findIndex(
+      (call) => call.name === 'arc' && (call.args[2] === 6 || call.args[2] === 7),
+    );
+
+    expect(firstSelectionHandle).toBeGreaterThan(lastDrawingStroke);
   });
 
   it('renders handles for every drawing in a multi-selection', () => {

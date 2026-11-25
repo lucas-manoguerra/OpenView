@@ -896,6 +896,12 @@ const drawDrawings = (context: CanvasRenderingContext2D, scene: ChartRenderScene
   context.rect(plotArea.x, plotArea.y, plotArea.width, plotArea.height + volumeArea.height);
   context.clip();
 
+  const selectionHandles: {
+    point: ChartCoordinate;
+    color: string;
+    hovered: boolean;
+  }[] = [];
+
   for (const drawing of scene.drawings) {
     if (drawing.visible === false) {
       continue;
@@ -1017,29 +1023,35 @@ const drawDrawings = (context: CanvasRenderingContext2D, scene: ChartRenderScene
 
     const hoveredTarget =
       scene.hoveredDrawingHit?.drawingId === drawing.id ? scene.hoveredDrawingHit.target : null;
-    const handles: Readonly<{ point: ChartCoordinate; target: 'start' | 'end' }>[] = [];
     if (isSelected || hoveredTarget === 'start') {
-      handles.push({ point: startHandle, target: 'start' });
+      selectionHandles.push({
+        point: startHandle,
+        color: drawing.color,
+        hovered: hoveredTarget === 'start',
+      });
     }
     if (endHandle !== null && (isSelected || hoveredTarget === 'end')) {
-      handles.push({ point: endHandle, target: 'end' });
+      selectionHandles.push({
+        point: endHandle,
+        color: drawing.color,
+        hovered: hoveredTarget === 'end',
+      });
     }
+  }
 
-    for (const handle of handles) {
-      const isHovered = hoveredTarget === handle.target;
+  for (const handle of selectionHandles) {
+    context.beginPath();
+    context.arc(handle.point.x, handle.point.y, handle.hovered ? 7 : 6, 0, Math.PI * 2);
+    context.fillStyle = handle.hovered ? '#e2e8f0' : '#0b0f17';
+    context.fill();
+    context.strokeStyle = handle.color;
+    context.lineWidth = handle.hovered ? 2 : 1.5;
+    context.stroke();
+    if (!handle.hovered) {
       context.beginPath();
-      context.arc(handle.point.x, handle.point.y, isHovered ? 7 : 6, 0, Math.PI * 2);
-      context.fillStyle = isHovered ? '#e2e8f0' : '#0b0f17';
+      context.arc(handle.point.x, handle.point.y, 2, 0, Math.PI * 2);
+      context.fillStyle = '#e2e8f0';
       context.fill();
-      context.strokeStyle = drawing.color;
-      context.lineWidth = isHovered ? 2 : 1.5;
-      context.stroke();
-      if (!isHovered) {
-        context.beginPath();
-        context.arc(handle.point.x, handle.point.y, 2, 0, Math.PI * 2);
-        context.fillStyle = '#e2e8f0';
-        context.fill();
-      }
     }
   }
 
