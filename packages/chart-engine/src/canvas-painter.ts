@@ -30,12 +30,16 @@ export type ChartDrawingPoint = Readonly<{
   price: number;
 }>;
 
+export type ChartDrawingLineStyle = 'solid' | 'dashed' | 'dotted';
+
 export type ChartRenderDrawing = Readonly<{
   id: string;
   type: 'trend-line' | 'ray' | 'horizontal-line' | 'vertical-line' | 'rectangle';
   start: ChartDrawingPoint;
   end: ChartDrawingPoint | null;
   color: string;
+  lineWidth?: number;
+  lineStyle?: ChartDrawingLineStyle;
 }>;
 
 export type ChartRenderScene = Readonly<{
@@ -144,6 +148,17 @@ const normalizeChartDrawings = (
         throw new RangeError('Chart drawing end points must be finite.');
       }
 
+      const lineWidth = drawing.lineWidth ?? 1.5;
+      const lineStyle = drawing.lineStyle ?? 'solid';
+
+      if (!Number.isFinite(lineWidth) || lineWidth < 0.5 || lineWidth > 8) {
+        throw new RangeError('Chart drawing line width must be between 0.5 and 8.');
+      }
+
+      if (!(['solid', 'dashed', 'dotted'] as const).includes(lineStyle)) {
+        throw new RangeError('Chart drawing line style must be solid, dashed or dotted.');
+      }
+
       ids.add(drawing.id);
       return Object.freeze({
         id: drawing.id,
@@ -151,6 +166,8 @@ const normalizeChartDrawings = (
         start: Object.freeze({ ...drawing.start }),
         end: drawing.end === null ? null : Object.freeze({ ...drawing.end }),
         color: drawing.color,
+        lineWidth,
+        lineStyle,
       });
     }),
   );
@@ -788,11 +805,15 @@ const drawDrawings = (context: CanvasRenderingContext2D, scene: ChartRenderScene
       continue;
     }
 
+    const isSelected = scene.selectedDrawingId === drawing.id;
+    const lineDash =
+      drawing.lineStyle === 'dashed' ? [8, 5] : drawing.lineStyle === 'dotted' ? [2, 4] : [];
+    context.setLineDash(lineDash);
     context.strokeStyle = drawing.color;
-    context.lineWidth = scene.selectedDrawingId === drawing.id ? 2.5 : 1.5;
+    context.lineWidth = (drawing.lineWidth ?? 1.5) + (isSelected ? 1 : 0);
     context.stroke();
 
-    if (scene.selectedDrawingId === drawing.id) {
+    if (isSelected) {
       const handles: ChartCoordinate[] = [startHandle];
 
       if (endHandle !== null) {
@@ -800,10 +821,17 @@ const drawDrawings = (context: CanvasRenderingContext2D, scene: ChartRenderScene
       }
 
       for (const handle of handles) {
+        context.beginPath();
+        context.arc(handle.x, handle.y, 6, 0, Math.PI * 2);
         context.fillStyle = '#0b0f17';
-        context.fillRect(handle.x - 5, handle.y - 5, 10, 10);
+        context.fill();
+        context.strokeStyle = drawing.color;
+        context.lineWidth = 1.5;
+        context.stroke();
+        context.beginPath();
+        context.arc(handle.x, handle.y, 2, 0, Math.PI * 2);
         context.fillStyle = '#e2e8f0';
-        context.fillRect(handle.x - 3, handle.y - 3, 6, 6);
+        context.fill();
       }
     }
   }
