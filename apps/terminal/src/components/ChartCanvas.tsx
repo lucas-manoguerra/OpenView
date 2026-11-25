@@ -1023,10 +1023,7 @@ export function ChartCanvas({
                 0,
                 Math.min(maxLeft, drag.left + event.clientX - drag.pointerX),
               );
-              const top = Math.max(
-                0,
-                Math.min(maxTop, drag.top + event.clientY - drag.pointerY),
-              );
+              const top = Math.max(0, Math.min(maxTop, drag.top + event.clientY - drag.pointerY));
               setDrawingPanelPosition({ left, top });
             }}
             onPointerUp={(event) => {
