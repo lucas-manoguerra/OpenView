@@ -1375,7 +1375,7 @@ test('draws geometric annotations and supports undo, redo and clearing', async (
   await expect(canvas).toHaveAttribute('data-drawing-count', '2');
 
   await page.getByTestId('drawing-tool-horizontal-line').click();
-  await page.mouse.click(bounds.x + bounds.width * 0.64, bounds.y + bounds.height * 0.62);
+  await page.mouse.click(bounds.x + bounds.width * 0.64, bounds.y + bounds.height * 0.5);
   await expect(canvas).toHaveAttribute('data-drawing-count', '3');
 
   await page.getByTestId('drawing-tool-vertical-line').click();
@@ -1387,7 +1387,7 @@ test('draws geometric annotations and supports undo, redo and clearing', async (
     bounds.x + bounds.width * 0.36,
     bounds.y + bounds.height * 0.24,
     bounds.x + bounds.width * 0.58,
-    bounds.y + bounds.height * 0.68,
+    bounds.y + bounds.height * 0.58,
   );
   await expect(canvas).toHaveAttribute('data-drawing-count', '5');
   await expect(canvas).toHaveAttribute('data-drawing-undo-count', '5');
@@ -1628,7 +1628,7 @@ test('hides drawings without deleting them and restores their selection', async 
   await expect(canvas).toHaveAttribute('data-renderable-drawing-count', '1');
 
   await page.getByTestId('drawing-tool-select').click();
-  await page.mouse.click(middleX, middleY - 12);
+  await page.mouse.click(middleX, middleY);
   await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-1');
 });
 
