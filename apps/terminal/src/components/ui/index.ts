@@ -12,3 +12,7 @@ export { Select } from './Select';
 export type { SelectProps, SelectSize } from './Select';
 export { TextField } from './TextField';
 export type { TextFieldProps, TextFieldSize } from './TextField';
+export { DropdownMenu } from './DropdownMenu';
+export type { DropdownMenuItem, DropdownMenuProps } from './DropdownMenu';
+export { Tabs } from './Tabs';
+export type { TabItem, TabsProps } from './Tabs';
