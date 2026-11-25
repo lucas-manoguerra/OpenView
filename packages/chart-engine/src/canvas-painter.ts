@@ -369,10 +369,17 @@ export const updateChartRenderScene = (
     ...indicators.map((indicator) => ({ kind: 'indicator' as const, id: indicator.id })),
     ...drawings.map((drawing) => ({ kind: 'drawing' as const, id: drawing.id })),
   ];
-  const objectOrder = reconcileChartObjectOrder(
-    update.objectOrder ?? scene.objectOrder,
-    availableObjects,
-  );
+  const orderMatchesAvailable =
+    scene.objectOrder.length === availableObjects.length &&
+    scene.objectOrder.every(
+      (item, index) =>
+        item.kind === availableObjects[index]?.kind &&
+        item.id === availableObjects[index]?.id,
+    );
+  const objectOrder =
+    update.objectOrder === undefined && orderMatchesAvailable
+      ? scene.objectOrder
+      : reconcileChartObjectOrder(update.objectOrder ?? scene.objectOrder, availableObjects);
 
   if (crosshair !== null && (!Number.isFinite(crosshair.x) || !Number.isFinite(crosshair.y))) {
     throw new RangeError('Crosshair coordinates must be finite numbers.');
@@ -1158,10 +1165,12 @@ export const drawChartScene = (
         drawIndicators(context, { ...scene, indicators: [indicator] });
       }
     } else if (item.kind === 'drawing') {
-      const drawing = scene.drawings.find((candidate) => candidate.id === item.id);
-      if (drawing !== undefined) {
-        drawDrawings(context, { ...scene, drawings: [drawing] });
-      }
+      const orderedDrawings = scene.objectOrder
+        .filter((candidate) => candidate.kind === 'drawing')
+        .map((candidate) => scene.drawings.find((drawing) => drawing.id === candidate.id))
+        .filter((drawing): drawing is ChartRenderDrawing => drawing !== undefined);
+      drawDrawings(context, { ...scene, drawings: orderedDrawings });
+      break;
     }
   }
   drawCrosshair(context, scene, theme);
