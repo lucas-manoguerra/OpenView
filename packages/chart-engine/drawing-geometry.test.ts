@@ -85,6 +85,25 @@ describe('chart drawing geometry', () => {
     });
   });
 
+  it('does not hit-test locked drawings', () => {
+    const frame = createFrame();
+    const candles = createCandles();
+    const lockedDrawing: ChartRenderDrawing = Object.freeze({
+      ...trendDrawing,
+      locked: true,
+    });
+    const start = dataPointToChartCoordinate({ logicalIndex: 0, price: 100 }, frame);
+    const middle = {
+      x: dataPointToChartCoordinate({ logicalIndex: 0, price: 100 }, frame).x * 0.5 +
+        dataPointToChartCoordinate({ logicalIndex: 2, price: 110 }, frame).x * 0.5,
+      y: dataPointToChartCoordinate({ logicalIndex: 0, price: 100 }, frame).y * 0.5 +
+        dataPointToChartCoordinate({ logicalIndex: 2, price: 110 }, frame).y * 0.5,
+    };
+
+    expect(hitTestChartDrawing(start, [lockedDrawing], candles, frame)).toBeNull();
+    expect(hitTestChartDrawing(middle, [lockedDrawing], candles, frame)).toBeNull();
+  });
+
   it('selects the top-most drawing when annotations overlap', () => {
     const frame = createFrame();
     const candles = createCandles();
