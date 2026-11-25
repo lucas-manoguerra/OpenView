@@ -283,7 +283,7 @@ export function ChartCanvas({
   const [drawingPanelLayout, setDrawingPanelLayout] = useState<DrawingPanelLayout>(
     DEFAULT_DRAWING_PANEL_LAYOUT,
   );
-  const [drawingPanelLayoutLoaded, setDrawingPanelLayoutLoaded] = useState(false);
+
   const [customDrawingTemplates, setCustomDrawingTemplates] = useState<
     readonly DrawingStyleTemplate[]
   >([]);
@@ -313,6 +313,7 @@ export function ChartCanvas({
   const commitDrawingsRef = useRef<(nextDrawings: readonly ChartRenderDrawing[]) => void>(() => {});
   const drawingSequenceRef = useRef(0);
   const drawingPanelLayoutRef = useRef<DrawingPanelLayout>(drawingPanelLayout);
+  const drawingPanelLayoutLoadedRef = useRef(false);
   const drawingPropertiesPanelRef = useRef<HTMLDivElement | null>(null);
   const drawingCoordinatesPanelRef = useRef<HTMLElement | null>(null);
   const drawingPanelDragCleanupRef = useRef<(() => void) | null>(null);
@@ -323,7 +324,6 @@ export function ChartCanvas({
   chartTypeRef.current = chartType;
   drawingToolRef.current = drawingTool;
   drawingToolPreferencesRef.current = drawingToolPreferences;
-  drawingPanelLayoutRef.current = drawingPanelLayout;
   drawingsRef.current = drawings;
   selectedDrawingIdRef.current = selectedDrawingId;
   selectedDrawingIdsRef.current = selectedDrawingIds;
@@ -339,19 +339,19 @@ export function ChartCanvas({
     runtimeRef.current?.setDrawings(drawingsRef.current);
   };
   const ensureDrawingPanelLayoutLoaded = (): void => {
-    if (drawingPanelLayoutLoaded) {
+    if (drawingPanelLayoutLoadedRef.current) {
       return;
     }
 
     const layout = loadBrowserDrawingPanelLayout();
     drawingPanelLayoutRef.current = layout;
+    drawingPanelLayoutLoadedRef.current = true;
     setDrawingPanelLayout(layout);
-    setDrawingPanelLayoutLoaded(true);
   };
   const commitDrawingPanelLayout = (layout: DrawingPanelLayout): void => {
     drawingPanelLayoutRef.current = layout;
+    drawingPanelLayoutLoadedRef.current = true;
     setDrawingPanelLayout(layout);
-    setDrawingPanelLayoutLoaded(true);
     saveBrowserDrawingPanelLayout(layout);
   };
   const handleDrawingPanelPositionChange = (
