@@ -956,10 +956,7 @@ const drawDrawings = (context: CanvasRenderingContext2D, scene: ChartRenderScene
 
     context.stroke();
 
-    if (
-      endHandle !== null &&
-      (drawing.type === 'trend-line' || drawing.type === 'ray')
-    ) {
+    if (endHandle !== null && (drawing.type === 'trend-line' || drawing.type === 'ray')) {
       const direction = Math.atan2(endHandle.y - startHandle.y, endHandle.x - startHandle.x);
       drawDrawingEndpoint(
         context,
