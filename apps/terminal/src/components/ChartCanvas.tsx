@@ -1003,6 +1003,47 @@ export function ChartCanvas({
         class="relative h-full min-w-0 bg-[#0b0f17]"
         data-testid="chart-surface"
         data-provider-error={error === null ? 'false' : 'true'}
+            onPointerMove={(event) => {
+              const drag = drawingPropertiesDragRef.current;
+              const panel = drawingPropertiesPanelRef.current;
+              const parent = panel === null ? null : panel.parentElement;
+
+              if (
+                drag === null ||
+                drag.pointerId !== event.pointerId ||
+                panel === null ||
+                parent === null
+              ) {
+                return;
+              }
+
+              const maxLeft = Math.max(0, parent.clientWidth - panel.offsetWidth);
+              const maxTop = Math.max(0, parent.clientHeight - panel.offsetHeight);
+              const left = Math.max(
+                0,
+                Math.min(maxLeft, drag.left + event.clientX - drag.pointerX),
+              );
+              const top = Math.max(
+                0,
+                Math.min(maxTop, drag.top + event.clientY - drag.pointerY),
+              );
+              setDrawingPanelPosition({ left, top });
+            }}
+            onPointerUp={(event) => {
+              if (drawingPropertiesDragRef.current?.pointerId !== event.pointerId) {
+                return;
+              }
+
+              drawingPropertiesDragRef.current = null;
+              if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                event.currentTarget.releasePointerCapture(event.pointerId);
+              }
+            }}
+            onPointerCancel={(event) => {
+              if (drawingPropertiesDragRef.current?.pointerId === event.pointerId) {
+                drawingPropertiesDragRef.current = null;
+              }
+            }}
       >
         <canvas
           ref={bindCanvas}
@@ -1229,47 +1270,6 @@ export function ChartCanvas({
             ref={drawingPropertiesPanelRef}
             data-testid="drawing-properties-panel"
             class="absolute bottom-10 left-3 z-20 w-64 rounded-xl border border-white/10 bg-[#101723]/95 p-3 shadow-2xl backdrop-blur"
-            onPointerMove={(event) => {
-              const drag = drawingPropertiesDragRef.current;
-              const panel = drawingPropertiesPanelRef.current;
-              const parent = panel === null ? null : panel.parentElement;
-
-              if (
-                drag === null ||
-                drag.pointerId !== event.pointerId ||
-                panel === null ||
-                parent === null
-              ) {
-                return;
-              }
-
-              const maxLeft = Math.max(0, parent.clientWidth - panel.offsetWidth);
-              const maxTop = Math.max(0, parent.clientHeight - panel.offsetHeight);
-              const left = Math.max(
-                0,
-                Math.min(maxLeft, drag.left + event.clientX - drag.pointerX),
-              );
-              const top = Math.max(
-                0,
-                Math.min(maxTop, drag.top + event.clientY - drag.pointerY),
-              );
-              setDrawingPanelPosition({ left, top });
-            }}
-            onPointerUp={(event) => {
-              if (drawingPropertiesDragRef.current?.pointerId !== event.pointerId) {
-                return;
-              }
-
-              drawingPropertiesDragRef.current = null;
-              if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-                event.currentTarget.releasePointerCapture(event.pointerId);
-              }
-            }}
-            onPointerCancel={(event) => {
-              if (drawingPropertiesDragRef.current?.pointerId === event.pointerId) {
-                drawingPropertiesDragRef.current = null;
-              }
-            }}
             style={
               drawingPanelPosition === null
                 ? undefined
