@@ -111,7 +111,6 @@ test('navigates TradingView tabs and dropdown menus with keyboard and pointer', 
   await expect(menu).toBeHidden();
 });
 
-
 test('opens modal dialogs with focus containment, Escape and focus restoration', async ({
   page,
 }) => {
