@@ -51,6 +51,7 @@ export type ChartRenderScene = Readonly<{
   indicators: readonly ChartIndicatorSeries[];
   drawings: readonly ChartRenderDrawing[];
   selectedDrawingId: string | null;
+  selectedDrawingIds: readonly string[];
 }>;
 
 export type ChartRenderTheme = Readonly<{
@@ -120,6 +121,14 @@ const normalizeChartIndicators = (
     }),
   );
 
+const normalizeSelectedDrawingIds = (
+  selectedDrawingIds: readonly string[],
+  drawings: readonly ChartRenderDrawing[],
+): readonly string[] => {
+  const drawingIds = new Set(drawings.map((drawing) => drawing.id));
+  return Object.freeze([...new Set(selectedDrawingIds)].filter((id) => drawingIds.has(id)));
+};
+
 const normalizeChartDrawings = (
   drawings: readonly ChartRenderDrawing[],
 ): readonly ChartRenderDrawing[] => {
@@ -181,6 +190,7 @@ export const createChartRenderScene = (
   indicators: readonly ChartIndicatorSeries[] = [],
   drawings: readonly ChartRenderDrawing[] = [],
   selectedDrawingId: string | null = null,
+  selectedDrawingIds: readonly string[] = selectedDrawingId === null ? [] : [selectedDrawingId],
 ): ChartRenderScene => {
   let previousLogicalIndex = Number.NEGATIVE_INFINITY;
   const normalizedCandles: ChartRenderCandle[] = [];
@@ -209,6 +219,10 @@ export const createChartRenderScene = (
   const frozenCandles = Object.freeze(normalizedCandles);
   const frozenIndicators = normalizeChartIndicators(indicators);
   const frozenDrawings = normalizeChartDrawings(drawings);
+  const frozenSelectedDrawingIds = normalizeSelectedDrawingIds(
+    selectedDrawingIds,
+    frozenDrawings,
+  );
 
   return Object.freeze({
     frame,
@@ -218,7 +232,8 @@ export const createChartRenderScene = (
     chartType,
     indicators: frozenIndicators,
     drawings: frozenDrawings,
-    selectedDrawingId,
+    selectedDrawingId: frozenSelectedDrawingIds[frozenSelectedDrawingIds.length - 1] ?? null,
+    selectedDrawingIds: frozenSelectedDrawingIds,
   });
 };
 
@@ -229,6 +244,7 @@ export type ChartRenderSceneUpdate = Readonly<{
   indicators?: readonly ChartIndicatorSeries[];
   drawings?: readonly ChartRenderDrawing[];
   selectedDrawingId?: string | null;
+  selectedDrawingIds?: readonly string[];
 }>;
 
 export const updateChartRenderScene = (
@@ -248,6 +264,21 @@ export const updateChartRenderScene = (
     update.drawings === undefined || update.drawings === scene.drawings
       ? scene.drawings
       : normalizeChartDrawings(update.drawings);
+  const requestedSelectedDrawingIds =
+    update.selectedDrawingIds ??
+    (update.selectedDrawingId === undefined
+      ? scene.selectedDrawingIds
+      : update.selectedDrawingId === null
+        ? []
+        : [update.selectedDrawingId]);
+  const selectedDrawingIds =
+    update.selectedDrawingIds === undefined &&
+    update.selectedDrawingId === undefined &&
+    drawings === scene.drawings
+      ? scene.selectedDrawingIds
+      : normalizeSelectedDrawingIds(requestedSelectedDrawingIds, drawings);
+  const selectedDrawingId =
+    selectedDrawingIds[selectedDrawingIds.length - 1] ?? null;
 
   if (crosshair !== null && (!Number.isFinite(crosshair.x) || !Number.isFinite(crosshair.y))) {
     throw new RangeError('Crosshair coordinates must be finite numbers.');
@@ -260,7 +291,8 @@ export const updateChartRenderScene = (
     chartType === scene.chartType &&
     indicators === scene.indicators &&
     drawings === scene.drawings &&
-    selectedDrawingId === scene.selectedDrawingId
+    selectedDrawingId === scene.selectedDrawingId &&
+    selectedDrawingIds === scene.selectedDrawingIds
   ) {
     return scene;
   }
@@ -274,6 +306,7 @@ export const updateChartRenderScene = (
     indicators,
     drawings,
     selectedDrawingId,
+    selectedDrawingIds,
   });
 };
 
@@ -805,7 +838,8 @@ const drawDrawings = (context: CanvasRenderingContext2D, scene: ChartRenderScene
       continue;
     }
 
-    const isSelected = scene.selectedDrawingId === drawing.id;
+    const isSelected =
+      scene.selectedDrawingId === drawing.id || scene.selectedDrawingIds.includes(drawing.id);
     const lineDash =
       drawing.lineStyle === 'dashed' ? [8, 5] : drawing.lineStyle === 'dotted' ? [2, 4] : [];
     context.setLineDash(lineDash);
