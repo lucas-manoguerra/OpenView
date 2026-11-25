@@ -16,6 +16,7 @@ Cada ruta del Component Lab es una superficie de validación aislada y no una im
 ## Estado de validación
 
 Un componente se considera listo para integración cuando:
+
 - Su API está tipada y documentada.
 - Su ruta aislada cubre variantes y estados.
 - Los eventos producen el resultado esperado.
