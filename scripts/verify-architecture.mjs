@@ -140,7 +140,8 @@ for (const root of sourceRoots) {
         (specifier) =>
           specifier === '@openview/terminal' ||
           specifier.startsWith('@openview/terminal/') ||
-          (specifier.startsWith('apps/terminal/') || specifier.includes('/apps/terminal/')),
+          specifier.startsWith('apps/terminal/') ||
+          specifier.includes('/apps/terminal/'),
       );
 
       if (forbiddenImports.length > 0) {
