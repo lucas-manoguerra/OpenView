@@ -1,0 +1,32 @@
+name: Format icon files
+
+on:
+  push:
+    branches:
+      - feat/lucide-icon-system
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12.23.0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.22.3
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Format files
+        run: pnpm exec biome format --write apps/terminal/src/components/ui/Icon.tsx tests/e2e/component-lab.spec.ts
+      - uses: actions/upload-artifact@v6
+        with:
+          name: formatted-icon-files
+          path: |
+            apps/terminal/src/components/ui/Icon.tsx
+            tests/e2e/component-lab.spec.ts
+          retention-days: 1
