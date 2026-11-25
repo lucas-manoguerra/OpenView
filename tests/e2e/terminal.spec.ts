@@ -1457,7 +1457,9 @@ test('persists the TradingView drawing magnet preference', async ({ page }) => {
   );
 });
 
-test('returns to the cursor by default and keeps the tool active when requested', async ({ page }) => {
+test('returns to the cursor by default and keeps the tool active when requested', async ({
+  page,
+}) => {
   await page.goto('/');
 
   const canvas = page.getByRole('img', {
