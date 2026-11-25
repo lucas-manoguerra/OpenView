@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'preact/hooks';
+import { useId, useRef, useState } from 'preact/hooks';
 
 export type DropdownMenuItem = {
   id: string;
@@ -22,25 +22,8 @@ export function DropdownMenu({
 }: DropdownMenuProps) {
   const [open, setOpen] = useState(false);
   const menuId = useId();
-  const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const firstItem = menuRef.current?.querySelector<HTMLButtonElement>(
-      '[role="menuitem"]:not(:disabled)',
-    );
-    firstItem?.focus();
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-
-    document.addEventListener('pointerdown', handlePointerDown);
-    return () => document.removeEventListener('pointerdown', handlePointerDown);
-  }, [open]);
 
   const closeMenu = (restoreFocus = false) => {
     setOpen(false);
@@ -72,7 +55,13 @@ export function DropdownMenu({
   };
 
   return (
-    <div ref={rootRef} class="relative inline-flex">
+    <div
+      class="relative inline-flex"
+      onBlur={(event) => {
+        const nextTarget = event.relatedTarget as Node | null;
+        if (!nextTarget || !event.currentTarget.contains(nextTarget)) setOpen(false);
+      }}
+    >
       <button
         ref={triggerRef}
         type="button"
