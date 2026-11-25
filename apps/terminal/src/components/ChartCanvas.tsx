@@ -318,7 +318,7 @@ export function ChartCanvas({
   >([]);
   const [drawingTemplatesExpanded, setDrawingTemplatesExpanded] = useState(false);
   const [drawingTemplatesLoaded, setDrawingTemplatesLoaded] = useState(false);
-  const [selectedDrawingTemplateId, setSelectedDrawingTemplateId] = useState('');
+  const [selectedDrawingTemplateId, setSelectedDrawingTemplateId] = useState('default');
   const [newDrawingTemplateName, setNewDrawingTemplateName] = useState('');
   const [drawingTemplateError, setDrawingTemplateError] = useState<string | null>(null);
   const [drawingToolPreferences, setDrawingToolPreferences] = useState<DrawingToolPreferences>(
