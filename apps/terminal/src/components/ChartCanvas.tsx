@@ -292,8 +292,9 @@ export function ChartCanvas({
   const [selectedDrawingTemplateId, setSelectedDrawingTemplateId] = useState('builtin-blue');
   const [newDrawingTemplateName, setNewDrawingTemplateName] = useState('');
   const [drawingTemplateError, setDrawingTemplateError] = useState<string | null>(null);
-  const [drawingToolPreferences, setDrawingToolPreferences] =
-    useState<DrawingToolPreferences>(DEFAULT_DRAWING_TOOL_PREFERENCES);
+  const [drawingToolPreferences, setDrawingToolPreferences] = useState<DrawingToolPreferences>(
+    DEFAULT_DRAWING_TOOL_PREFERENCES,
+  );
   const [drawingToolPreferencesLoaded, setDrawingToolPreferencesLoaded] = useState(false);
   const [quickDrawingTemplatesOpen, setQuickDrawingTemplatesOpen] = useState(false);
   const [autoScale, setAutoScale] = useState(true);
@@ -878,7 +879,8 @@ export function ChartCanvas({
       selectedDrawingIdRef.current === null ||
       selectedDrawingIdsRef.current.length !== 1 ||
       (updates.price !== undefined && !Number.isFinite(updates.price)) ||
-      (updates.timestamp !== undefined && (!Number.isFinite(updates.timestamp) || updates.timestamp <= 0))
+      (updates.timestamp !== undefined &&
+        (!Number.isFinite(updates.timestamp) || updates.timestamp <= 0))
     ) {
       return;
     }
@@ -1076,7 +1078,8 @@ export function ChartCanvas({
 
   const selectedDrawing = drawings.find((drawing) => drawing.id === selectedDrawingId) ?? null;
   const drawingStyleTemplates = [...BUILT_IN_DRAWING_STYLE_TEMPLATES, ...customDrawingTemplates];
-  const selectedDrawingHasSingleSelection = selectedDrawing !== null && selectedDrawingIds.length === 1;
+  const selectedDrawingHasSingleSelection =
+    selectedDrawing !== null && selectedDrawingIds.length === 1;
 
   return (
     <div class="grid h-[390px] min-h-[340px] w-full grid-cols-[38px_minmax(0,1fr)] bg-[#0b0f17]">
