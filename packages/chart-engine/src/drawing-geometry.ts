@@ -364,6 +364,84 @@ export const selectChartDrawingsWithinArea = (
   const contains = (point: ChartCoordinate): boolean =>
     point.x >= left && point.x <= right && point.y >= top && point.y <= bottom;
 
+  const segmentIntersectsArea = (start: ChartCoordinate, end: ChartCoordinate): boolean => {
+    const deltaX = end.x - start.x;
+    const deltaY = end.y - start.y;
+    let minimum = 0;
+    let maximum = 1;
+    const constraints: readonly (readonly [number, number])[] = [
+      [-deltaX, start.x - left],
+      [deltaX, right - start.x],
+      [-deltaY, start.y - top],
+      [deltaY, bottom - start.y],
+    ];
+
+    for (const [direction, distanceFromEdge] of constraints) {
+      if (direction === 0) {
+        if (distanceFromEdge < 0) {
+          return false;
+        }
+        continue;
+      }
+
+      const progress = distanceFromEdge / direction;
+
+      if (direction < 0) {
+        minimum = Math.max(minimum, progress);
+      } else {
+        maximum = Math.min(maximum, progress);
+      }
+
+      if (minimum > maximum) {
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const intersectsArea = (
+    drawing: ChartRenderDrawing,
+    start: ChartCoordinate,
+    end: ChartCoordinate | null,
+  ): boolean => {
+    if (drawing.type === 'horizontal-line') {
+      const { plotArea } = frame.layout;
+      return segmentIntersectsArea(
+        { x: plotArea.x, y: start.y },
+        { x: plotArea.x + plotArea.width, y: start.y },
+      );
+    }
+
+    if (drawing.type === 'vertical-line') {
+      const { plotArea } = frame.layout;
+      return segmentIntersectsArea(
+        { x: start.x, y: plotArea.y },
+        { x: start.x, y: plotArea.y + plotArea.height },
+      );
+    }
+
+    if (end === null) {
+      return contains(start);
+    }
+
+    if (drawing.type === 'rectangle') {
+      return (
+        Math.max(start.x, end.x) >= left &&
+        Math.min(start.x, end.x) <= right &&
+        Math.max(start.y, end.y) >= top &&
+        Math.min(start.y, end.y) <= bottom
+      );
+    }
+
+    if (drawing.type === 'ray') {
+      const rayEnd = getRayEnd(start, end, frame);
+      return rayEnd !== null && segmentIntersectsArea(start, rayEnd);
+    }
+
+    return segmentIntersectsArea(start, end);
+  };
+
   const selectedIds: string[] = [];
 
   for (const drawing of drawings) {
@@ -373,11 +451,7 @@ export const selectChartDrawingsWithinArea = (
 
     const coordinates = getDrawingCoordinates(drawing, candles, frame);
 
-    if (
-      coordinates !== null &&
-      contains(coordinates.start) &&
-      (coordinates.end === null || contains(coordinates.end))
-    ) {
+    if (coordinates !== null && intersectsArea(drawing, coordinates.start, coordinates.end)) {
       selectedIds.push(drawing.id);
     }
   }
