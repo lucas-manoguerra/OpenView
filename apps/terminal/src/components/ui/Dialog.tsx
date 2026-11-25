@@ -25,7 +25,9 @@ export function Dialog({
     setOpen(true);
     requestAnimationFrame(() => {
       dialogRef.current
-        ?.querySelector<HTMLElement>('[data-dialog-autofocus], button:not(:disabled), input:not(:disabled)')
+        ?.querySelector<HTMLElement>(
+          '[data-dialog-autofocus], button:not(:disabled), input:not(:disabled)',
+        )
         ?.focus();
     });
   };
