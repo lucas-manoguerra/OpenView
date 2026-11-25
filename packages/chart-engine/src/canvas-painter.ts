@@ -1041,18 +1041,17 @@ const drawDrawings = (context: CanvasRenderingContext2D, scene: ChartRenderScene
 
   for (const handle of selectionHandles) {
     context.beginPath();
-    context.arc(handle.point.x, handle.point.y, handle.hovered ? 7 : 6, 0, Math.PI * 2);
-    context.fillStyle = handle.hovered ? '#e2e8f0' : '#0b0f17';
+    context.arc(handle.point.x, handle.point.y, handle.hovered ? 8 : 6, 0, Math.PI * 2);
+    context.fillStyle = '#ffffff';
     context.fill();
     context.strokeStyle = handle.color;
     context.lineWidth = handle.hovered ? 2 : 1.5;
     context.stroke();
-    if (!handle.hovered) {
-      context.beginPath();
-      context.arc(handle.point.x, handle.point.y, 2, 0, Math.PI * 2);
-      context.fillStyle = '#e2e8f0';
-      context.fill();
-    }
+
+    context.beginPath();
+    context.arc(handle.point.x, handle.point.y, 2, 0, Math.PI * 2);
+    context.fillStyle = handle.color;
+    context.fill();
   }
 
   context.restore();
