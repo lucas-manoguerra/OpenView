@@ -2128,14 +2128,33 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
     throw new Error('The drawing coordinate panel must be visible before dragging.');
   }
 
+  const coordinateDragPoint = {
+    x: coordinateHandleBounds.x + coordinateHandleBounds.width / 2,
+    y: coordinateHandleBounds.y + coordinateHandleBounds.height / 2,
+  };
+  const coordinatePointerTarget = await page.evaluate(({ x, y }) => {
+    const target = document.elementFromPoint(x, y);
+    const handle = target?.closest('[data-testid="drawing-coordinate-drag-handle"]');
+    return {
+      handleReceivesPointer: handle !== null && handle !== undefined,
+      topElement: target?.tagName ?? null,
+      topTestId: target?.getAttribute('data-testid') ?? null,
+      topClass: typeof target?.className === 'string' ? target.className : '',
+    };
+  }, coordinateDragPoint);
+  expect(
+    coordinatePointerTarget.handleReceivesPointer,
+    JSON.stringify(coordinatePointerTarget),
+  ).toBe(true);
+
   await page.mouse.move(
-    coordinateHandleBounds.x + coordinateHandleBounds.width / 2,
-    coordinateHandleBounds.y + coordinateHandleBounds.height / 2,
+    coordinateDragPoint.x,
+    coordinateDragPoint.y,
   );
   await page.mouse.down();
   await page.mouse.move(
-    coordinateHandleBounds.x + coordinateHandleBounds.width / 2 + 38,
-    coordinateHandleBounds.y + coordinateHandleBounds.height / 2 + 24,
+    coordinateDragPoint.x + 38,
+    coordinateDragPoint.y + 24,
   );
   await page.mouse.up();
 
