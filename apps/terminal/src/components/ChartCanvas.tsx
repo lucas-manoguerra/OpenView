@@ -1469,14 +1469,27 @@ export function ChartCanvas({
                 : 'text-slate-400 hover:bg-white/5 hover:text-slate-100')
             }
           >
-            🧲
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              class="size-[18px]"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M6 20V10.5a6 6 0 0 1 12 0V20" />
+              <path d="M10 20v-9.5a2 2 0 0 1 4 0V20" />
+              <path d="M6 16h4M14 16h4" />
+            </svg>
           </button>
           {drawingMagnetMenuOpen && (
             <div
               role="menu"
               aria-label="Modo Imán"
               data-testid="drawing-magnet-menu"
-              class="absolute left-full top-0 z-40 ml-2 w-40 rounded-lg border border-white/10 bg-[#101723] p-1.5 shadow-xl"
+              class="absolute left-full top-0 z-40 ml-2 w-48 rounded-lg border border-white/10 bg-[#101723] p-1.5 shadow-xl"
             >
               <button
                 type="button"
@@ -1541,7 +1554,20 @@ export function ChartCanvas({
                 }
               >
                 Ajustar a indicadores
-                {snapToIndicators && <span aria-hidden="true">✓</span>}
+                <span
+                  aria-hidden="true"
+                  class={
+                    'relative h-4 w-7 rounded-full transition-colors ' +
+                    (snapToIndicators ? 'bg-blue-500' : 'bg-white/20')
+                  }
+                >
+                  <span
+                    class={
+                      'absolute top-0.5 size-3 rounded-full bg-white transition-transform ' +
+                      (snapToIndicators ? 'translate-x-3.5' : 'translate-x-0.5')
+                    }
+                  />
+                </span>
               </button>
             </div>
           )}
