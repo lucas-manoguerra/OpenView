@@ -132,7 +132,13 @@ for (const root of sourceRoots) {
 
     if (normalizedPath.startsWith('packages/chart-engine/')) {
       const forbiddenImports = imports.filter((specifier) =>
-        /^(preact|astro|tailwindcss|@tailwindcss|@astrojs)(\/|$)/.test(specifier),
+        /^(preact|astro|tailwindcss|@tailwindcss|@astrojs)(\\/|$)/.test(specifier),
+      );
+      const forbiddenHostImports = imports.filter(
+        (specifier) =>
+          specifier === '@openview/terminal' ||
+          specifier.startsWith('@openview/terminal/') ||
+          /(^|\\/)apps\\/terminal(\\/|$)/.test(specifier),
       );
 
       if (forbiddenImports.length > 0) {
@@ -140,6 +146,14 @@ for (const root of sourceRoots) {
           filePath,
           'chart-engine-isolation',
           `Chart engine imports framework or styling modules: ${forbiddenImports.join(', ')}.`,
+        );
+      }
+
+      if (forbiddenHostImports.length > 0) {
+        report(
+          filePath,
+          'chart-host-isolation',
+          `Chart engine must not import terminal modules: ${forbiddenHostImports.join(', ')}.`,
         );
       }
     }
