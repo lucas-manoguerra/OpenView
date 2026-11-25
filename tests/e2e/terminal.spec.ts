@@ -1575,6 +1575,38 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
   await page.getByTestId('drawing-redo').click();
   await expect(canvas).toHaveAttribute('data-drawing-count', '0');
 
+  const persistedPanelLayout = await page.evaluate(() => {
+    const serialized = window.localStorage.getItem('openview.chart.drawing-panel-layout');
+
+    if (serialized === null) {
+      return null;
+    }
+
+    return JSON.parse(serialized) as {
+      positions: {
+        appearance: { left: number; top: number } | null;
+        coordinates: { left: number; top: number } | null;
+      };
+      visible: { appearance: boolean; coordinates: boolean };
+    };
+  });
+
+  expect(persistedPanelLayout).not.toBeNull();
+
+  if (persistedPanelLayout === null) {
+    throw new Error('The drawing panel layout must be persisted before reloading.');
+  }
+
+  expect(persistedPanelLayout.positions.appearance).toEqual({
+    left: Number.parseFloat(savedAppearancePosition.left),
+    top: Number.parseFloat(savedAppearancePosition.top),
+  });
+  expect(persistedPanelLayout.positions.coordinates).toEqual({
+    left: Number.parseFloat(savedCoordinatePosition.left),
+    top: Number.parseFloat(savedCoordinatePosition.top),
+  });
+  expect(persistedPanelLayout.visible).toEqual({ appearance: false, coordinates: true });
+
   await page.reload();
   await expect
     .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
