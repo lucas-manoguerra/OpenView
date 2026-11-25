@@ -738,7 +738,6 @@ export function ChartCanvas({
               return;
             }
 
-            drawingSequenceRef.current += 1;
             const drawing: ChartRenderDrawing = Object.freeze({
               id: 'drawing-' + crypto.randomUUID(),
               type: gesture.type,
