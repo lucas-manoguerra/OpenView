@@ -58,9 +58,7 @@ export const moveChartObjectInOrder = (
 ): readonly ChartObjectOrderItem[] => {
   assertUniqueObjects(order);
   const targetKey = `${target.kind}:${target.id}`;
-  const currentIndex = order.findIndex(
-    (object) => `${object.kind}:${object.id}` === targetKey,
-  );
+  const currentIndex = order.findIndex((object) => `${object.kind}:${object.id}` === targetKey);
 
   if (currentIndex === -1) {
     return createChartObjectOrder(order);
@@ -81,6 +79,9 @@ export const moveChartObjectInOrder = (
 
   const nextOrder = [...order];
   const [moved] = nextOrder.splice(currentIndex, 1);
+  if (moved === undefined) {
+    return order;
+  }
   nextOrder.splice(nextIndex, 0, moved);
   return createChartObjectOrder(nextOrder);
 };
