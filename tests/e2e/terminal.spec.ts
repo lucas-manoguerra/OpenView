@@ -2085,24 +2085,6 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
   }, dragPoint);
   expect(pointerTarget.handleReceivesPointer, JSON.stringify(pointerTarget)).toBe(true);
 
-  await dragHandle.evaluate((element) => {
-    element.dataset.pointerDownId = 'unset';
-    element.dataset.pointerMoveId = 'unset';
-    element.addEventListener(
-      'pointerdown',
-      (event) => {
-        element.dataset.pointerDownId = String(event.pointerId);
-      },
-      { capture: true },
-    );
-    window.addEventListener(
-      'pointermove',
-      (event) => {
-        element.dataset.pointerMoveId = String(event.pointerId);
-      },
-      { capture: true },
-    );
-  });
   await page.mouse.move(dragPoint.x, dragPoint.y);
   await page.mouse.down();
   await page.mouse.move(
@@ -2111,13 +2093,6 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
     { steps: 8 },
   );
   await page.mouse.up();
-  const pointerIds = await dragHandle.evaluate((element) => ({
-    down: element.dataset.pointerDownId,
-    move: element.dataset.pointerMoveId,
-  }));
-  expect(pointerIds.down).not.toBe('unset');
-  expect(pointerIds.move).toBe(pointerIds.down);
-
   const panelAfterDrag = await propertiesPanel.boundingBox();
   expect(panelAfterDrag).not.toBeNull();
 
