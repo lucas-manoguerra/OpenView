@@ -14,7 +14,12 @@ const tones = {
 
 export function Badge({ children, tone = 'neutral' }: BadgeProps) {
   return (
-    <span class={['inline-flex h-5 items-center rounded border px-1.5 text-[10px] font-medium', tones[tone]].join(' ')}>
+    <span
+      class={[
+        'inline-flex h-5 items-center rounded border px-1.5 text-[10px] font-medium',
+        tones[tone],
+      ].join(' ')}
+    >
       {children}
     </span>
   );
