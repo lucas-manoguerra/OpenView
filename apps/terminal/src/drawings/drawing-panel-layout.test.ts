@@ -114,6 +114,8 @@ describe('drawing panel layout', () => {
     };
 
     expect(loadDrawingPanelLayout(blockedStorage)).toEqual(DEFAULT_DRAWING_PANEL_LAYOUT);
-    expect(() => saveDrawingPanelLayout(blockedStorage, DEFAULT_DRAWING_PANEL_LAYOUT)).not.toThrow();
+    expect(() =>
+      saveDrawingPanelLayout(blockedStorage, DEFAULT_DRAWING_PANEL_LAYOUT),
+    ).not.toThrow();
   });
 });
