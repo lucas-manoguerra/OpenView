@@ -1707,10 +1707,18 @@ test('selects multiple drawings with Ctrl click and marquee, then moves them tog
   await page.mouse.click(bounds.x + bounds.width * 0.84, bounds.y + bounds.height * 0.48);
   await expect(canvas).toHaveAttribute('data-selected-drawing-count', '0');
 
+  const marqueeBounds = await canvas.boundingBox();
+  expect(marqueeBounds).not.toBeNull();
+
+  if (marqueeBounds === null) {
+    throw new Error('The chart canvas must remain visible before marquee selection.');
+  }
+
+  await canvas.focus();
   await page.keyboard.down('Control');
-  await page.mouse.move(bounds.x + bounds.width * 0.22, bounds.y + bounds.height * 0.2);
+  await page.mouse.move(marqueeBounds.x + marqueeBounds.width * 0.22, marqueeBounds.y + marqueeBounds.height * 0.2);
   await page.mouse.down();
-  await page.mouse.move(bounds.x + bounds.width * 0.64, bounds.y + bounds.height * 0.74);
+  await page.mouse.move(marqueeBounds.x + marqueeBounds.width * 0.64, marqueeBounds.y + marqueeBounds.height * 0.74);
   await expect(page.getByTestId('drawing-selection-marquee')).toBeVisible();
   await page.mouse.up();
   await page.keyboard.up('Control');
@@ -2352,7 +2360,7 @@ test('edits rectangle fill color and opacity', async ({ page }) => {
   await expect(page.getByTestId('drawing-fill-opacity')).toHaveValue('45');
 });
 
-test('selects drawings with Shift and moves and deletes the group together', async ({ page }) => {
+test('selects drawings with Control and moves and deletes the group together', async ({ page }) => {
   await page.goto('/');
 
   const canvas = page.getByRole('img', {
@@ -2396,9 +2404,10 @@ test('selects drawings with Shift and moves and deletes the group together', asy
   await page.mouse.click(firstMidpoint.x, firstMidpoint.y);
   await expect(canvas).toHaveAttribute('data-selected-drawing-count', '1');
 
-  await page.keyboard.down('Shift');
+  await canvas.focus();
+  await page.keyboard.down('Control');
   await page.mouse.click(secondAnchor.x, secondAnchor.y);
-  await page.keyboard.up('Shift');
+  await page.keyboard.up('Control');
   await expect(canvas).toHaveAttribute('data-selected-drawing-count', '2');
   await expect(canvas).toHaveAttribute('data-selected-drawing-ids', 'drawing-1,drawing-2');
 
