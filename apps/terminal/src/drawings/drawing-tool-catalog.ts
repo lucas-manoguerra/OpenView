@@ -94,10 +94,28 @@ export const DRAWING_TOOL_CATALOG: readonly DrawingToolDefinition[] = Object.fre
   define('triangle-pattern', 'Patrón de triángulo', 'patterns', 'pattern-points', 3),
   define('three-drives-pattern', 'Patrón de tres impulsos', 'patterns', 'pattern-points', 6),
   define('elliott-impulse', 'Onda de impulso Elliott 1–5', 'elliott-waves', 'pattern-points', 5),
-  define('elliott-correction', 'Onda correctiva Elliott A–B–C', 'elliott-waves', 'pattern-points', 3),
+  define(
+    'elliott-correction',
+    'Onda correctiva Elliott A–B–C',
+    'elliott-waves',
+    'pattern-points',
+    3,
+  ),
   define('elliott-triangle', 'Triángulo Elliott A–B–C–D–E', 'elliott-waves', 'pattern-points', 5),
-  define('elliott-double-combo', 'Combinación doble Elliott W–X–Y', 'elliott-waves', 'pattern-points', 3),
-  define('elliott-triple-combo', 'Combinación triple Elliott W–X–Y–X–Z', 'elliott-waves', 'pattern-points', 5),
+  define(
+    'elliott-double-combo',
+    'Combinación doble Elliott W–X–Y',
+    'elliott-waves',
+    'pattern-points',
+    3,
+  ),
+  define(
+    'elliott-triple-combo',
+    'Combinación triple Elliott W–X–Y–X–Z',
+    'elliott-waves',
+    'pattern-points',
+    5,
+  ),
   define('cyclic-lines', 'Líneas cíclicas', 'cycles', 'time-levels', 2),
   define('time-cycles', 'Ciclos de tiempo', 'cycles', 'time-levels', 2),
   define('sine-line', 'Línea seno', 'cycles', 'two-point-line', 2),
@@ -106,8 +124,20 @@ export const DRAWING_TOOL_CATALOG: readonly DrawingToolDefinition[] = Object.fre
   define('anchored-vwap', 'VWAP anclado', 'forecast-measurement', 'text-anchor', 1),
   define('price-range', 'Rango de precio', 'forecast-measurement', 'price-range', 2),
   define('date-range', 'Rango de fecha', 'forecast-measurement', 'date-range', 2),
-  define('fixed-range-volume-profile', 'Perfil de volumen de rango fijo', 'forecast-measurement', 'volume-profile', 2),
-  define('anchored-volume-profile', 'Perfil de volumen anclado', 'forecast-measurement', 'volume-profile', 1),
+  define(
+    'fixed-range-volume-profile',
+    'Perfil de volumen de rango fijo',
+    'forecast-measurement',
+    'volume-profile',
+    2,
+  ),
+  define(
+    'anchored-volume-profile',
+    'Perfil de volumen anclado',
+    'forecast-measurement',
+    'volume-profile',
+    1,
+  ),
   define('date-price-range', 'Rango de fecha y precio', 'forecast-measurement', 'price-range', 2),
   define('brush', 'Pincel', 'shapes', 'freehand', 1),
   define('rectangle', 'Rectángulo', 'shapes', 'rectangle', 2),
@@ -143,12 +173,8 @@ export const DRAWING_TOOL_GROUPS: readonly Readonly<{
   { id: 'annotations', label: 'Anotaciones' },
 ]);
 
-export const getDrawingToolsByGroup = (
-  group: DrawingToolGroup,
-): readonly DrawingToolDefinition[] =>
+export const getDrawingToolsByGroup = (group: DrawingToolGroup): readonly DrawingToolDefinition[] =>
   DRAWING_TOOL_CATALOG.filter((tool) => tool.group === group);
 
-export const getDrawingToolById = (
-  id: string,
-): DrawingToolDefinition | undefined =>
+export const getDrawingToolById = (id: string): DrawingToolDefinition | undefined =>
   DRAWING_TOOL_CATALOG.find((tool) => tool.id === id);
