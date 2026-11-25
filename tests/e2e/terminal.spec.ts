@@ -1529,6 +1529,51 @@ test('returns to the cursor by default and keeps the tool active when requested'
   await expect(trendLineTool).toHaveAttribute('aria-pressed', 'true');
 });
 
+test('locks all drawings and prevents selection until they are unlocked', async ({ page }) => {
+  await page.goto('/');
+
+  const canvas = page.getByRole('img', {
+    name: /Gráfico interactivo de velas y volumen para BTC \/ USDT/,
+  });
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+
+  const bounds = await canvas.boundingBox();
+
+  if (bounds === null) {
+    throw new Error('The chart canvas must have a visible bounding box.');
+  }
+
+  const startX = bounds.x + bounds.width * 0.3;
+  const startY = bounds.y + bounds.height * 0.34;
+  const endX = bounds.x + bounds.width * 0.58;
+  const endY = bounds.y + bounds.height * 0.56;
+
+  await page.getByTestId('drawing-tool-trend-line').click();
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await page.mouse.move(endX, endY);
+  await page.mouse.up();
+  await expect(canvas).toHaveAttribute('data-drawing-count', '1');
+
+  const lockButton = page.getByTestId('drawings-lock-toggle');
+  await expect(lockButton).toBeEnabled();
+  await lockButton.click();
+  await expect(lockButton).toHaveAttribute('aria-pressed', 'true');
+  await expect(canvas).toHaveAttribute('data-drawings-locked', 'true');
+
+  await page.getByTestId('drawing-tool-select').click();
+  await page.mouse.click((startX + endX) / 2, (startY + endY) / 2);
+  await expect(canvas).toHaveAttribute('data-selected-drawing-id', '');
+
+  await lockButton.click();
+  await expect(lockButton).toHaveAttribute('aria-pressed', 'false');
+  await expect(canvas).toHaveAttribute('data-drawings-locked', 'false');
+  await page.mouse.click((startX + endX) / 2, (startY + endY) / 2);
+  await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-1');
+});
+
 test('selects, moves, edits and deletes a drawing individually', async ({ page }) => {
   await page.goto('/');
 
