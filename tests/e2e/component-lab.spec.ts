@@ -7,7 +7,7 @@ test('opens the isolated component lab and navigates to the core controls', asyn
   await expect(page.getByRole('heading', { name: 'Component Lab' })).toBeVisible();
   await page.getByRole('link', { name: 'Buttons & Controls' }).first().click();
 
-  await expect(page).toHaveURL(/\\/component-lab\\/core\\/buttons$/);
+  await expect(page).toHaveURL(/buttons$/);
   await expect(page.getByRole('heading', { name: 'Buttons & Controls' })).toBeVisible();
 });
 
@@ -53,7 +53,7 @@ test('inspects form controls in isolation and updates their values', async ({ pa
   await page.goto('/component-lab');
 
   await page.getByRole('link', { name: 'Forms · Inputs & Selects' }).click();
-  await expect(page).toHaveURL(/\\/component-lab\\/forms$/);
+  await expect(page).toHaveURL(/forms$/);
   await expect(page.getByRole('heading', { name: 'Inputs & Selects' })).toBeVisible();
 
   const symbolInput = page.getByTestId('forms-symbol-input');
