@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createChart, type ChartSnapshot } from './chart-api';
 import { createChartFrame } from './chart-frame';
+import { logicalIndexToCoordinate } from './time-scale';
+import { priceToCoordinate } from './price-scale';
 import { createChartRenderScene } from './canvas-painter';
 
 const createScene = () => {
@@ -162,6 +164,60 @@ describe('chart public API', () => {
     chart.execute({ type: 'set-drawings-visible', visible: true });
     expect(chart.exportSnapshot().scene.drawings).toHaveLength(1);
     expect(chart.exportSnapshot().scene.selectedDrawingIds).toEqual(['drawing-1']);
+    chart.destroy();
+  });
+
+
+  it('queries visible drawing hits and area selection through chart-owned scene state', () => {
+    const { surface } = createSurface();
+    const candles = [
+      { timestamp: 1, open: 2, high: 4, low: 1, close: 3, volume: 10, logicalIndex: 0 },
+      { timestamp: 2, open: 3, high: 5, low: 2, close: 4, volume: 12, logicalIndex: 1 },
+    ];
+    const frame = createChartFrame(320, 240, { min: 0, max: 10 }, 1);
+    const scene = createChartRenderScene(frame, candles);
+    const chart = createChart({
+      surface,
+      initialScene: scene,
+      renderer: { scheduler: { requestFrame: () => 1, cancelFrame: () => {} } },
+    });
+    const drawing = {
+      id: 'drawing-query',
+      type: 'trend-line' as const,
+      start: { timestamp: 1, price: 2 },
+      end: { timestamp: 2, price: 3 },
+      color: '#ffffff',
+    };
+    chart.execute({ type: 'set-drawings', drawings: [drawing] });
+    const point = {
+      x: frame.layout.plotArea.x + logicalIndexToCoordinate(0, frame.timeScale),
+      y: frame.layout.plotArea.y + priceToCoordinate(2, frame.priceScale),
+    };
+
+    expect(chart.hitTestDrawing(point)).toEqual({
+      drawingId: 'drawing-query',
+      target: 'start',
+    });
+    expect(
+      chart.selectDrawingsWithinArea({
+        start: { x: point.x - 2, y: point.y - 2 },
+        end: { x: point.x + 2, y: point.y + 2 },
+      }),
+    ).toEqual(['drawing-query']);
+
+    chart.execute({ type: 'set-drawings', drawings: [{ ...drawing, visible: false }] });
+    expect(chart.hitTestDrawing(point)).toBeNull();
+    expect(chart.selectDrawingsWithinArea({
+      start: { x: point.x - 2, y: point.y - 2 },
+      end: { x: point.x + 2, y: point.y + 2 },
+    })).toEqual([]);
+
+    chart.execute({ type: 'set-drawings-visible', visible: false });
+    expect(chart.hitTestDrawing(point)).toBeNull();
+    expect(chart.selectDrawingsWithinArea({
+      start: { x: point.x - 2, y: point.y - 2 },
+      end: { x: point.x + 2, y: point.y + 2 },
+    })).toEqual([]);
     chart.destroy();
   });
 
