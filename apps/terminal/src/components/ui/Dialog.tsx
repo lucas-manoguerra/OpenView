@@ -25,13 +25,11 @@ export function Dialog({
     dialogRef.current = element;
     if (!element) return;
 
-    requestAnimationFrame(() => {
-      const focusTarget =
-        element.querySelector<HTMLElement>(
-          '[data-dialog-autofocus], button:not(:disabled), input:not(:disabled)',
-        ) ?? element;
-      focusTarget.focus();
-    });
+    const focusTarget =
+      element.querySelector<HTMLElement>(
+        '[data-dialog-autofocus], button:not(:disabled), input:not(:disabled)',
+      ) ?? element;
+    focusTarget.focus();
   };
 
   const openDialog = () => setOpen(true);
