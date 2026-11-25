@@ -3,6 +3,7 @@ import type { Candle } from '@openview/market-domain';
 import type { CandleInterval } from '@openview/market-data';
 import { ChartTypeSelector, PriceScaleSelector, type ChartControlOption } from './ui';
 import { DrawingToolCatalogMenu } from './DrawingToolCatalogMenu';
+import { DrawingPropertiesPanel } from './drawings/DrawingPropertiesPanel';
 import {
   DEFAULT_DRAWING_INTERACTION_PREFERENCES,
   loadBrowserDrawingInteractionPreferences,
@@ -2633,326 +2634,32 @@ export function ChartCanvas({
             </section>
           )}
         {selectedDrawing !== null && drawingPanelLayout.visible.appearance && (
-          <div
-            ref={(element) => attachDrawingPanelElement('appearance', element)}
-            data-testid="drawing-properties-panel"
-            data-panel-left={drawingPanelLayout.positions.appearance?.left ?? 'default'}
-            data-panel-top={drawingPanelLayout.positions.appearance?.top ?? 'default'}
-            class="absolute bottom-10 left-3 z-20 w-64 max-w-[calc(100%_-_3rem)] max-h-[60%] overflow-y-auto rounded-xl border border-white/10 bg-[#101723]/95 p-3 shadow-2xl backdrop-blur"
-            style={
-              drawingPanelLayout.positions.appearance === null
-                ? undefined
-                : {
-                    left: drawingPanelLayout.positions.appearance.left,
-                    top: drawingPanelLayout.positions.appearance.top,
-                    right: 'auto',
-                    bottom: 'auto',
-                  }
-            }
-          >
-            <div class="mb-3 flex items-center gap-2">
-              <div
-                data-testid="drawing-properties-drag-handle"
-                class="flex min-w-0 flex-1 cursor-grab items-center gap-2 touch-none rounded px-1 py-1 text-[11px] font-semibold text-slate-200 active:cursor-grabbing"
-                onPointerDown={(event) => handleDrawingPanelPointerDown('appearance', event)}
-              >
-                <span aria-hidden="true" class="text-slate-500">
-                  ⠿
-                </span>
-                <span class="truncate">
-                  {selectedDrawingIds.length > 1
-                    ? 'Editar ' + selectedDrawingIds.length + ' dibujos'
-                    : 'Editar ' + selectedDrawing.type}
-                </span>
-              </div>
-              <button
-                type="button"
-                aria-label="Ocultar panel de estilo"
-                data-testid="drawing-editor-close"
-                onClick={() => handleDrawingPanelVisibilityChange('appearance', false)}
-                class="grid size-6 shrink-0 place-items-center rounded text-xs text-slate-400 hover:bg-white/10 hover:text-white"
-              >
-                ×
-              </button>
-            </div>
-            <div class="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-2">
-              <label htmlFor="drawing-style-color" class="text-[10px] text-slate-400">
-                Color
-              </label>
-              <input
-                id="drawing-style-color"
-                type="color"
-                aria-label="Color del dibujo"
-                data-testid="drawing-style-color"
-                value={selectedDrawing.color}
-                onInput={(event) =>
-                  handleSelectedDrawingUpdate({ color: event.currentTarget.value })
-                }
-                class="h-7 w-10 cursor-pointer rounded border border-white/10 bg-transparent p-0.5"
-              />
-              <label htmlFor="drawing-style-width" class="text-[10px] text-slate-400">
-                Grosor
-              </label>
-              <select
-                id="drawing-style-width"
-                aria-label="Grosor del dibujo"
-                data-testid="drawing-style-width"
-                value={String(selectedDrawing.lineWidth ?? 1.5)}
-                onChange={(event) =>
-                  handleSelectedDrawingUpdate({ lineWidth: Number(event.currentTarget.value) })
-                }
-                class="min-w-20 rounded border border-white/10 bg-[#0b0f17] px-2 py-1 text-[10px] text-slate-200 outline-none focus:border-blue-400"
-              >
-                <option value="1">1 px</option>
-                <option value="1.5">1.5 px</option>
-                <option value="2">2 px</option>
-                <option value="3">3 px</option>
-                <option value="4">4 px</option>
-                <option value="5">5 px</option>
-                <option value="6">6 px</option>
-              </select>
-              <label htmlFor="drawing-style-line" class="text-[10px] text-slate-400">
-                Trazo
-              </label>
-              <select
-                id="drawing-style-line"
-                aria-label="Estilo de línea del dibujo"
-                data-testid="drawing-style-line"
-                value={selectedDrawing.lineStyle ?? 'solid'}
-                onChange={(event) =>
-                  handleSelectedDrawingUpdate({
-                    lineStyle: event.currentTarget.value as NonNullable<
-                      ChartRenderDrawing['lineStyle']
-                    >,
-                  })
-                }
-                class="min-w-20 rounded border border-white/10 bg-[#0b0f17] px-2 py-1 text-[10px] text-slate-200 outline-none focus:border-blue-400"
-              >
-                <option value="solid">Continuo</option>
-                <option value="dashed">Guiones</option>
-                <option value="dotted">Puntos</option>
-              </select>
-            </div>
-            {selectedDrawing !== null &&
-              selectedDrawingsShareType &&
-              selectedDrawing.type === 'rectangle' && (
-                <div
-                  class="mt-3 space-y-2 border-t border-white/10 pt-3"
-                  data-testid="drawing-rectangle-properties"
-                >
-                  <div class="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-2">
-                    <label htmlFor="drawing-fill-color" class="text-[10px] text-slate-400">
-                      Color de relleno
-                    </label>
-                    <input
-                      id="drawing-fill-color"
-                      type="color"
-                      aria-label="Color de relleno"
-                      data-testid="drawing-fill-color"
-                      value={selectedDrawing.fillColor ?? selectedDrawing.color}
-                      onInput={(event) =>
-                        handleSelectedDrawingUpdate({ fillColor: event.currentTarget.value })
-                      }
-                      class="h-7 w-10 cursor-pointer rounded border border-white/10 bg-transparent p-0.5"
-                    />
-                  </div>
-                  <label class="flex items-center justify-between gap-3 text-[10px] text-slate-400">
-                    Opacidad del relleno
-                    <input
-                      type="range"
-                      aria-label="Opacidad del relleno"
-                      data-testid="drawing-fill-opacity"
-                      min="0"
-                      max="100"
-                      step="5"
-                      value={String(Math.round((selectedDrawing.fillOpacity ?? 0) * 100))}
-                      onInput={(event) =>
-                        handleSelectedDrawingUpdate({
-                          fillOpacity: Number(event.currentTarget.value) / 100,
-                        })
-                      }
-                      class="w-28 accent-blue-400"
-                    />
-                    <span class="w-8 text-right tabular-nums text-slate-300">
-                      {Math.round((selectedDrawing.fillOpacity ?? 0) * 100)}%
-                    </span>
-                  </label>
-                </div>
-              )}
-            {selectedDrawing !== null &&
-              selectedDrawingsShareType &&
-              (selectedDrawing.type === 'trend-line' || selectedDrawing.type === 'ray') && (
-                <div
-                  class="mt-3 space-y-2 border-t border-white/10 pt-3"
-                  data-testid="drawing-line-properties"
-                >
-                  <div class="grid grid-cols-2 gap-2">
-                    <label class="flex items-center gap-2 text-[10px] text-slate-400">
-                      <input
-                        type="checkbox"
-                        aria-label="Extender inicio"
-                        data-testid="drawing-extend-start"
-                        checked={selectedDrawing.extendStart ?? false}
-                        onChange={(event) =>
-                          handleSelectedDrawingUpdate({ extendStart: event.currentTarget.checked })
-                        }
-                        class="accent-blue-400"
-                      />
-                      Extender inicio
-                    </label>
-                    <label class="flex items-center gap-2 text-[10px] text-slate-400">
-                      <input
-                        type="checkbox"
-                        aria-label="Extender final"
-                        data-testid="drawing-extend-end"
-                        checked={selectedDrawing.extendEnd ?? selectedDrawing.type === 'ray'}
-                        onChange={(event) =>
-                          handleSelectedDrawingUpdate({ extendEnd: event.currentTarget.checked })
-                        }
-                        class="accent-blue-400"
-                      />
-                      Extender final
-                    </label>
-                  </div>
-                  <div class="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-2">
-                    <label htmlFor="drawing-start-style" class="text-[10px] text-slate-400">
-                      Estilo de inicio
-                    </label>
-                    <select
-                      id="drawing-start-style"
-                      aria-label="Estilo de inicio"
-                      data-testid="drawing-start-style"
-                      value={selectedDrawing.startStyle ?? 'none'}
-                      onChange={(event) =>
-                        handleSelectedDrawingUpdate({
-                          startStyle: event.currentTarget.value as NonNullable<
-                            ChartRenderDrawing['startStyle']
-                          >,
-                        })
-                      }
-                      class="min-w-24 rounded border border-white/10 bg-[#0b0f17] px-2 py-1 text-[10px] text-slate-200 outline-none focus:border-blue-400"
-                    >
-                      <option value="none">Ninguno</option>
-                      <option value="arrow">Flecha</option>
-                      <option value="circle">Círculo</option>
-                    </select>
-                    <label htmlFor="drawing-end-style" class="text-[10px] text-slate-400">
-                      Estilo final
-                    </label>
-                    <select
-                      id="drawing-end-style"
-                      aria-label="Estilo final"
-                      data-testid="drawing-end-style"
-                      value={selectedDrawing.endStyle ?? 'none'}
-                      onChange={(event) =>
-                        handleSelectedDrawingUpdate({
-                          endStyle: event.currentTarget.value as NonNullable<
-                            ChartRenderDrawing['endStyle']
-                          >,
-                        })
-                      }
-                      class="min-w-24 rounded border border-white/10 bg-[#0b0f17] px-2 py-1 text-[10px] text-slate-200 outline-none focus:border-blue-400"
-                    >
-                      <option value="none">Ninguno</option>
-                      <option value="arrow">Flecha</option>
-                      <option value="circle">Círculo</option>
-                    </select>
-                  </div>
-                </div>
-              )}
-            <div class="mt-3 border-t border-white/10 pt-3">
-              <div class="flex items-center justify-between gap-2">
-                <span class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                  Plantillas
-                </span>
-                <button
-                  type="button"
-                  data-testid="drawing-templates-toggle"
-                  aria-expanded={drawingTemplatesExpanded}
-                  onClick={handleToggleDrawingTemplates}
-                  class="rounded px-2 py-1 text-[10px] text-blue-300 transition-colors hover:bg-blue-400/10"
-                >
-                  {drawingTemplatesExpanded ? 'Ocultar' : 'Gestionar'}
-                </button>
-              </div>
-              {drawingTemplatesExpanded && (
-                <div class="mt-2 space-y-2" data-testid="drawing-templates-manager">
-                  <select
-                    aria-label="Plantilla de dibujo"
-                    data-testid="drawing-template-select"
-                    value={selectedDrawingTemplateId}
-                    onChange={(event) => setSelectedDrawingTemplateId(event.currentTarget.value)}
-                    class="w-full rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-[10px] text-slate-200 outline-none focus:border-blue-400"
-                  >
-                    {activeDefaultStyle !== null && <option value="default">Default</option>}
-                    {drawingStyleTemplates.map((template) => (
-                      <option key={template.id} value={template.id}>
-                        {template.name}
-                      </option>
-                    ))}
-                  </select>
-                  <div class="flex gap-2">
-                    <button
-                      type="button"
-                      data-testid="drawing-template-apply"
-                      onClick={handleApplyDrawingTemplate}
-                      class="flex-1 rounded bg-blue-500/15 px-2 py-1.5 text-[10px] font-medium text-blue-200 hover:bg-blue-500/25"
-                    >
-                      Aplicar
-                    </button>
-                    {customDrawingTemplates.some(
-                      (template) =>
-                        template.id === selectedDrawingTemplateId &&
-                        template.tool === activeTemplateTool,
-                    ) && (
-                      <button
-                        type="button"
-                        data-testid="drawing-template-delete"
-                        aria-label="Eliminar plantilla personalizada"
-                        onClick={handleDeleteDrawingTemplate}
-                        class="rounded bg-rose-500/10 px-2 py-1.5 text-[10px] text-rose-200 hover:bg-rose-500/20"
-                      >
-                        Eliminar
-                      </button>
-                    )}
-                  </div>
-                  <div class="flex gap-2">
-                    <input
-                      type="text"
-                      aria-label="Nombre de la nueva plantilla"
-                      data-testid="drawing-template-name"
-                      maxLength={32}
-                      value={newDrawingTemplateName}
-                      onInput={(event) => {
-                        setNewDrawingTemplateName(event.currentTarget.value);
-                        setDrawingTemplateError(null);
-                      }}
-                      placeholder="Guardar estilo actual…"
-                      class="min-w-0 flex-1 rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-[10px] text-slate-200 outline-none placeholder:text-slate-600 focus:border-blue-400"
-                    />
-                    <button
-                      type="button"
-                      data-testid="drawing-template-save"
-                      disabled={newDrawingTemplateName.trim().length === 0}
-                      onClick={handleSaveDrawingTemplate}
-                      class="rounded bg-white/10 px-2 py-1.5 text-[10px] font-medium text-slate-200 hover:bg-white/15 disabled:opacity-30"
-                    >
-                      Guardar
-                    </button>
-                  </div>
-                  {drawingTemplateError !== null && (
-                    <p role="alert" class="text-[10px] text-rose-300">
-                      {drawingTemplateError}
-                    </p>
-                  )}
-                  <p class="text-[9px] leading-relaxed text-slate-500">
-                    Las plantillas personalizadas se guardan en este navegador y se aplican a toda
-                    la selección.
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
+          <DrawingPropertiesPanel
+            selectedDrawing={selectedDrawing}
+            selectedDrawingIds={selectedDrawingIds}
+            selectedDrawingsShareType={selectedDrawingsShareType}
+            panelPosition={drawingPanelLayout.positions.appearance}
+            templates={drawingStyleTemplates}
+            activeDefaultStyle={activeDefaultStyle !== null}
+            activeTemplateTool={activeTemplateTool}
+            expanded={drawingTemplatesExpanded}
+            selectedTemplateId={selectedDrawingTemplateId}
+            newTemplateName={newDrawingTemplateName}
+            templateError={drawingTemplateError}
+            panelRef={(element) => attachDrawingPanelElement('appearance', element)}
+            onDragStart={(event) => handleDrawingPanelPointerDown('appearance', event)}
+            onClose={() => handleDrawingPanelVisibilityChange('appearance', false)}
+            onStyleChange={handleSelectedDrawingUpdate}
+            onToggleTemplates={handleToggleDrawingTemplates}
+            onTemplateChange={setSelectedDrawingTemplateId}
+            onApplyTemplate={handleApplyDrawingTemplate}
+            onDeleteTemplate={handleDeleteDrawingTemplate}
+            onTemplateNameChange={(name) => {
+              setNewDrawingTemplateName(name);
+              setDrawingTemplateError(null);
+            }}
+            onSaveTemplate={handleSaveDrawingTemplate}
+          />
         )}
         {loading && (
           <div class="pointer-events-none absolute inset-0 grid place-items-center bg-[#0b0f17]/70">
