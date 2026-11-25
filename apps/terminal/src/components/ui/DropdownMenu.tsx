@@ -19,7 +19,15 @@ export function DropdownMenu({ label, items, onSelect, align = 'start' }: Dropdo
   const menuId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const firstEnabledItemId = items.find((item) => !item.disabled)?.id;
+
+  const openMenu = () => {
+    setOpen(true);
+    requestAnimationFrame(() => {
+      menuRef.current
+        ?.querySelector<HTMLButtonElement>('[role="menuitem"]:not(:disabled)')
+        ?.focus();
+    });
+  };
 
   const closeMenu = (restoreFocus = false) => {
     setOpen(false);
@@ -34,8 +42,7 @@ export function DropdownMenu({ label, items, onSelect, align = 'start' }: Dropdo
     }
 
     const enabledItems = Array.from(
-      menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)') ??
-        [],
+      menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)') ?? [],
     );
     const currentIndex = enabledItems.indexOf(event.target as HTMLButtonElement);
     if (currentIndex < 0 || enabledItems.length === 0) return;
@@ -53,24 +60,21 @@ export function DropdownMenu({ label, items, onSelect, align = 'start' }: Dropdo
   };
 
   return (
-    <div
-      class="relative inline-flex"
-      onBlur={(event) => {
-        const nextTarget = event.relatedTarget as Node | null;
-        if (!nextTarget || !event.currentTarget.contains(nextTarget)) setOpen(false);
-      }}
-    >
+    <div class="relative inline-flex">
       <button
         ref={triggerRef}
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={menuId}
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => {
+          if (open) setOpen(false);
+          else openMenu();
+        }}
         onKeyDown={(event) => {
           if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
             event.preventDefault();
-            setOpen(true);
+            openMenu();
           }
         }}
         class={[
@@ -108,8 +112,11 @@ export function DropdownMenu({ label, items, onSelect, align = 'start' }: Dropdo
               key={item.id}
               type="button"
               role="menuitem"
-              autoFocus={item.id === firstEnabledItemId}
               disabled={item.disabled}
+              onBlur={(event) => {
+                const nextTarget = event.relatedTarget as Node | null;
+                if (!nextTarget || !menuRef.current?.contains(nextTarget)) setOpen(false);
+              }}
               onClick={() => {
                 onSelect?.(item.id);
                 closeMenu(true);
