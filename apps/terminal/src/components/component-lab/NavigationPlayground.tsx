@@ -54,13 +54,12 @@ export function NavigationPlayground() {
       <section class="space-y-3">
         <h2 class="text-sm font-semibold text-[#d1d4dc]">Menú desplegable</h2>
         <div class="flex flex-wrap items-center gap-3 rounded-md border border-[#2a2e39] bg-[#131722] p-4">
-          <DropdownMenu
-            label="Diseño"
-            items={menuItems}
-            onSelect={(id) => setLastAction(id)}
-          />
+          <DropdownMenu label="Diseño" items={menuItems} onSelect={(id) => setLastAction(id)} />
           <span class="text-xs text-[#787b86]" aria-live="polite">
-            Última acción: <span class="font-mono text-[#d1d4dc]" data-testid="navigation-menu-action">{lastAction}</span>
+            Última acción:{' '}
+            <span class="font-mono text-[#d1d4dc]" data-testid="navigation-menu-action">
+              {lastAction}
+            </span>
           </span>
         </div>
       </section>
