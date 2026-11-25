@@ -1439,10 +1439,7 @@ test('persists the TradingView drawing magnet preference', async ({ page }) => {
 
   await page.getByTestId('drawing-magnet-toggle').click();
   await expect(menu).toBeVisible();
-  await expect(page.getByTestId('drawing-magnet-weak')).toHaveAttribute(
-    'aria-checked',
-    'true',
-  );
+  await expect(page.getByTestId('drawing-magnet-weak')).toHaveAttribute('aria-checked', 'true');
 });
 
 test('selects, moves, edits and deletes a drawing individually', async ({ page }) => {
