@@ -1048,44 +1048,6 @@ export function ChartCanvas({
         class="relative h-full min-w-0 bg-[#0b0f17]"
         data-testid="chart-surface"
         data-provider-error={error === null ? 'false' : 'true'}
-        onPointerMove={(event) => {
-          const drag = drawingPropertiesDragRef.current;
-          const panel = drawingPropertiesPanelRef.current;
-          const parent = panel === null ? null : panel.parentElement;
-
-          if (
-            drag === null ||
-            drag.pointerId !== event.pointerId ||
-            panel === null ||
-            parent === null
-          ) {
-            return;
-          }
-
-          const maxLeft = Math.max(0, parent.clientWidth - panel.offsetWidth);
-          const maxTop = Math.max(0, parent.clientHeight - panel.offsetHeight);
-          const left = Math.max(0, Math.min(maxLeft, drag.left + event.clientX - drag.pointerX));
-          const top = Math.max(0, Math.min(maxTop, drag.top + event.clientY - drag.pointerY));
-          setDrawingPanelPosition({ left, top });
-        }}
-        onPointerUp={(event) => {
-          if (drawingPropertiesDragRef.current?.pointerId !== event.pointerId) {
-            return;
-          }
-
-          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-            event.currentTarget.releasePointerCapture(event.pointerId);
-          }
-          drawingPropertiesDragRef.current = null;
-        }}
-        onPointerCancel={(event) => {
-          if (drawingPropertiesDragRef.current?.pointerId === event.pointerId) {
-            if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-              event.currentTarget.releasePointerCapture(event.pointerId);
-            }
-            drawingPropertiesDragRef.current = null;
-          }
-        }}
       >
         <canvas
           ref={bindCanvas}
@@ -1352,6 +1314,52 @@ export function ChartCanvas({
                     top,
                   };
                   setDrawingPanelPosition({ left, top });
+
+                  const handlePointerMove = (pointerEvent: PointerEvent): void => {
+                    const drag = drawingPropertiesDragRef.current;
+                    const currentPanel = drawingPropertiesPanelRef.current;
+                    const parent = currentPanel?.parentElement ?? null;
+
+                    if (
+                      drag === null ||
+                      drag.pointerId !== pointerEvent.pointerId ||
+                      currentPanel === null ||
+                      parent === null
+                    ) {
+                      return;
+                    }
+
+                    const maxLeft = Math.max(0, parent.clientWidth - currentPanel.offsetWidth);
+                    const maxTop = Math.max(0, parent.clientHeight - currentPanel.offsetHeight);
+                    const nextLeft = Math.max(
+                      0,
+                      Math.min(maxLeft, drag.left + pointerEvent.clientX - drag.pointerX),
+                    );
+                    const nextTop = Math.max(
+                      0,
+                      Math.min(maxTop, drag.top + pointerEvent.clientY - drag.pointerY),
+                    );
+                    setDrawingPanelPosition({ left: nextLeft, top: nextTop });
+                  };
+
+                  const handlePointerEnd = (pointerEvent: PointerEvent): void => {
+                    if (drawingPropertiesDragRef.current?.pointerId !== pointerEvent.pointerId) {
+                      return;
+                    }
+
+                    window.removeEventListener('pointermove', handlePointerMove);
+                    window.removeEventListener('pointerup', handlePointerEnd);
+                    window.removeEventListener('pointercancel', handlePointerEnd);
+
+                    if (dragSurface.hasPointerCapture(pointerEvent.pointerId)) {
+                      dragSurface.releasePointerCapture(pointerEvent.pointerId);
+                    }
+                    drawingPropertiesDragRef.current = null;
+                  };
+
+                  window.addEventListener('pointermove', handlePointerMove);
+                  window.addEventListener('pointerup', handlePointerEnd);
+                  window.addEventListener('pointercancel', handlePointerEnd);
                   dragSurface.setPointerCapture(event.pointerId);
                 }}
               >
