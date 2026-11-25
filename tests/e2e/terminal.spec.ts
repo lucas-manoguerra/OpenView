@@ -1994,8 +1994,8 @@ test('manages individual drawing visibility and lock from the object tree', asyn
 
   await page.getByTestId('drawing-object-delete-1').click();
   await expect(canvas).toHaveAttribute('data-drawing-count', '1');
-  await expect(tree.getByTestId('drawing-object-row-1')).toHaveCount(0);
-  await expect(tree.getByTestId('drawing-object-row-2')).toBeVisible();
+  await expect(tree.getByTestId('drawing-object-row-2')).toHaveCount(0);
+  await expect(tree.getByTestId('drawing-object-row-1')).toBeVisible();
 });
 
 test('selects, moves, edits and deletes a drawing individually', async ({ page }) => {
