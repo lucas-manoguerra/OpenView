@@ -2059,7 +2059,7 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
   await expect(page.getByTestId('drawing-coordinate-panel')).toHaveCount(0);
 
   const dragHandle = page.getByTestId('drawing-properties-drag-handle');
-  await dragHandle.click();
+  await dragHandle.scrollIntoViewIfNeeded();
   const panelBeforeDrag = await propertiesPanel.boundingBox();
   const dragHandleBounds = await dragHandle.boundingBox();
   expect(panelBeforeDrag).not.toBeNull();
