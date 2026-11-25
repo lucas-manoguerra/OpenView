@@ -1327,7 +1327,7 @@ export function ChartCanvas({
               </button>
             </div>
             <div class="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-2">
-              <label for="drawing-style-color" class="text-[10px] text-slate-400">
+              <label htmlFor="drawing-style-color" class="text-[10px] text-slate-400">
                 Color
               </label>
               <input
@@ -1341,7 +1341,7 @@ export function ChartCanvas({
                 }
                 class="h-7 w-10 cursor-pointer rounded border border-white/10 bg-transparent p-0.5"
               />
-              <label for="drawing-style-width" class="text-[10px] text-slate-400">
+              <label htmlFor="drawing-style-width" class="text-[10px] text-slate-400">
                 Grosor
               </label>
               <select
@@ -1362,7 +1362,7 @@ export function ChartCanvas({
                 <option value="5">5 px</option>
                 <option value="6">6 px</option>
               </select>
-              <label for="drawing-style-line" class="text-[10px] text-slate-400">
+              <label htmlFor="drawing-style-line" class="text-[10px] text-slate-400">
                 Trazo
               </label>
               <select
