@@ -2379,9 +2379,9 @@ test('selects drawings with Shift and moves and deletes the group together', asy
     x: bounds.x + bounds.width * 0.4,
     y: bounds.y + bounds.height * 0.34,
   };
-  const secondMidpoint = {
-    x: bounds.x + bounds.width * 0.4,
-    y: bounds.y + bounds.height * 0.66,
+  const secondAnchor = {
+    x: bounds.x + bounds.width * 0.28,
+    y: bounds.y + bounds.height * 0.6,
   };
 
   await page.getByTestId('drawing-tool-select').click();
@@ -2389,7 +2389,7 @@ test('selects drawings with Shift and moves and deletes the group together', asy
   await expect(canvas).toHaveAttribute('data-selected-drawing-count', '1');
 
   await page.keyboard.down('Shift');
-  await page.mouse.click(secondMidpoint.x, secondMidpoint.y);
+  await page.mouse.click(secondAnchor.x, secondAnchor.y);
   await page.keyboard.up('Shift');
   await expect(canvas).toHaveAttribute('data-selected-drawing-count', '2');
   await expect(canvas).toHaveAttribute('data-selected-drawing-ids', 'drawing-1,drawing-2');
