@@ -59,10 +59,19 @@ export function FormsPlayground() {
             <option value="locked">Solo lectura</option>
           </Select>
         </div>
-        <div class="rounded-md border border-[#2a2e39] bg-[#131722] p-4 text-xs text-[#787b86]" aria-live="polite">
-          Símbolo: <span class="font-mono text-[#d1d4dc]" data-testid="forms-symbol-value">{symbol}</span>
+        <div
+          class="rounded-md border border-[#2a2e39] bg-[#131722] p-4 text-xs text-[#787b86]"
+          aria-live="polite"
+        >
+          Símbolo:{' '}
+          <span class="font-mono text-[#d1d4dc]" data-testid="forms-symbol-value">
+            {symbol}
+          </span>
           <span class="mx-2 text-[#434651]">·</span>
-          Temporalidad: <span class="font-mono text-[#d1d4dc]" data-testid="forms-timeframe-value">{timeframe}</span>
+          Temporalidad:{' '}
+          <span class="font-mono text-[#d1d4dc]" data-testid="forms-timeframe-value">
+            {timeframe}
+          </span>
         </div>
       </section>
 
