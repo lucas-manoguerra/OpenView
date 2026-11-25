@@ -729,8 +729,14 @@ describe('canvas pointer event adapter', () => {
       drawingIds: ['trend-1', 'trend-2'],
       current: chartCoordinateToDataPoint(
         {
-          x: Math.max(frame.layout.plotArea.x, Math.min(frame.layout.plotArea.x + frame.layout.plotArea.width, movedBody.x)),
-          y: Math.max(frame.layout.plotArea.y, Math.min(frame.layout.plotArea.y + frame.layout.plotArea.height, movedBody.y)),
+          x: Math.max(
+            frame.layout.plotArea.x,
+            Math.min(frame.layout.plotArea.x + frame.layout.plotArea.width, movedBody.x),
+          ),
+          y: Math.max(
+            frame.layout.plotArea.y,
+            Math.min(frame.layout.plotArea.y + frame.layout.plotArea.height, movedBody.y),
+          ),
         },
         frame,
       ),
