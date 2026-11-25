@@ -1885,9 +1885,7 @@ test('nudges every selected drawing by one bar and one provider tick', async ({ 
   await expect(canvas).toHaveAttribute('data-drawing-undo-count', '4');
 });
 
-test('manages individual drawing visibility and lock from the object tree', async ({
-  page,
-}) => {
+test('manages individual drawing visibility and lock from the object tree', async ({ page }) => {
   await page.goto('/');
 
   const canvas = page.getByRole('img', {
@@ -1942,18 +1940,12 @@ test('manages individual drawing visibility and lock from the object tree', asyn
   await page.getByTestId('drawing-object-lock-drawing-1').click();
   await expect(firstRow).toHaveAttribute('data-drawing-locked', 'true');
   await page.getByTestId('drawing-tool-select').click();
-  await page.mouse.click(
-    (firstStart.x + firstEnd.x) / 2,
-    (firstStart.y + firstEnd.y) / 2,
-  );
+  await page.mouse.click((firstStart.x + firstEnd.x) / 2, (firstStart.y + firstEnd.y) / 2);
   await expect(canvas).toHaveAttribute('data-selected-drawing-id', '');
 
   await page.getByTestId('drawing-object-lock-drawing-1').click();
   await expect(firstRow).toHaveAttribute('data-drawing-locked', 'false');
-  await page.mouse.click(
-    (firstStart.x + firstEnd.x) / 2,
-    (firstStart.y + firstEnd.y) / 2,
-  );
+  await page.mouse.click((firstStart.x + firstEnd.x) / 2, (firstStart.y + firstEnd.y) / 2);
   await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-1');
 
   await page.getByTestId('drawing-object-delete-drawing-1').click();
