@@ -42,7 +42,7 @@ export function DrawingToolCatalogMenu({ activeTool, onSelect }: DrawingToolCata
   }, [group, query]);
 
   return (
-    <div class="relative z-40 w-full px-1">
+    <div class="absolute left-0 top-[84px] z-40 w-full px-1">
       <button
         type="button"
         data-testid="drawing-tool-catalog-toggle"
