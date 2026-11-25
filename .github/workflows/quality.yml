@@ -125,7 +125,7 @@ jobs:
 
           shard_tests="$(printf '%s\n' "$test_list" | sed -nE 's/^Total: ([0-9]+) tests?.*/\1/p' | tail -n 1)"
           if [[ -z "$shard_tests" ]]; then
-            echo "::error::Unable to determine the Playwright test count for shard ${{ matrix.shard }}/8."
+            echo "::error::Unable to determine the Playwright test count for shard ${{ matrix.shard }}/10."
             exit 1
           fi
 
@@ -134,10 +134,10 @@ jobs:
             exit 1
           fi
 
-          echo "Shard ${{ matrix.shard }}/8 contains $shard_tests tests (maximum: five)."
+          echo "Shard ${{ matrix.shard }}/10 contains $shard_tests tests (maximum: five)."
 
       - name: Run Playwright shard
-        run: pnpm exec playwright test --shard=${{ matrix.shard }}/8
+        run: pnpm exec playwright test --shard=${{ matrix.shard }}/10
 
       - name: Upload browser test reports
         if: ${{ !cancelled() }}
