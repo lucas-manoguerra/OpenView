@@ -2113,8 +2113,6 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
   await expect(coordinatePanel).toBeHidden();
 
   const selectedImage = await canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL());
-  const middleX = (startX + endX) / 2;
-  const middleY = (startY + endY) / 2;
   await page.mouse.move(middleX, middleY);
   await page.mouse.down();
   await page.mouse.move(middleX + 35, middleY - 18);
