@@ -1617,12 +1617,10 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
 
   await page.getByTestId('drawing-panel-toggle-appearance').click();
   await expect(propertiesPanel).toBeVisible();
-  const restoredAppearancePosition = await propertiesPanel.evaluate(
-    (element: HTMLElement) => ({
-      left: element.style.left,
-      top: element.style.top,
-    }),
-  );
+  const restoredAppearancePosition = await propertiesPanel.evaluate((element: HTMLElement) => ({
+    left: element.style.left,
+    top: element.style.top,
+  }));
 
   expect(restoredAppearancePosition).toEqual(savedAppearancePosition);
 });
