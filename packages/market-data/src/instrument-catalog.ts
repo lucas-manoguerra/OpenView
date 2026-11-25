@@ -13,15 +13,45 @@ const normalizeAssetCode = (value: string, label: string): string => {
   return normalized;
 };
 
-export const createMarketInstrument = (baseAsset: string, quoteAsset: string): MarketInstrument => {
+export const parsePriceIncrement = (value: unknown): number | undefined => {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  if (
+    (typeof value !== 'number' && typeof value !== 'string') ||
+    (typeof value === 'string' && value.trim().length === 0)
+  ) {
+    throw new RangeError('Market instrument price increment must be a positive finite number.');
+  }
+
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new RangeError('Market instrument price increment must be a positive finite number.');
+  }
+
+  return parsed;
+};
+
+export const createMarketInstrument = (
+  baseAsset: string,
+  quoteAsset: string,
+  priceIncrement?: number,
+): MarketInstrument => {
   const normalizedBaseAsset = normalizeAssetCode(baseAsset, 'base asset');
   const normalizedQuoteAsset = normalizeAssetCode(quoteAsset, 'quote asset');
+
+  if (priceIncrement !== undefined && (!Number.isFinite(priceIncrement) || priceIncrement <= 0)) {
+    throw new RangeError('Market instrument price increment must be a positive finite number.');
+  }
 
   return Object.freeze({
     id: createInstrumentId(normalizedBaseAsset + '-' + normalizedQuoteAsset),
     symbol: normalizedBaseAsset + '/' + normalizedQuoteAsset,
     baseAsset: normalizedBaseAsset,
     quoteAsset: normalizedQuoteAsset,
+    ...(priceIncrement === undefined ? {} : { priceIncrement }),
   });
 };
 
@@ -31,12 +61,13 @@ export const isSupportedMarketAssetCode = (value: string): boolean =>
 export const tryCreateMarketInstrument = (
   baseAsset: string,
   quoteAsset: string,
+  priceIncrement?: number,
 ): MarketInstrument | null => {
   if (!isSupportedMarketAssetCode(baseAsset) || !isSupportedMarketAssetCode(quoteAsset)) {
     return null;
   }
 
-  return createMarketInstrument(baseAsset, quoteAsset);
+  return createMarketInstrument(baseAsset, quoteAsset, priceIncrement);
 };
 
 export const normalizeMarketInstruments = (
