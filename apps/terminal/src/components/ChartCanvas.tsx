@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef, useState } from 'preact/hooks';
 import type { Candle } from '@openview/market-domain';
 import type { CandleInterval } from '@openview/market-data';
 import { ChartTypeSelector, PriceScaleSelector, type ChartControlOption } from './ui';
+import { DrawingToolCatalogMenu } from './DrawingToolCatalogMenu';
 import {
   DEFAULT_DRAWING_INTERACTION_PREFERENCES,
   loadBrowserDrawingInteractionPreferences,
@@ -1582,6 +1583,10 @@ export function ChartCanvas({
         >
           ◉
         </button>
+        <DrawingToolCatalogMenu
+          activeTool={drawingTool}
+          onSelect={(tool) => handleDrawingToolChange(tool)}
+        />
         <div class="relative z-30">
           <button
             type="button"
