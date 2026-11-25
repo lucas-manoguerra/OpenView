@@ -1251,11 +1251,6 @@ export function ChartCanvas({
     });
   };
 
-  const toLocalDateTimeValue = (timestamp: number): string => {
-    const date = new Date(timestamp);
-    return new Date(timestamp - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
-  };
-
   const handleToggleDrawingTemplates = (): void => {
     ensureDrawingTemplatesLoaded();
     setDrawingTemplatesExpanded(!drawingTemplatesExpanded);
