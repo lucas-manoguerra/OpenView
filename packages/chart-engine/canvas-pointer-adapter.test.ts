@@ -799,16 +799,13 @@ describe('canvas pointer event adapter', () => {
     );
 
     for (const key of ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']) {
-      dispatch(
-        'keydown',
-        {
-          key,
-          ctrlKey: false,
-          metaKey: false,
-          altKey: false,
-          preventDefault,
-        } as unknown as KeyboardEvent,
-      );
+      dispatch('keydown', {
+        key,
+        ctrlKey: false,
+        metaKey: false,
+        altKey: false,
+        preventDefault,
+      } as unknown as KeyboardEvent);
     }
 
     expect(directions).toEqual(['left', 'right', 'up', 'down']);
@@ -831,26 +828,20 @@ describe('canvas pointer event adapter', () => {
       },
     );
 
-    dispatch(
-      'keydown',
-      {
-        key: 'ArrowUp',
-        ctrlKey: false,
-        metaKey: false,
-        altKey: false,
-        preventDefault: verticalPreventDefault,
-      } as unknown as KeyboardEvent,
-    );
-    dispatch(
-      'keydown',
-      {
-        key: 'ArrowLeft',
-        ctrlKey: false,
-        metaKey: false,
-        altKey: false,
-        preventDefault: horizontalPreventDefault,
-      } as unknown as KeyboardEvent,
-    );
+    dispatch('keydown', {
+      key: 'ArrowUp',
+      ctrlKey: false,
+      metaKey: false,
+      altKey: false,
+      preventDefault: verticalPreventDefault,
+    } as unknown as KeyboardEvent);
+    dispatch('keydown', {
+      key: 'ArrowLeft',
+      ctrlKey: false,
+      metaKey: false,
+      altKey: false,
+      preventDefault: horizontalPreventDefault,
+    } as unknown as KeyboardEvent);
 
     expect(directions).toEqual(['left']);
     expect(verticalPreventDefault).not.toHaveBeenCalled();
