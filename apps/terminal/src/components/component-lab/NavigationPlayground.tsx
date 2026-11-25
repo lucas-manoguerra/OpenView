@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useCallback, useState } from 'preact/hooks';
 import { DropdownMenu, Tabs } from '../ui';
 
 const navigationTabs = [
@@ -26,11 +26,19 @@ const menuItems = [
 ];
 
 export function NavigationPlayground() {
+  const setPlaygroundRef = useCallback((element: HTMLDivElement | null) => {
+    if (element) element.dataset['hydrated'] = 'true';
+  }, []);
   const [activeTab, setActiveTab] = useState('chart');
   const [lastAction, setLastAction] = useState('Ninguna acción seleccionada');
 
   return (
-    <div class="space-y-6">
+    <div
+      class="space-y-6"
+      data-testid="navigation-playground"
+      data-hydrated="false"
+      ref={setPlaygroundRef}
+    >
       <section class="space-y-3">
         <div class="flex items-center justify-between">
           <h2 class="text-sm font-semibold text-[#d1d4dc]">Pestañas</h2>
