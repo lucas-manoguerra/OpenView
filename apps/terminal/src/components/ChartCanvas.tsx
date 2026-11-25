@@ -623,7 +623,7 @@ export function ChartCanvas({
                 area,
                 renderableDrawingsRef.current,
                 currentCandles,
-                controller.snapshot.frame,
+                interactionController.snapshot.frame,
               ),
             );
           },
