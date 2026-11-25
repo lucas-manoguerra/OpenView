@@ -10,6 +10,11 @@ import {
 import type { ChartCoordinate, ChartFrame } from './chart-frame';
 import type { MovingAveragePoint } from './indicators';
 import { getLogicalIndexAtTimestamp } from './drawing-geometry';
+import {
+  createChartObjectOrder,
+  reconcileChartObjectOrder,
+  type ChartObjectOrderItem,
+} from './chart-object-order';
 
 export type ChartRenderCandle = Candle &
   Readonly<{
@@ -67,6 +72,7 @@ export type ChartRenderScene = Readonly<{
   selectedDrawingId: string | null;
   selectedDrawingIds: readonly string[];
   hoveredDrawingHit: ChartRenderDrawingHit | null;
+  objectOrder: readonly ChartObjectOrderItem[];
 }>;
 
 export type ChartRenderTheme = Readonly<{
@@ -249,6 +255,7 @@ export const createChartRenderScene = (
   selectedDrawingId: string | null = null,
   selectedDrawingIds: readonly string[] = selectedDrawingId === null ? [] : [selectedDrawingId],
   hoveredDrawingHit: ChartRenderDrawingHit | null = null,
+  objectOrder?: readonly ChartObjectOrderItem[],
 ): ChartRenderScene => {
   let previousLogicalIndex = Number.NEGATIVE_INFINITY;
   const normalizedCandles: ChartRenderCandle[] = [];
@@ -278,6 +285,16 @@ export const createChartRenderScene = (
   const frozenIndicators = normalizeChartIndicators(indicators);
   const frozenDrawings = normalizeChartDrawings(drawings);
   const frozenSelectedDrawingIds = normalizeSelectedDrawingIds(selectedDrawingIds, frozenDrawings);
+  const availableObjects: ChartObjectOrderItem[] = [
+    { kind: 'price-series', id: 'main' },
+    { kind: 'volume', id: 'volume' },
+    ...frozenIndicators.map((indicator) => ({ kind: 'indicator' as const, id: indicator.id })),
+    ...frozenDrawings.map((drawing) => ({ kind: 'drawing' as const, id: drawing.id })),
+  ];
+  const frozenObjectOrder = reconcileChartObjectOrder(
+    objectOrder ?? createChartObjectOrder(availableObjects),
+    availableObjects,
+  );
 
   return Object.freeze({
     frame,
@@ -294,6 +311,7 @@ export const createChartRenderScene = (
       frozenDrawings.some((drawing) => drawing.id === hoveredDrawingHit.drawingId)
         ? Object.freeze({ ...hoveredDrawingHit })
         : null,
+    objectOrder: frozenObjectOrder,
   });
 };
 
@@ -306,6 +324,7 @@ export type ChartRenderSceneUpdate = Readonly<{
   selectedDrawingId?: string | null;
   selectedDrawingIds?: readonly string[];
   hoveredDrawingHit?: ChartRenderDrawingHit | null;
+  objectOrder?: readonly ChartObjectOrderItem[];
 }>;
 
 export const updateChartRenderScene = (
@@ -344,6 +363,16 @@ export const updateChartRenderScene = (
           drawings.some((drawing) => drawing.id === update.hoveredDrawingHit?.drawingId)
         ? Object.freeze({ ...update.hoveredDrawingHit })
         : null;
+  const availableObjects: ChartObjectOrderItem[] = [
+    { kind: 'price-series', id: 'main' },
+    { kind: 'volume', id: 'volume' },
+    ...indicators.map((indicator) => ({ kind: 'indicator' as const, id: indicator.id })),
+    ...drawings.map((drawing) => ({ kind: 'drawing' as const, id: drawing.id })),
+  ];
+  const objectOrder = reconcileChartObjectOrder(
+    update.objectOrder ?? scene.objectOrder,
+    availableObjects,
+  );
 
   if (crosshair !== null && (!Number.isFinite(crosshair.x) || !Number.isFinite(crosshair.y))) {
     throw new RangeError('Crosshair coordinates must be finite numbers.');
@@ -359,7 +388,8 @@ export const updateChartRenderScene = (
     selectedDrawingId === scene.selectedDrawingId &&
     selectedDrawingIds === scene.selectedDrawingIds &&
     hoveredDrawingHit?.drawingId === scene.hoveredDrawingHit?.drawingId &&
-    hoveredDrawingHit?.target === scene.hoveredDrawingHit?.target
+    hoveredDrawingHit?.target === scene.hoveredDrawingHit?.target &&
+    objectOrder === scene.objectOrder
   ) {
     return scene;
   }
@@ -375,6 +405,7 @@ export const updateChartRenderScene = (
     selectedDrawingId,
     selectedDrawingIds,
     hoveredDrawingHit,
+    objectOrder,
   });
 };
 
@@ -1110,16 +1141,29 @@ export const drawChartScene = (
   drawAxes(context, scene, theme);
   drawVolumeBackground(context, scene, theme);
   drawGrid(context, scene, theme);
-  if (scene.chartType === 'candles') {
-    drawCandles(context, scene, theme);
-  } else if (scene.chartType === 'bars') {
-    drawBars(context, scene, theme);
-  } else {
-    drawCloseSeries(context, scene, theme, scene.chartType === 'area');
+  for (const item of scene.objectOrder) {
+    if (item.kind === 'price-series' && item.id === 'main') {
+      if (scene.chartType === 'candles') {
+        drawCandles(context, scene, theme);
+      } else if (scene.chartType === 'bars') {
+        drawBars(context, scene, theme);
+      } else {
+        drawCloseSeries(context, scene, theme, scene.chartType === 'area');
+      }
+    } else if (item.kind === 'volume' && item.id === 'volume') {
+      drawVolumeBars(context, scene, theme);
+    } else if (item.kind === 'indicator') {
+      const indicator = scene.indicators.find((candidate) => candidate.id === item.id);
+      if (indicator !== undefined) {
+        drawIndicators(context, { ...scene, indicators: [indicator] });
+      }
+    } else if (item.kind === 'drawing') {
+      const drawing = scene.drawings.find((candidate) => candidate.id === item.id);
+      if (drawing !== undefined) {
+        drawDrawings(context, { ...scene, drawings: [drawing] });
+      }
+    }
   }
-  drawVolumeBars(context, scene, theme);
-  drawIndicators(context, scene);
-  drawDrawings(context, scene);
   drawCrosshair(context, scene, theme);
   context.restore();
 };
