@@ -68,11 +68,13 @@ tests/e2e/                   Pruebas de navegador
 
 Las reglas se comprueban con Biome y los scripts de arquitectura. No dependen solamente de instrucciones para los agentes.
 
-## Referencia funcional
+## Referencia de producto
 
-TradingView Lightweight Charts se utiliza exclusivamente para estudiar comportamientos observables, funcionalidades, interacción y experiencia de usuario. OpenView implementa su propio modelo, motor de gráficos, escalas, renderizado y API. No se incorpora su código ni se depende de la biblioteca.
+La plataforma TradingView oficial es la única referencia para la paridad visual y funcional de OpenView: estructura, jerarquía, estilos, componentes, herramientas, flujos, controles, menús, interacciones y UI/UX. El objetivo es alcanzar paridad integral con la plataforma, no solamente con el gráfico.
 
-Referencia: https://github.com/tradingview/lightweight-charts
+OpenView implementa su propia arquitectura, modelo de dominio, motor, escalas, renderizado y API. TradingView Lightweight Charts no se utiliza como sustituto de la plataforma ni como modelo de arquitectura o interacción; tampoco se incorpora como dependencia. No se copia código fuente, assets propietarios ni tests internos.
+
+La documentación técnica de proveedores, protocolos, estándares web y APIs puede consultarse exclusivamente para verificar contratos y hechos técnicos, nunca como referencia de producto, visual o UI/UX.
 
 ## Datos y gratuidad
 
