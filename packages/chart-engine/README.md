@@ -26,7 +26,7 @@ The host should retain only the returned API instance. Drawing creation and dele
 
 The render stack covers the main price series, volume, each indicator, and drawings. New objects are appended when reconciling a scene; removed objects are discarded; retained objects preserve their relative order. The order is included in version 1 snapshots.
 
-The object order is a chart-domain concern. A host may present controls for it, but must not maintain a second authoritative order.
+The object order is a chart-domain concern. A host may present controls for it, but must not maintain a second authoritative order. Drawing IDs are opaque, immutable identities (UUIDs in the terminal); they never encode visual position. The chart snapshot's `objectOrder` is the separate, authoritative ordering property: each drawing is addressed by its ID, and moving it changes only its entry in `objectOrder`. We intentionally do not duplicate this as a mutable `order` field on each drawing, which could drift out of sync with the cross-object render stack.
 
 ## Snapshot compatibility
 
