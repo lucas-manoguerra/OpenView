@@ -130,6 +130,15 @@ export {
 } from './drawing-magnet';
 
 export {
+  createChart,
+  type ChartApi,
+  type ChartCommand,
+  type ChartEvent,
+  type ChartSnapshot,
+  type CreateChartOptions,
+} from './chart-api';
+
+export {
   createChartObjectOrder,
   moveChartObjectInOrder,
   reconcileChartObjectOrder,
