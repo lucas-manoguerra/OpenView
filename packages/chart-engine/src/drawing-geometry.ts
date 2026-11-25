@@ -320,7 +320,7 @@ export const hitTestChartDrawing = (
 
   const selectedIds = new Set(selectedDrawingIds);
 
-  for (let index = drawings.length - 1; index >= 0; index -= 1) {
+    for (let index = drawings.length - 1; index >= 0; index -= 1) {
     const drawing = drawings[index];
 
     if (drawing === undefined || drawing.locked === true || !selectedIds.has(drawing.id)) {
