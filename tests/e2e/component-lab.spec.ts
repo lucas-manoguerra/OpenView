@@ -27,27 +27,26 @@ test('opens the component lab and explores drawing tools and style templates', a
   await page.getByTestId('drawing-tool-catalog-item-trend-line').click();
   await expect(page.getByTestId('drawing-active-tool')).toHaveText('trend-line');
 
-  await page.getByTestId('drawing-template-builtin-red-dashed').click();
-  await expect(page.getByTestId('drawing-style-color')).toHaveValue('#ef5350');
-  await expect(page.getByTestId('drawing-style-width')).toHaveValue('2');
-  await expect(page.getByTestId('drawing-style-line')).toHaveValue('dashed');
-
+  await expect(page.getByTestId('drawing-template-default')).toBeVisible();
+  await expect(page.getByTestId('drawing-template-default')).toBeEnabled();
   await page.getByTestId('drawing-style-color').evaluate((element: HTMLInputElement) => {
     element.value = '#abcdef';
     element.dispatchEvent(new Event('input', { bubbles: true }));
   });
-  await page.getByTestId('drawing-style-width').selectOption('4');
-  await page.getByTestId('drawing-style-line').selectOption('dotted');
-  await page.getByTestId('drawing-template-name').fill('Estilo de prueba');
+  await page.getByTestId('drawing-style-width').selectOption('2');
+  await page.getByTestId('drawing-style-line').selectOption('dashed');
+  await page.getByTestId('drawing-template-name').fill('Support');
   await page.getByTestId('drawing-template-save').click();
   await expect(page.getByTestId('drawing-template-count')).toHaveText(
-    '1 / 20 plantillas personalizadas',
+    '1 plantillas personalizadas de esta herramienta',
   );
   await expect(page.locator('[data-testid^="drawing-custom-template-custom-"]')).toHaveCount(1);
-  await page.getByTestId('drawing-template-load').click();
-  await expect(page.getByTestId('drawing-template-count')).toHaveText(
-    '1 / 20 plantillas personalizadas',
-  );
+  await expect(page.getByTestId('drawing-template-delete')).toBeEnabled();
+  await page.getByTestId('drawing-template-default').click();
+  await expect(page.getByTestId('drawing-style-color')).toHaveValue('#60a5fa');
+  await expect(page.getByTestId('drawing-style-width')).toHaveValue('1.5');
+  await expect(page.getByTestId('drawing-style-line')).toHaveValue('solid');
+  await expect(page.getByTestId('drawing-template-delete')).toBeDisabled();
 });
 
 test('exposes button variants and sizes in the playground', async ({ page }) => {
