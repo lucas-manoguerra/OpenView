@@ -72,6 +72,7 @@ export type CanvasPointerAdapterOptions = Readonly<{
   onDrawingEdit?: (gesture: CanvasDrawingEditGesture) => void;
   onDrawingEditPreview?: (gesture: CanvasDrawingEditGesture | null) => void;
   onDrawingGroupEditPreview?: (gesture: CanvasDrawingGroupEditGesture | null) => void;
+  onDrawingHover?: (hit: ChartDrawingHit | null) => void;
   onDrawingGroupEdit?: (gesture: CanvasDrawingGroupEditGesture) => void;
   onDrawingAreaSelectionChange?: (selection: CanvasDrawingAreaSelection | null) => void;
   onDrawingAreaSelectionComplete?: (area: ChartDrawingSelectionArea) => void;
@@ -297,7 +298,21 @@ export const attachCanvasPointerEvents = (
       return;
     }
 
-    controller.pointerMove(getCanvasPosition(canvas, event));
+    const position = getCanvasPosition(canvas, event);
+    if ((options.getDrawingTool?.() ?? 'cursor') === 'select') {
+      const hit = hitTestChartDrawing(
+        position,
+        options.getDrawings?.() ?? [],
+        options.getCandles?.() ?? [],
+        controller.snapshot.frame,
+        8,
+        getSelectedDrawingIds(),
+      );
+      options.onDrawingHover?.(hit);
+    } else {
+      options.onDrawingHover?.(null);
+    }
+    controller.pointerMove(position);
   };
 
   const handlePointerUp = (event: PointerEvent): void => {
@@ -499,6 +514,7 @@ export const attachCanvasPointerEvents = (
   };
 
   const handlePointerLeave = (): void => {
+    options.onDrawingHover?.(null);
     controller.pointerLeave();
   };
 
