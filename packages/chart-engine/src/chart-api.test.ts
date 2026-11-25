@@ -243,6 +243,15 @@ describe('chart public API', () => {
     const committed = chart.exportSnapshot().scene.drawings;
     expect(committed[0]?.start.price).toBe(3);
     expect(committed[1]?.start.price).toBe(5);
+
+    chart.execute({ type: 'undo-drawings' });
+    const undone = chart.exportSnapshot().scene.drawings;
+    expect(undone[0]?.start.price).toBe(2);
+    expect(undone[1]?.start.price).toBe(4);
+    chart.execute({ type: 'redo-drawings' });
+    const redone = chart.exportSnapshot().scene.drawings;
+    expect(redone[0]?.start.price).toBe(3);
+    expect(redone[1]?.start.price).toBe(5);
     chart.destroy();
   });
 
