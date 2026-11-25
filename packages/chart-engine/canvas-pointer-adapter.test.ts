@@ -551,7 +551,7 @@ describe('canvas pointer event adapter', () => {
     expect(edits).toEqual([]);
   });
 
-  it('toggles drawing selection with Shift and moves selected drawings as a group', () => {
+  it('toggles drawing selection with Ctrl and moves selected drawings as a group', () => {
     const { canvas, dispatch, capturedPointers } = createCanvasTarget();
     const frame = createChartFrame(900, 500, { min: 90, max: 120 }, 2);
     const controller = createChartInteractionController(frame);
@@ -633,16 +633,16 @@ describe('canvas pointer event adapter', () => {
     dispatch('pointerup', pointerEvent(firstBody));
     expect(selectedIds).toEqual(['trend-1']);
 
-    dispatch('pointerdown', pointerEvent(secondBody, { shiftKey: true }));
-    dispatch('pointerup', pointerEvent(secondBody, { shiftKey: true }));
+    dispatch('pointerdown', pointerEvent(secondBody, { ctrlKey: true }));
+    dispatch('pointerup', pointerEvent(secondBody, { ctrlKey: true }));
     expect(selectedIds).toEqual(['trend-1', 'trend-2']);
 
-    dispatch('pointerdown', pointerEvent(secondBody, { shiftKey: true }));
-    dispatch('pointerup', pointerEvent(secondBody, { shiftKey: true }));
+    dispatch('pointerdown', pointerEvent(secondBody, { ctrlKey: true }));
+    dispatch('pointerup', pointerEvent(secondBody, { ctrlKey: true }));
     expect(selectedIds).toEqual(['trend-1']);
 
-    dispatch('pointerdown', pointerEvent(secondBody, { shiftKey: true }));
-    dispatch('pointerup', pointerEvent(secondBody, { shiftKey: true }));
+    dispatch('pointerdown', pointerEvent(secondBody, { ctrlKey: true }));
+    dispatch('pointerup', pointerEvent(secondBody, { ctrlKey: true }));
     expect(selectedIds).toEqual(['trend-1', 'trend-2']);
 
     const movedBody = { x: firstBody.x + 35, y: firstBody.y - 18 };
@@ -673,6 +673,113 @@ describe('canvas pointer event adapter', () => {
 
     dispatch('keydown', { key: 'Delete', preventDefault: vi.fn() } as unknown as KeyboardEvent);
     expect(deletedGroups).toEqual([['trend-1', 'trend-2']]);
+  });
+
+  it('selects drawings inside a Ctrl-drag marquee area', () => {
+    const { canvas, dispatch, capturedPointers } = createCanvasTarget();
+    const frame = createChartFrame(900, 500, { min: 90, max: 120 }, 2);
+    const controller = createChartInteractionController(frame);
+    const candles: readonly ChartRenderCandle[] = [
+      {
+        logicalIndex: 0,
+        timestamp: 1_700_000_000_000,
+        open: 100,
+        high: 110,
+        low: 95,
+        close: 105,
+        volume: 10,
+      },
+      {
+        logicalIndex: 1,
+        timestamp: 1_700_000_060_000,
+        open: 105,
+        high: 112,
+        low: 100,
+        close: 108,
+        volume: 20,
+      },
+      {
+        logicalIndex: 2,
+        timestamp: 1_700_000_120_000,
+        open: 108,
+        high: 120,
+        low: 105,
+        close: 118,
+        volume: 30,
+      },
+    ];
+    const drawings: readonly ChartRenderDrawing[] = [
+      {
+        id: 'trend-1',
+        type: 'trend-line',
+        start: { timestamp: candles[0]!.timestamp, price: 100 },
+        end: { timestamp: candles[2]!.timestamp, price: 108 },
+        color: '#60a5fa',
+      },
+      {
+        id: 'trend-2',
+        type: 'trend-line',
+        start: { timestamp: candles[0]!.timestamp, price: 110 },
+        end: { timestamp: candles[2]!.timestamp, price: 118 },
+        color: '#f4c542',
+      },
+      {
+        id: 'trend-locked',
+        type: 'trend-line',
+        start: { timestamp: candles[0]!.timestamp, price: 101 },
+        end: { timestamp: candles[2]!.timestamp, price: 109 },
+        color: '#94a3b8',
+        locked: true,
+      },
+    ];
+    const completedAreas: { start: { x: number; y: number }; end: { x: number; y: number } }[] = [];
+    const selectionUpdates: (CanvasDrawingAreaSelection | null)[] = [];
+    attachCanvasPointerEvents(canvas, controller, {
+      getDrawingTool: () => 'select',
+      getDrawings: () => drawings,
+      getCandles: () => candles,
+      onDrawingAreaSelectionChange: (selection) => selectionUpdates.push(selection),
+      onDrawingAreaSelectionComplete: (area) => completedAreas.push(area),
+    });
+    const start = {
+      x: frame.layout.plotArea.x - 4,
+      y: frame.layout.plotArea.y - 4,
+    };
+    const end = {
+      x: frame.layout.plotArea.x + frame.layout.plotArea.width + 4,
+      y: frame.layout.plotArea.y + frame.layout.plotArea.height + 4,
+    };
+
+    dispatch(
+      'pointerdown',
+      createPointerEvent({
+        clientX: 100 + start.x,
+        clientY: 50 + start.y,
+        ctrlKey: true,
+      }),
+    );
+    expect(capturedPointers.has(7)).toBe(true);
+    dispatch(
+      'pointermove',
+      createPointerEvent({
+        clientX: 100 + end.x,
+        clientY: 50 + end.y,
+        ctrlKey: true,
+      }),
+    );
+    expect(selectionUpdates.at(-1)?.current).toEqual(end);
+    dispatch(
+      'pointerup',
+      createPointerEvent({
+        clientX: 100 + end.x,
+        clientY: 50 + end.y,
+        ctrlKey: true,
+      }),
+    );
+
+    expect(completedAreas).toEqual([{ start, end }]);
+    expect(selectionUpdates.at(-1)).toBeNull();
+    expect(capturedPointers.has(7)).toBe(false);
   });
 
   it('deletes the selected drawing on Delete and deselects on Escape', () => {
