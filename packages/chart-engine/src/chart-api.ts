@@ -20,6 +20,7 @@ import {
 export type ChartCommand =
   | Readonly<{ type: 'set-scene'; scene: ChartRenderScene }>
   | Readonly<{ type: 'set-drawings'; drawings: readonly ChartRenderDrawing[] }>
+  | Readonly<{ type: 'set-drawings-visible'; visible: boolean }>
   | Readonly<{ type: 'set-drawing-selection'; drawingIds: readonly string[] }>
   | Readonly<{ type: 'move-object'; target: ChartObjectOrderItem; action: ChartObjectOrderAction }>
   | Readonly<{ type: 'resize'; width: number; height: number; devicePixelRatio?: number }>
@@ -69,6 +70,7 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
   const listeners = new Set<(event: ChartEvent) => void>();
   let scene = options.initialScene;
   let objectOrder = createChartObjectOrder(getAvailableObjects(scene));
+  let drawingsVisible = true;
   let destroyed = false;
 
   const emit = (event: ChartEvent): void => {
@@ -84,7 +86,10 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
   };
 
   const render = (): void => {
-    renderer.setScene(updateChartRenderScene(scene, { objectOrder }));
+    const renderScene = drawingsVisible
+      ? scene
+      : updateChartRenderScene(scene, { drawings: [] });
+    renderer.setScene(updateChartRenderScene(renderScene, { objectOrder }));
   };
 
   const emitDrawingState = (): void => {
@@ -131,6 +136,12 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
         render();
         emitDrawingState();
         emit(Object.freeze({ type: 'object-order-changed', order: objectOrder }));
+        return;
+      }
+
+      if (command.type === 'set-drawings-visible') {
+        drawingsVisible = command.visible;
+        render();
         return;
       }
 
