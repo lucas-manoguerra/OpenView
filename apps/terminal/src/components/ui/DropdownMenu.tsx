@@ -14,16 +14,12 @@ export type DropdownMenuProps = {
   align?: 'start' | 'end';
 };
 
-export function DropdownMenu({
-  label,
-  items,
-  onSelect,
-  align = 'start',
-}: DropdownMenuProps) {
+export function DropdownMenu({ label, items, onSelect, align = 'start' }: DropdownMenuProps) {
   const [open, setOpen] = useState(false);
   const menuId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const firstEnabledItemId = items.find((item) => !item.disabled)?.id;
 
   const closeMenu = (restoreFocus = false) => {
     setOpen(false);
@@ -38,14 +34,16 @@ export function DropdownMenu({
     }
 
     const enabledItems = Array.from(
-      menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)') ?? [],
+      menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)') ??
+        [],
     );
     const currentIndex = enabledItems.indexOf(event.target as HTMLButtonElement);
     if (currentIndex < 0 || enabledItems.length === 0) return;
 
     let nextIndex = currentIndex;
     if (event.key === 'ArrowDown') nextIndex = (currentIndex + 1) % enabledItems.length;
-    else if (event.key === 'ArrowUp') nextIndex = (currentIndex - 1 + enabledItems.length) % enabledItems.length;
+    else if (event.key === 'ArrowUp')
+      nextIndex = (currentIndex - 1 + enabledItems.length) % enabledItems.length;
     else if (event.key === 'Home') nextIndex = 0;
     else if (event.key === 'End') nextIndex = enabledItems.length - 1;
     else return;
@@ -84,7 +82,10 @@ export function DropdownMenu({
         ].join(' ')}
       >
         {label}
-        <span aria-hidden="true" class={['text-[9px] transition-transform', open ? 'rotate-180' : ''].join(' ')}>
+        <span
+          aria-hidden="true"
+          class={['text-[9px] transition-transform', open ? 'rotate-180' : ''].join(' ')}
+        >
           ▾
         </span>
       </button>
@@ -107,6 +108,7 @@ export function DropdownMenu({
               key={item.id}
               type="button"
               role="menuitem"
+              autoFocus={item.id === firstEnabledItemId}
               disabled={item.disabled}
               onClick={() => {
                 onSelect?.(item.id);
@@ -120,7 +122,9 @@ export function DropdownMenu({
               ].join(' ')}
             >
               <span>{item.label}</span>
-              {item.shortcut ? <span class="font-mono text-[10px] text-[#787b86]">{item.shortcut}</span> : null}
+              {item.shortcut ? (
+                <span class="font-mono text-[10px] text-[#787b86]">{item.shortcut}</span>
+              ) : null}
             </button>
           ))}
         </div>
