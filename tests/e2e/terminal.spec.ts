@@ -2524,7 +2524,24 @@ test('saves and reapplies custom drawing style templates across reloads', async 
     )
     .toBeGreaterThan(400);
 
-  await page.evaluate(() => localStorage.removeItem('openview.chart.drawing-style-templates'));
+  await page.evaluate(() => {
+    localStorage.setItem(
+      'openview.chart.drawing-style-templates',
+      JSON.stringify({
+        version: 2,
+        templates: [
+          {
+            id: 'custom-trend-red-dashed',
+            name: 'Red dashed',
+            tool: 'trend-line',
+            color: '#ef5350',
+            lineWidth: 2,
+            lineStyle: 'dashed',
+          },
+        ],
+      }),
+    );
+  });
   await page.reload();
 
   const canvas = page.getByRole('img', {
@@ -2562,7 +2579,7 @@ test('saves and reapplies custom drawing style templates across reloads', async 
   await drawAndSelect();
   await page.getByTestId('drawing-templates-toggle').click();
   await expect(page.getByTestId('drawing-templates-manager')).toBeVisible();
-  await page.getByTestId('drawing-template-select').selectOption('builtin-red-dashed');
+  await page.getByTestId('drawing-template-select').selectOption('custom-trend-red-dashed');
   await page.getByTestId('drawing-template-apply').click();
 
   await expect(canvas).toHaveAttribute('data-selected-drawing-color', '#ef5350');
@@ -2597,10 +2614,28 @@ test('saves and reapplies custom drawing style templates across reloads', async 
     .poll(() =>
       page.evaluate(() => localStorage.getItem('openview.chart.drawing-style-templates') ?? ''),
     )
-    .toContain('"templates":[]');
+    .not.toContain('Mi estilo');
 });
 
 test('uses quick drawing templates and contextual coordinate controls', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      'openview.chart.drawing-style-templates',
+      JSON.stringify({
+        version: 2,
+        templates: [
+          {
+            id: 'custom-horizontal-red-dashed',
+            name: 'Horizontal red dashed',
+            tool: 'horizontal-line',
+            color: '#ef5350',
+            lineWidth: 2,
+            lineStyle: 'dashed',
+          },
+        ],
+      }),
+    );
+  });
   await page.goto('/');
 
   const canvas = page.getByRole('img', {
@@ -2620,7 +2655,7 @@ test('uses quick drawing templates and contextual coordinate controls', async ({
   await page.getByTestId('drawing-tool-horizontal-line').click();
   await page.getByTestId('drawing-template-quick-toggle').click();
   await expect(page.getByTestId('drawing-template-quick-menu')).toBeVisible();
-  await page.getByTestId('drawing-template-quick-builtin-red-dashed').click();
+  await page.getByTestId('drawing-template-quick-custom-horizontal-red-dashed').click();
 
   await expect
     .poll(() =>
