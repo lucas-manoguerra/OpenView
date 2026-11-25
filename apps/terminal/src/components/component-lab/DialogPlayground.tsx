@@ -22,7 +22,8 @@ export function DialogPlayground() {
                 />
               </label>
               <p class="text-xs leading-5 text-[#787b86]">
-                Los cambios se aplicarán al diseño activo y podrán guardarse desde el menú de diseño.
+                Los cambios se aplicarán al diseño activo y podrán guardarse desde el menú de
+                diseño.
               </p>
             </div>
           </Dialog>
@@ -32,7 +33,8 @@ export function DialogPlayground() {
             description="Panel secundario con contenido de lectura."
           >
             <p class="text-xs leading-5 text-[#b2b5be]">
-              Los diálogos mantienen el foco dentro de la ventana, admiten Escape y devuelven el foco al control que los abrió.
+              Los diálogos mantienen el foco dentro de la ventana, admiten Escape y devuelven el
+              foco al control que los abrió.
             </p>
           </Dialog>
         </div>
