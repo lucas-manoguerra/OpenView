@@ -308,6 +308,9 @@ export function ChartCanvas({
   const [snapToIndicators, setSnapToIndicators] = useState(
     DEFAULT_DRAWING_INTERACTION_PREFERENCES.snapToIndicators,
   );
+  const [keepDrawing, setKeepDrawing] = useState(
+    DEFAULT_DRAWING_INTERACTION_PREFERENCES.keepDrawing,
+  );
   const [drawingInteractionPreferencesLoaded, setDrawingInteractionPreferencesLoaded] =
     useState(false);
   const [drawingMagnetMenuOpen, setDrawingMagnetMenuOpen] = useState(false);
@@ -322,6 +325,7 @@ export function ChartCanvas({
   const drawingToolPreferencesRef = useRef<DrawingToolPreferences>(drawingToolPreferences);
   const drawingMagnetModeRef = useRef<ChartDrawingMagnetMode>(drawingMagnetMode);
   const snapToIndicatorsRef = useRef(snapToIndicators);
+  const keepDrawingRef = useRef(keepDrawing);
   const drawingsRef = useRef<readonly ChartRenderDrawing[]>(drawings);
   const selectedDrawingIdRef = useRef<string | null>(selectedDrawingId);
   const selectedDrawingIdsRef = useRef<readonly string[]>(selectedDrawingIds);
@@ -343,6 +347,7 @@ export function ChartCanvas({
   drawingToolPreferencesRef.current = drawingToolPreferences;
   drawingMagnetModeRef.current = drawingMagnetMode;
   snapToIndicatorsRef.current = snapToIndicators;
+  keepDrawingRef.current = keepDrawing;
   drawingsRef.current = drawings;
   selectedDrawingIdRef.current = selectedDrawingId;
   selectedDrawingIdsRef.current = selectedDrawingIds;
@@ -584,6 +589,7 @@ export function ChartCanvas({
           getDrawingMagnetMode: () => drawingMagnetModeRef.current,
           getSnapToIndicators: () => snapToIndicatorsRef.current,
           getIndicators: () => indicatorsRef.current,
+          getKeepDrawing: () => keepDrawingRef.current,
           getDrawings: () => drawingsRef.current,
           getCandles: () => currentCandles,
           getSelectedDrawingId: () => selectedDrawingIdRef.current,
@@ -683,6 +689,10 @@ export function ChartCanvas({
               ...drawingToolPreferencesRef.current[gesture.type],
             });
             commitDrawingsRef.current([...drawingsRef.current, drawing]);
+          },
+          onDrawingToolExit: (): void => {
+            drawingToolRef.current = 'cursor';
+            setDrawingTool('cursor');
           },
         });
       } else {
@@ -937,18 +947,22 @@ export function ChartCanvas({
     const preferences = loadBrowserDrawingInteractionPreferences();
     drawingMagnetModeRef.current = preferences.magnetMode;
     snapToIndicatorsRef.current = preferences.snapToIndicators;
+    keepDrawingRef.current = preferences.keepDrawing;
     setDrawingMagnetMode(preferences.magnetMode);
     setSnapToIndicators(preferences.snapToIndicators);
+    setKeepDrawing(preferences.keepDrawing);
     setDrawingInteractionPreferencesLoaded(true);
   };
 
   const persistDrawingInteractionPreferences = (
     magnetMode = drawingMagnetModeRef.current,
     snapIndicators = snapToIndicatorsRef.current,
+    keepDrawingValue = keepDrawingRef.current,
   ): void => {
     saveBrowserDrawingInteractionPreferences({
       magnetMode,
       snapToIndicators: snapIndicators,
+      keepDrawing: keepDrawingValue,
     });
   };
 
@@ -971,6 +985,19 @@ export function ChartCanvas({
   const handleDrawingMagnetMenuToggle = (): void => {
     ensureDrawingInteractionPreferencesLoaded();
     setDrawingMagnetMenuOpen((open) => !open);
+  };
+
+  const handleKeepDrawingToggle = (): void => {
+    ensureDrawingInteractionPreferencesLoaded();
+    const nextValue = !keepDrawingRef.current;
+    keepDrawingRef.current = nextValue;
+    setKeepDrawing(nextValue);
+    setDrawingInteractionPreferencesLoaded(true);
+    persistDrawingInteractionPreferences(
+      drawingMagnetModeRef.current,
+      snapToIndicatorsRef.current,
+      nextValue,
+    );
   };
 
   const ensureDrawingTemplatesLoaded = (): void => {
@@ -1572,7 +1599,35 @@ export function ChartCanvas({
             </div>
           )}
         </div>
-
+        <button
+          type="button"
+          aria-label="Mantener dibujo"
+          aria-pressed={keepDrawing}
+          data-testid="keep-drawing-toggle"
+          title="Mantener dibujo"
+          onClick={handleKeepDrawingToggle}
+          class={
+            'grid size-8 place-items-center rounded text-sm transition-colors ' +
+            (keepDrawing
+              ? 'bg-blue-500/20 text-blue-200'
+              : 'text-slate-400 hover:bg-white/5 hover:text-slate-100')
+          }
+        >
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            class="size-[18px]"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="m14.5 5.5 4 4" />
+            <path d="M4 20l4.5-1 10.7-10.7a2.1 2.1 0 0 0-3-3L5.5 16z" />
+            <path d="M4 20l1.1-4.5" />
+          </svg>
+        </button>
         <span class="my-1 h-px w-6 bg-white/10" />
         <button
           type="button"
@@ -1640,6 +1695,7 @@ export function ChartCanvas({
           data-drawing-count={drawings.length}
           data-drawing-magnet-mode={drawingMagnetMode}
           data-drawing-snap-to-indicators={String(snapToIndicators)}
+          data-keep-drawing={String(keepDrawing)}
           data-selected-drawing-id={selectedDrawingId ?? ''}
           data-selected-drawing-type={selectedDrawing?.type ?? ''}
           data-selected-drawing-start-price={
