@@ -1714,6 +1714,16 @@ test('selects multiple drawings with Ctrl click and marquee, then moves them tog
     throw new Error('The chart canvas must remain visible before marquee selection.');
   }
 
+  const marqueeStart = {
+    x: marqueeBounds.x + marqueeBounds.width * 0.12,
+    y: marqueeBounds.y + marqueeBounds.height * 0.24,
+  };
+  const marqueeEnd = {
+    x: marqueeBounds.x + marqueeBounds.width * 0.7,
+    y: marqueeBounds.y + marqueeBounds.height * 0.74,
+  };
+
+  await page.mouse.click(marqueeStart.x, marqueeStart.y);
   await canvas.evaluate((element) => {
     element.dataset.lastPointerControl = 'unset';
     element.addEventListener(
@@ -1725,16 +1735,10 @@ test('selects multiple drawings with Ctrl click and marquee, then moves them tog
     );
   });
   await page.keyboard.down('Control');
-  await page.mouse.move(
-    marqueeBounds.x + marqueeBounds.width * 0.22,
-    marqueeBounds.y + marqueeBounds.height * 0.24,
-  );
+  await page.mouse.move(marqueeStart.x, marqueeStart.y);
   await page.mouse.down();
   await expect(canvas).toHaveAttribute('data-last-pointer-control', 'true');
-  await page.mouse.move(
-    marqueeBounds.x + marqueeBounds.width * 0.64,
-    marqueeBounds.y + marqueeBounds.height * 0.74,
-  );
+  await page.mouse.move(marqueeEnd.x, marqueeEnd.y);
   await expect(page.getByTestId('drawing-selection-marquee')).toBeVisible();
   await page.mouse.up();
   await page.keyboard.up('Control');
@@ -2420,10 +2424,10 @@ test('selects drawings with Control and moves and deletes the group together', a
   };
 
   await page.getByTestId('drawing-tool-select').click();
-  await page.mouse.click(firstMidpoint.x, firstMidpoint.y);
-  await expect(canvas).toHaveAttribute('data-selected-drawing-count', '1');
+  await page.mouse.click(secondBody.x, secondBody.y);
+  await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-2');
 
-  await page.mouse.click(secondBody.x, secondBody.y, { modifiers: ['Control'] });
+  await page.mouse.click(firstMidpoint.x, firstMidpoint.y, { modifiers: ['Control'] });
   await expect(canvas).toHaveAttribute('data-selected-drawing-count', '2');
   await expect(canvas).toHaveAttribute('data-selected-drawing-ids', 'drawing-1,drawing-2');
 
