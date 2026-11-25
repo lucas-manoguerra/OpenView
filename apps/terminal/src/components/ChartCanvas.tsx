@@ -555,6 +555,13 @@ export function ChartCanvas({
           if (event.type !== 'drawing-state-changed') {
             return;
           }
+          if (scene !== null) {
+            scene = updateChartRenderScene(scene, {
+              drawings: event.drawings,
+              selectedDrawingId: event.selectedDrawingId,
+              selectedDrawingIds: event.selectedDrawingIds,
+            });
+          }
           drawingsRef.current = event.drawings;
           selectedDrawingIdRef.current = event.selectedDrawingId;
           selectedDrawingIdsRef.current = event.selectedDrawingIds;
