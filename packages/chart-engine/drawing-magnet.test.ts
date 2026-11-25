@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createChartFrame } from './src/chart-frame';
 import { resolveChartDrawingMagnetMode, snapChartDrawingPointToOhlc } from './src/drawing-magnet';
-import type { ChartRenderCandle } from './src/canvas-painter';
+import type { ChartIndicatorSeries, ChartRenderCandle } from './src/canvas-painter';
 
 const candles: readonly ChartRenderCandle[] = Object.freeze([
   Object.freeze({
@@ -67,6 +67,56 @@ describe('chart drawing magnet', () => {
     const distantPoint = Object.freeze({ logicalIndex: 1, price: 100 });
 
     expect(snapChartDrawingPointToOhlc(distantPoint, candles, frame, 'weak', 8)).toBe(distantPoint);
+  });
+
+  it('snaps to overlay indicator values when indicator snapping is enabled', () => {
+    const indicators: readonly ChartIndicatorSeries[] = [
+      Object.freeze({
+        id: 'sma-20',
+        label: 'SMA 20',
+        color: '#2962ff',
+        points: Object.freeze([
+          Object.freeze({ logicalIndex: 0, value: 109 }),
+          Object.freeze({ logicalIndex: 1, value: 111 }),
+          Object.freeze({ logicalIndex: 2, value: 107 }),
+        ]),
+      }),
+    ];
+
+    expect(
+      snapChartDrawingPointToOhlc(
+        { logicalIndex: 1, price: 111.2 },
+        candles,
+        frame,
+        'strong',
+        undefined,
+        indicators,
+        true,
+      ),
+    ).toEqual({ logicalIndex: 1, price: 111 });
+  });
+
+  it('does not use overlay indicator values when indicator snapping is disabled', () => {
+    const indicators: readonly ChartIndicatorSeries[] = [
+      Object.freeze({
+        id: 'sma-20',
+        label: 'SMA 20',
+        color: '#2962ff',
+        points: Object.freeze([Object.freeze({ logicalIndex: 1, value: 111 })]),
+      }),
+    ];
+
+    expect(
+      snapChartDrawingPointToOhlc(
+        { logicalIndex: 1, price: 111.2 },
+        candles,
+        frame,
+        'strong',
+        undefined,
+        indicators,
+        false,
+      ),
+    ).toEqual({ logicalIndex: 1, price: 114 });
   });
 
   it('uses the configured magnet mode unless the temporary modifier is pressed', () => {
