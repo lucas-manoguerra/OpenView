@@ -64,6 +64,16 @@ type ChartRenderData = Readonly<{
   candles: readonly ChartRenderCandle[];
 }>;
 
+type DrawingPanelPosition = Readonly<{ left: number; top: number }>;
+
+type DrawingPanelDrag = Readonly<{
+  pointerId: number;
+  pointerX: number;
+  pointerY: number;
+  left: number;
+  top: number;
+}>;
+
 const EMPTY_PRICE_RANGE: NumericRange = Object.freeze({ min: 0, max: 1 });
 const OLDER_HISTORY_TRIGGER_LOGICAL_INDEX = 120;
 
@@ -253,6 +263,8 @@ export function ChartCanvas({
   const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null);
   const [drawingUndoCount, setDrawingUndoCount] = useState(0);
   const [drawingRedoCount, setDrawingRedoCount] = useState(0);
+  const [drawingPanelPosition, setDrawingPanelPosition] =
+    useState<DrawingPanelPosition | null>(null);
   const [autoScale, setAutoScale] = useState(true);
   const [priceScaleLocked, setPriceScaleLocked] = useState(false);
   const [priceScaleInverted, setPriceScaleInverted] = useState(false);
@@ -266,6 +278,8 @@ export function ChartCanvas({
   const drawingRedoStackRef = useRef<readonly (readonly ChartRenderDrawing[])[]>([]);
   const commitDrawingsRef = useRef<(nextDrawings: readonly ChartRenderDrawing[]) => void>(() => {});
   const drawingSequenceRef = useRef(0);
+  const drawingPropertiesPanelRef = useRef<HTMLDivElement | null>(null);
+  const drawingPropertiesDragRef = useRef<DrawingPanelDrag | null>(null);
   const drawingSymbolRef = useRef(symbol);
   const autoScaleRef = useRef(autoScale);
   const priceScaleLockedRef = useRef(priceScaleLocked);
@@ -484,6 +498,8 @@ export function ChartCanvas({
                       price: gesture.end.price,
                     }),
               color: '#60a5fa',
+              lineWidth: 1.5,
+              lineStyle: 'solid',
             });
             commitDrawingsRef.current([...drawingsRef.current, drawing]);
           },
@@ -713,6 +729,21 @@ export function ChartCanvas({
     setDrawingTool(nextTool);
   };
 
+  const handleSelectedDrawingUpdate = (
+    updates: Partial<Pick<ChartRenderDrawing, 'color' | 'lineWidth' | 'lineStyle'>>,
+  ): void => {
+    const selectedId = selectedDrawingIdRef.current;
+
+    if (selectedId === null) {
+      return;
+    }
+
+    const nextDrawings = drawingsRef.current.map((drawing) =>
+      drawing.id === selectedId ? Object.freeze({ ...drawing, ...updates }) : drawing,
+    );
+    commitDrawingsRef.current(nextDrawings);
+  };
+
   const handleClearDrawings = (): void => {
     if (drawingsRef.current.length > 0) {
       commitDrawingsRef.current([]);
@@ -802,6 +833,9 @@ export function ChartCanvas({
     setPriceScaleMode(mode);
     runtimeRef.current?.setPriceScaleMode(mode);
   };
+
+  const selectedDrawing =
+    drawings.find((drawing) => drawing.id === selectedDrawingId) ?? null;
 
   return (
     <div class="grid h-[390px] min-h-[340px] w-full grid-cols-[38px_minmax(0,1fr)] bg-[#0b0f17]">
@@ -985,6 +1019,11 @@ export function ChartCanvas({
           data-indicator-count={renderIndicators.length}
           data-drawing-count={drawings.length}
           data-selected-drawing-id={selectedDrawingId ?? ''}
+          data-selected-drawing-color={selectedDrawing?.color ?? ''}
+          data-selected-drawing-width={
+            selectedDrawing === null ? '' : String(selectedDrawing.lineWidth ?? 1.5)
+          }
+          data-selected-drawing-line-style={selectedDrawing?.lineStyle ?? 'solid'}
           data-drawing-tool={drawingTool}
           data-drawing-undo-count={drawingUndoCount}
           data-drawing-redo-count={drawingRedoCount}
@@ -1185,6 +1224,168 @@ export function ChartCanvas({
             Ver todo
           </button>
         </fieldset>
+        {selectedDrawing !== null && (
+          <div
+            ref={drawingPropertiesPanelRef}
+            data-testid="drawing-properties-panel"
+            class="absolute bottom-10 left-3 z-20 w-64 rounded-xl border border-white/10 bg-[#101723]/95 p-3 shadow-2xl backdrop-blur"
+            style={
+              drawingPanelPosition === null
+                ? undefined
+                : {
+                    left: drawingPanelPosition.left,
+                    top: drawingPanelPosition.top,
+                    right: 'auto',
+                    bottom: 'auto',
+                  }
+            }
+          >
+            <div class="mb-3 flex items-center gap-2">
+              <div
+                data-testid="drawing-properties-drag-handle"
+                class="flex min-w-0 flex-1 cursor-grab items-center gap-2 touch-none rounded px-1 py-1 text-[11px] font-semibold text-slate-200 active:cursor-grabbing"
+                onPointerDown={(event) => {
+                  if (event.button !== 0) {
+                    return;
+                  }
+
+                  const panel = drawingPropertiesPanelRef.current;
+
+                  if (panel === null) {
+                    return;
+                  }
+
+                  const left = panel.offsetLeft;
+                  const top = panel.offsetTop;
+                  drawingPropertiesDragRef.current = {
+                    pointerId: event.pointerId,
+                    pointerX: event.clientX,
+                    pointerY: event.clientY,
+                    left,
+                    top,
+                  };
+                  setDrawingPanelPosition({ left, top });
+                  event.currentTarget.setPointerCapture(event.pointerId);
+                }}
+                onPointerMove={(event) => {
+                  const drag = drawingPropertiesDragRef.current;
+                  const panel = drawingPropertiesPanelRef.current;
+                  const parent = panel?.parentElement;
+
+                  if (
+                    drag === null ||
+                    drag.pointerId !== event.pointerId ||
+                    panel === null ||
+                    parent === null
+                  ) {
+                    return;
+                  }
+
+                  const maxLeft = Math.max(0, parent.clientWidth - panel.offsetWidth);
+                  const maxTop = Math.max(0, parent.clientHeight - panel.offsetHeight);
+                  const left = Math.max(
+                    0,
+                    Math.min(maxLeft, drag.left + event.clientX - drag.pointerX),
+                  );
+                  const top = Math.max(
+                    0,
+                    Math.min(maxTop, drag.top + event.clientY - drag.pointerY),
+                  );
+                  setDrawingPanelPosition({ left, top });
+                }}
+                onPointerUp={(event) => {
+                  if (drawingPropertiesDragRef.current?.pointerId !== event.pointerId) {
+                    return;
+                  }
+
+                  drawingPropertiesDragRef.current = null;
+                  if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                    event.currentTarget.releasePointerCapture(event.pointerId);
+                  }
+                }}
+                onPointerCancel={(event) => {
+                  if (drawingPropertiesDragRef.current?.pointerId === event.pointerId) {
+                    drawingPropertiesDragRef.current = null;
+                  }
+                }}
+              >
+                <span aria-hidden="true" class="text-slate-500">⠿</span>
+                <span class="truncate">Editar {selectedDrawing.type}</span>
+              </div>
+              <button
+                type="button"
+                aria-label="Cerrar editor de dibujo"
+                data-testid="drawing-editor-close"
+                onClick={() => {
+                  selectedDrawingIdRef.current = null;
+                  setSelectedDrawingId(null);
+                  runtimeRef.current?.setSelectedDrawingId(null);
+                }}
+                class="grid size-6 shrink-0 place-items-center rounded text-xs text-slate-400 hover:bg-white/10 hover:text-white"
+              >
+                ×
+              </button>
+            </div>
+            <div class="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-2">
+              <label for="drawing-style-color" class="text-[10px] text-slate-400">
+                Color
+              </label>
+              <input
+                id="drawing-style-color"
+                type="color"
+                aria-label="Color del dibujo"
+                data-testid="drawing-style-color"
+                value={selectedDrawing.color}
+                onInput={(event) =>
+                  handleSelectedDrawingUpdate({ color: event.currentTarget.value })
+                }
+                class="h-7 w-10 cursor-pointer rounded border border-white/10 bg-transparent p-0.5"
+              />
+              <label for="drawing-style-width" class="text-[10px] text-slate-400">
+                Grosor
+              </label>
+              <select
+                id="drawing-style-width"
+                aria-label="Grosor del dibujo"
+                data-testid="drawing-style-width"
+                value={String(selectedDrawing.lineWidth ?? 1.5)}
+                onChange={(event) =>
+                  handleSelectedDrawingUpdate({ lineWidth: Number(event.currentTarget.value) })
+                }
+                class="min-w-20 rounded border border-white/10 bg-[#0b0f17] px-2 py-1 text-[10px] text-slate-200 outline-none focus:border-blue-400"
+              >
+                <option value="1">1 px</option>
+                <option value="1.5">1.5 px</option>
+                <option value="2">2 px</option>
+                <option value="3">3 px</option>
+                <option value="4">4 px</option>
+                <option value="5">5 px</option>
+                <option value="6">6 px</option>
+              </select>
+              <label for="drawing-style-line" class="text-[10px] text-slate-400">
+                Trazo
+              </label>
+              <select
+                id="drawing-style-line"
+                aria-label="Estilo de línea del dibujo"
+                data-testid="drawing-style-line"
+                value={selectedDrawing.lineStyle ?? 'solid'}
+                onChange={(event) =>
+                  handleSelectedDrawingUpdate({
+                    lineStyle: event.currentTarget.value as NonNullable<
+                      ChartRenderDrawing['lineStyle']
+                    >,
+                  })
+                }
+                class="min-w-20 rounded border border-white/10 bg-[#0b0f17] px-2 py-1 text-[10px] text-slate-200 outline-none focus:border-blue-400"
+              >
+                <option value="solid">Continuo</option>
+                <option value="dashed">Guiones</option>
+                <option value="dotted">Puntos</option>
+              </select>
+            </div>
+          </div>
+        )}
         {loading && (
           <div class="pointer-events-none absolute inset-0 grid place-items-center bg-[#0b0f17]/70">
             <span
