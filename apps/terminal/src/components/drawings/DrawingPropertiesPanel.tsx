@@ -89,7 +89,9 @@ export function DrawingPropertiesPanel({
           class="flex min-w-0 flex-1 cursor-grab items-center gap-2 touch-none rounded px-1 py-1 text-[11px] font-semibold text-slate-200 active:cursor-grabbing"
           onPointerDown={onDragStart}
         >
-          <span aria-hidden="true" class="text-slate-500">⠿</span>
+          <span aria-hidden="true" class="text-slate-500">
+            ⠿
+          </span>
           <span class="truncate">
             {selectedDrawingIds.length > 1
               ? 'Editar ' + selectedDrawingIds.length + ' dibujos'
@@ -107,7 +109,9 @@ export function DrawingPropertiesPanel({
         </button>
       </div>
       <div class="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-2">
-        <label htmlFor="drawing-style-color" class="text-[10px] text-slate-400">Color</label>
+        <label htmlFor="drawing-style-color" class="text-[10px] text-slate-400">
+          Color
+        </label>
         <input
           id="drawing-style-color"
           type="color"
@@ -117,7 +121,9 @@ export function DrawingPropertiesPanel({
           onInput={(event) => onStyleChange({ color: event.currentTarget.value })}
           class="h-7 w-10 cursor-pointer rounded border border-white/10 bg-transparent p-0.5"
         />
-        <label htmlFor="drawing-style-width" class="text-[10px] text-slate-400">Grosor</label>
+        <label htmlFor="drawing-style-width" class="text-[10px] text-slate-400">
+          Grosor
+        </label>
         <select
           id="drawing-style-width"
           aria-label="Grosor del dibujo"
@@ -134,7 +140,9 @@ export function DrawingPropertiesPanel({
           <option value="5">5 px</option>
           <option value="6">6 px</option>
         </select>
-        <label htmlFor="drawing-style-line" class="text-[10px] text-slate-400">Trazo</label>
+        <label htmlFor="drawing-style-line" class="text-[10px] text-slate-400">
+          Trazo
+        </label>
         <select
           id="drawing-style-line"
           aria-label="Estilo de línea del dibujo"
@@ -153,9 +161,14 @@ export function DrawingPropertiesPanel({
         </select>
       </div>
       {selectedDrawingsShareType && selectedDrawing.type === 'rectangle' && (
-        <div class="mt-3 space-y-2 border-t border-white/10 pt-3" data-testid="drawing-rectangle-properties">
+        <div
+          class="mt-3 space-y-2 border-t border-white/10 pt-3"
+          data-testid="drawing-rectangle-properties"
+        >
           <div class="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-2">
-            <label htmlFor="drawing-fill-color" class="text-[10px] text-slate-400">Color de relleno</label>
+            <label htmlFor="drawing-fill-color" class="text-[10px] text-slate-400">
+              Color de relleno
+            </label>
             <input
               id="drawing-fill-color"
               type="color"
@@ -176,7 +189,9 @@ export function DrawingPropertiesPanel({
               max="100"
               step="5"
               value={String(Math.round((selectedDrawing.fillOpacity ?? 0) * 100))}
-              onInput={(event) => onStyleChange({ fillOpacity: Number(event.currentTarget.value) / 100 })}
+              onInput={(event) =>
+                onStyleChange({ fillOpacity: Number(event.currentTarget.value) / 100 })
+              }
               class="w-28 accent-blue-400"
             />
             <span class="w-8 text-right tabular-nums text-slate-300">
@@ -187,7 +202,10 @@ export function DrawingPropertiesPanel({
       )}
       {selectedDrawingsShareType &&
         (selectedDrawing.type === 'trend-line' || selectedDrawing.type === 'ray') && (
-          <div class="mt-3 space-y-2 border-t border-white/10 pt-3" data-testid="drawing-line-properties">
+          <div
+            class="mt-3 space-y-2 border-t border-white/10 pt-3"
+            data-testid="drawing-line-properties"
+          >
             <div class="grid grid-cols-2 gap-2">
               <label class="flex items-center gap-2 text-[10px] text-slate-400">
                 <input
@@ -213,7 +231,9 @@ export function DrawingPropertiesPanel({
               </label>
             </div>
             <div class="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-2">
-              <label htmlFor="drawing-start-style" class="text-[10px] text-slate-400">Estilo de inicio</label>
+              <label htmlFor="drawing-start-style" class="text-[10px] text-slate-400">
+                Estilo de inicio
+              </label>
               <select
                 id="drawing-start-style"
                 aria-label="Estilo de inicio"
@@ -221,7 +241,9 @@ export function DrawingPropertiesPanel({
                 value={selectedDrawing.startStyle ?? 'none'}
                 onChange={(event) =>
                   onStyleChange({
-                    startStyle: event.currentTarget.value as NonNullable<ChartRenderDrawing['startStyle']>,
+                    startStyle: event.currentTarget.value as NonNullable<
+                      ChartRenderDrawing['startStyle']
+                    >,
                   })
                 }
                 class="min-w-24 rounded border border-white/10 bg-[#0b0f17] px-2 py-1 text-[10px] text-slate-200 outline-none focus:border-blue-400"
@@ -230,7 +252,9 @@ export function DrawingPropertiesPanel({
                 <option value="arrow">Flecha</option>
                 <option value="circle">Círculo</option>
               </select>
-              <label htmlFor="drawing-end-style" class="text-[10px] text-slate-400">Estilo final</label>
+              <label htmlFor="drawing-end-style" class="text-[10px] text-slate-400">
+                Estilo final
+              </label>
               <select
                 id="drawing-end-style"
                 aria-label="Estilo final"
@@ -238,7 +262,9 @@ export function DrawingPropertiesPanel({
                 value={selectedDrawing.endStyle ?? 'none'}
                 onChange={(event) =>
                   onStyleChange({
-                    endStyle: event.currentTarget.value as NonNullable<ChartRenderDrawing['endStyle']>,
+                    endStyle: event.currentTarget.value as NonNullable<
+                      ChartRenderDrawing['endStyle']
+                    >,
                   })
                 }
                 class="min-w-24 rounded border border-white/10 bg-[#0b0f17] px-2 py-1 text-[10px] text-slate-200 outline-none focus:border-blue-400"
@@ -252,7 +278,9 @@ export function DrawingPropertiesPanel({
         )}
       <div class="mt-3 border-t border-white/10 pt-3">
         <div class="flex items-center justify-between gap-2">
-          <span class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Plantillas</span>
+          <span class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+            Plantillas
+          </span>
           <button
             type="button"
             data-testid="drawing-templates-toggle"
@@ -274,7 +302,9 @@ export function DrawingPropertiesPanel({
             >
               {activeDefaultStyle && <option value="default">Default</option>}
               {templates.map((template) => (
-                <option key={template.id} value={template.id}>{template.name}</option>
+                <option key={template.id} value={template.id}>
+                  {template.name}
+                </option>
               ))}
             </select>
             <div class="flex gap-2">
@@ -287,7 +317,8 @@ export function DrawingPropertiesPanel({
                 Aplicar
               </button>
               {templates.some(
-                (template) => template.id === selectedTemplateId && template.tool === activeTemplateTool,
+                (template) =>
+                  template.id === selectedTemplateId && template.tool === activeTemplateTool,
               ) && (
                 <button
                   type="button"
@@ -321,9 +352,14 @@ export function DrawingPropertiesPanel({
                 Guardar
               </button>
             </div>
-            {templateError !== null && <p role="alert" class="text-[10px] text-rose-300">{templateError}</p>}
+            {templateError !== null && (
+                <p role="alert" class="text-[10px] text-rose-300">
+                  {templateError}
+                </p>
+              )}
             <p class="text-[9px] leading-relaxed text-slate-500">
-              Las plantillas personalizadas se guardan en este navegador y se aplican a toda la selección.
+              Las plantillas personalizadas se guardan en este navegador y se aplican a toda la
+              selección.
             </p>
           </div>
         )}
