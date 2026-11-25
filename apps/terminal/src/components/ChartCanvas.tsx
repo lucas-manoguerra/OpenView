@@ -806,7 +806,9 @@ export function ChartCanvas({
       return;
     }
 
-    commitDrawingsRef.current(drawingsRef.current.filter((drawing) => !selectedIds.has(drawing.id)));
+    commitDrawingsRef.current(
+      drawingsRef.current.filter((drawing) => !selectedIds.has(drawing.id)),
+    );
     updateDrawingSelection([]);
   };
 
