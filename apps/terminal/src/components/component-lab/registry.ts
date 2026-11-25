@@ -17,6 +17,14 @@ export const componentLabRegistry: readonly ComponentLabEntry[] = [
     description: 'Button, IconButton, Tooltip, Badge y Divider.',
   },
   {
+    id: 'icons',
+    name: 'Icons',
+    family: 'Core',
+    route: '/component-lab/core/icons',
+    status: 'available',
+    description: 'Catálogo Lucide Preact con tamaños, grosor y accesibilidad estandarizados.',
+  },
+  {
     id: 'navigation',
     name: 'Navigation',
     family: 'Navigation',
