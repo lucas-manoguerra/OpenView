@@ -140,9 +140,7 @@ export const attachCanvasPointerEvents = (
       } else if (hit === null) {
         emitDrawingSelection([]);
       } else {
-        const nextSelection = selectedIds.includes(hit.drawingId)
-          ? selectedIds
-          : [hit.drawingId];
+        const nextSelection = selectedIds.includes(hit.drawingId) ? selectedIds : [hit.drawingId];
         emitDrawingSelection(nextSelection);
 
         const origin = chartCoordinateToDataPoint(position, controller.snapshot.frame);
