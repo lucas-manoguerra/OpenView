@@ -78,7 +78,10 @@ export function DrawingPlayground() {
           />
           <div class="min-w-0 flex-1 space-y-1 text-xs leading-5 text-[#787b86]">
             <p>Explora las familias, busca herramientas y selecciona las implementadas.</p>
-            <p>Las herramientas planificadas permanecen visibles y deshabilitadas hasta completar su geometría e interacción.</p>
+            <p>
+              Las herramientas planificadas permanecen visibles y deshabilitadas hasta completar su
+              geometría e interacción.
+            </p>
           </div>
         </div>
       </section>
@@ -86,7 +89,9 @@ export function DrawingPlayground() {
       <section class="space-y-3">
         <div>
           <h2 class="text-sm font-semibold text-[#d1d4dc]">Propiedades de dibujo</h2>
-          <p class="mt-1 text-xs text-[#787b86]">Prueba los valores de estilo de forma independiente del gráfico.</p>
+          <p class="mt-1 text-xs text-[#787b86]">
+            Prueba los valores de estilo de forma independiente del gráfico.
+          </p>
         </div>
         <div class="grid gap-3 rounded-md border border-[#2a2e39] bg-[#131722] p-4 sm:grid-cols-3">
           <label class="flex items-center gap-3 text-xs text-[#b2b5be]">
@@ -152,7 +157,9 @@ export function DrawingPlayground() {
       <section class="space-y-3">
         <div>
           <h2 class="text-sm font-semibold text-[#d1d4dc]">Plantillas de estilo</h2>
-          <p class="mt-1 text-xs text-[#787b86]">Aplica estilos predefinidos o guarda configuraciones personalizadas.</p>
+          <p class="mt-1 text-xs text-[#787b86]">
+            Aplica estilos predefinidos o guarda configuraciones personalizadas.
+          </p>
         </div>
         <div class="flex flex-wrap gap-2 rounded-md border border-[#2a2e39] bg-[#131722] p-4">
           {BUILT_IN_DRAWING_STYLE_TEMPLATES.map((template) => (
@@ -188,7 +195,8 @@ export function DrawingPlayground() {
               templateName.trim().length === 0 ||
               customTemplates.length >= MAX_CUSTOM_DRAWING_TEMPLATES ||
               customTemplates.some(
-                (template) => template.name.toLocaleLowerCase() === templateName.trim().toLocaleLowerCase(),
+                (template) =>
+                  template.name.toLocaleLowerCase() === templateName.trim().toLocaleLowerCase(),
               )
             }
             onClick={saveTemplate}
