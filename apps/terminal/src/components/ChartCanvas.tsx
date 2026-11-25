@@ -1550,7 +1550,7 @@ export function ChartCanvas({
 
   return (
     <div class="grid h-[390px] min-h-[340px] w-full grid-cols-[38px_minmax(0,1fr)] bg-[#0b0f17]">
-      <aside class="relative flex min-h-0 min-w-0 flex-col items-center gap-1 overflow-y-auto border-r border-white/10 bg-[#101723] py-2">
+      <aside class="relative flex min-w-0 flex-col items-center gap-1 border-r border-white/10 bg-[#101723] py-2">
         <button
           type="button"
           aria-label="Cursor y navegación"
