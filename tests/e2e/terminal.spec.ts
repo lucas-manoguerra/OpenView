@@ -1714,6 +1714,16 @@ test('selects multiple drawings with Ctrl click and marquee, then moves them tog
     throw new Error('The chart canvas must remain visible before marquee selection.');
   }
 
+  await canvas.evaluate((element) => {
+    element.dataset.lastPointerControl = 'unset';
+    element.addEventListener(
+      'pointerdown',
+      (event) => {
+        element.dataset.lastPointerControl = String(event.ctrlKey);
+      },
+      { capture: true },
+    );
+  });
   await canvas.focus();
   await page.keyboard.down('Control');
   await page.mouse.move(
@@ -1721,6 +1731,7 @@ test('selects multiple drawings with Ctrl click and marquee, then moves them tog
     marqueeBounds.y + marqueeBounds.height * 0.2,
   );
   await page.mouse.down();
+  await expect(canvas).toHaveAttribute('data-last-pointer-control', 'true');
   await page.mouse.move(
     marqueeBounds.x + marqueeBounds.width * 0.64,
     marqueeBounds.y + marqueeBounds.height * 0.74,
@@ -2058,6 +2069,7 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
   await page.mouse.move(
     dragHandleBounds.x + dragHandleBounds.width / 2 + 45,
     dragHandleBounds.y + dragHandleBounds.height / 2 + 30,
+    { steps: 8 },
   );
   await page.mouse.up();
 
@@ -2401,9 +2413,9 @@ test('selects drawings with Control and moves and deletes the group together', a
     x: bounds.x + bounds.width * 0.4,
     y: bounds.y + bounds.height * 0.34,
   };
-  const secondAnchor = {
-    x: bounds.x + bounds.width * 0.28,
-    y: bounds.y + bounds.height * 0.46,
+  const secondBody = {
+    x: bounds.x + bounds.width * 0.4,
+    y: bounds.y + bounds.height * 0.52,
   };
 
   await page.getByTestId('drawing-tool-select').click();
@@ -2411,9 +2423,7 @@ test('selects drawings with Control and moves and deletes the group together', a
   await expect(canvas).toHaveAttribute('data-selected-drawing-count', '1');
 
   await canvas.focus();
-  await page.keyboard.down('Control');
-  await page.mouse.click(secondAnchor.x, secondAnchor.y);
-  await page.keyboard.up('Control');
+  await page.mouse.click(secondBody.x, secondBody.y, { modifiers: ['Control'] });
   await expect(canvas).toHaveAttribute('data-selected-drawing-count', '2');
   await expect(canvas).toHaveAttribute('data-selected-drawing-ids', 'drawing-1,drawing-2');
 
