@@ -470,15 +470,24 @@ describe('canvas chart painter', () => {
 
   it('highlights only the hovered anchor of an unselected drawing', () => {
     const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 10);
-    const drawings: readonly ChartRenderDrawing[] = [{
-      id: 'trend-hovered',
-      type: 'trend-line',
-      start: { timestamp: 1_700_000_000_000, price: 100 },
-      end: { timestamp: 1_700_000_120_000, price: 110 },
-      color: '#60a5fa',
-    }];
+    const drawings: readonly ChartRenderDrawing[] = [
+      {
+        id: 'trend-hovered',
+        type: 'trend-line',
+        start: { timestamp: 1_700_000_000_000, price: 100 },
+        end: { timestamp: 1_700_000_120_000, price: 110 },
+        color: '#60a5fa',
+      },
+    ];
     const scene = createChartRenderScene(
-      frame, createCandles(), null, 'candles', [], drawings, null, [], 
+      frame,
+      createCandles(),
+      null,
+      'candles',
+      [],
+      drawings,
+      null,
+      [],
       { drawingId: 'trend-hovered', target: 'start' },
     );
     const { context, calls } = createMockContext();
@@ -486,8 +495,12 @@ describe('canvas chart painter', () => {
     drawChartScene(context, scene);
 
     const start = dataPointToChartCoordinate({ logicalIndex: 0, price: 100 }, frame);
-    const hoveredAnchor = calls.find((call) =>
-      call.name === 'arc' && call.args[0] === start.x && call.args[1] === start.y && call.args[2] === 7,
+    const hoveredAnchor = calls.find(
+      (call) =>
+        call.name === 'arc' &&
+        call.args[0] === start.x &&
+        call.args[1] === start.y &&
+        call.args[2] === 7,
     );
     expect(hoveredAnchor).toBeDefined();
     expect(calls.filter((call) => call.name === 'arc' && call.args[2] === 7)).toHaveLength(1);
