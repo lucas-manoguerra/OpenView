@@ -31,6 +31,7 @@ export type ChartDrawingPoint = Readonly<{
 }>;
 
 export type ChartDrawingLineStyle = 'solid' | 'dashed' | 'dotted';
+export type ChartDrawingEndpointStyle = 'none' | 'arrow' | 'circle';
 
 export type ChartRenderDrawing = Readonly<{
   id: string;
@@ -40,6 +41,12 @@ export type ChartRenderDrawing = Readonly<{
   color: string;
   lineWidth?: number;
   lineStyle?: ChartDrawingLineStyle;
+  fillColor?: string;
+  fillOpacity?: number;
+  extendStart?: boolean;
+  extendEnd?: boolean;
+  startStyle?: ChartDrawingEndpointStyle;
+  endStyle?: ChartDrawingEndpointStyle;
 }>;
 
 export type ChartRenderScene = Readonly<{
@@ -168,6 +175,34 @@ const normalizeChartDrawings = (
         throw new RangeError('Chart drawing line style must be solid, dashed or dotted.');
       }
 
+      const fillColor = drawing.fillColor ?? drawing.color;
+      const fillOpacity = drawing.fillOpacity ?? 0;
+      const extendStart = drawing.extendStart ?? false;
+      const extendEnd = drawing.extendEnd ?? drawing.type === 'ray';
+      const startStyle = drawing.startStyle ?? 'none';
+      const endStyle = drawing.endStyle ?? 'none';
+
+      if (
+        typeof fillColor !== 'string' ||
+        fillColor.length === 0 ||
+        !Number.isFinite(fillOpacity) ||
+        fillOpacity < 0 ||
+        fillOpacity > 1
+      ) {
+        throw new RangeError('Chart drawing fill color and opacity must be valid.');
+      }
+
+      if (typeof extendStart !== 'boolean' || typeof extendEnd !== 'boolean') {
+        throw new RangeError('Chart drawing extensions must be boolean values.');
+      }
+
+      if (
+        !(['none', 'arrow', 'circle'] as const).includes(startStyle) ||
+        !(['none', 'arrow', 'circle'] as const).includes(endStyle)
+      ) {
+        throw new RangeError('Chart drawing endpoint style must be none, arrow or circle.');
+      }
+
       ids.add(drawing.id);
       return Object.freeze({
         id: drawing.id,
@@ -177,6 +212,12 @@ const normalizeChartDrawings = (
         color: drawing.color,
         lineWidth,
         lineStyle,
+        fillColor,
+        fillOpacity,
+        extendStart,
+        extendEnd,
+        startStyle,
+        endStyle,
       });
     }),
   );
@@ -741,6 +782,72 @@ const drawIndicators = (context: CanvasRenderingContext2D, scene: ChartRenderSce
   context.restore();
 };
 
+const getPositivePlotExtent = (
+  originX: number,
+  originY: number,
+  deltaX: number,
+  deltaY: number,
+  plotArea: ChartFrame['layout']['plotArea'],
+): number | null => {
+  const right = plotArea.x + plotArea.width;
+  const bottom = plotArea.y + plotArea.height;
+  const intersections = [
+    deltaX > 0
+      ? (right - originX) / deltaX
+      : deltaX < 0
+        ? (plotArea.x - originX) / deltaX
+        : Number.POSITIVE_INFINITY,
+    deltaY > 0
+      ? (bottom - originY) / deltaY
+      : deltaY < 0
+        ? (plotArea.y - originY) / deltaY
+        : Number.POSITIVE_INFINITY,
+  ].filter((intersection) => intersection >= 0 && Number.isFinite(intersection));
+
+  return intersections.length === 0 ? null : Math.min(...intersections);
+};
+
+const drawDrawingEndpoint = (
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  direction: number,
+  style: ChartDrawingEndpointStyle,
+  color: string,
+  lineWidth: number,
+): void => {
+  if (style === 'none') {
+    return;
+  }
+
+  context.save();
+  context.fillStyle = color;
+  context.strokeStyle = color;
+
+  if (style === 'circle') {
+    context.beginPath();
+    context.arc(x, y, Math.max(3, lineWidth * 1.5), 0, Math.PI * 2);
+    context.fill();
+  } else {
+    const size = Math.max(8, lineWidth * 3);
+    const wing = size * 0.55;
+    const leftAngle = direction + Math.PI - Math.PI / 6;
+    const rightAngle = direction + Math.PI + Math.PI / 6;
+    context.beginPath();
+    context.moveTo(x, y);
+    context.lineTo(x + Math.cos(leftAngle) * size, y + Math.sin(leftAngle) * size);
+    context.lineTo(
+      x + Math.cos(direction + Math.PI) * wing,
+      y + Math.sin(direction + Math.PI) * wing,
+    );
+    context.lineTo(x + Math.cos(rightAngle) * size, y + Math.sin(rightAngle) * size);
+    context.closePath();
+    context.fill();
+  }
+
+  context.restore();
+};
+
 const drawDrawings = (context: CanvasRenderingContext2D, scene: ChartRenderScene): void => {
   if (scene.drawings.length === 0 || scene.candles.length === 0) {
     return;
@@ -793,7 +900,7 @@ const drawDrawings = (context: CanvasRenderingContext2D, scene: ChartRenderScene
         context.lineTo(endX, endY);
         context.lineTo(startX, endY);
         context.lineTo(startX, startY);
-      } else if (drawing.type === 'ray') {
+      } else {
         const deltaX = endX - startX;
         const deltaY = endY - startY;
 
@@ -801,32 +908,31 @@ const drawDrawings = (context: CanvasRenderingContext2D, scene: ChartRenderScene
           continue;
         }
 
-        const horizontalIntersection =
-          deltaX > 0
-            ? (plotRight - startX) / deltaX
-            : deltaX < 0
-              ? (plotArea.x - startX) / deltaX
-              : Number.POSITIVE_INFINITY;
-        const verticalIntersection =
-          deltaY > 0
-            ? (plotBottom - startY) / deltaY
-            : deltaY < 0
-              ? (plotArea.y - startY) / deltaY
-              : Number.POSITIVE_INFINITY;
-        const positiveIntersections = [horizontalIntersection, verticalIntersection].filter(
-          (intersection) => intersection >= 0 && Number.isFinite(intersection),
-        );
-        const extent = Math.min(...positiveIntersections);
+        let segmentStartX = startX;
+        let segmentStartY = startY;
+        let segmentEndX = endX;
+        let segmentEndY = endY;
 
-        if (!Number.isFinite(extent)) {
-          continue;
+        if (drawing.extendStart ?? false) {
+          const extent = getPositivePlotExtent(startX, startY, -deltaX, -deltaY, plotArea);
+
+          if (extent !== null) {
+            segmentStartX = startX - deltaX * extent;
+            segmentStartY = startY - deltaY * extent;
+          }
         }
 
-        context.moveTo(startX, startY);
-        context.lineTo(startX + deltaX * extent, startY + deltaY * extent);
-      } else {
-        context.moveTo(startX, startY);
-        context.lineTo(endX, endY);
+        if (drawing.extendEnd ?? drawing.type === 'ray') {
+          const extent = getPositivePlotExtent(startX, startY, deltaX, deltaY, plotArea);
+
+          if (extent !== null) {
+            segmentEndX = startX + deltaX * extent;
+            segmentEndY = startY + deltaY * extent;
+          }
+        }
+
+        context.moveTo(segmentStartX, segmentStartY);
+        context.lineTo(segmentEndX, segmentEndY);
       }
     } else {
       continue;
@@ -839,7 +945,38 @@ const drawDrawings = (context: CanvasRenderingContext2D, scene: ChartRenderScene
     context.setLineDash(lineDash);
     context.strokeStyle = drawing.color;
     context.lineWidth = (drawing.lineWidth ?? 1.5) + (isSelected ? 1 : 0);
+
+    if (drawing.type === 'rectangle' && (drawing.fillOpacity ?? 0) > 0) {
+      context.save();
+      context.globalAlpha = drawing.fillOpacity ?? 0;
+      context.fillStyle = drawing.fillColor ?? drawing.color;
+      context.fill();
+      context.restore();
+    }
+
     context.stroke();
+
+    if (endHandle !== null && (drawing.type === 'trend-line' || drawing.type === 'ray')) {
+      const direction = Math.atan2(endHandle.y - startHandle.y, endHandle.x - startHandle.x);
+      drawDrawingEndpoint(
+        context,
+        startHandle.x,
+        startHandle.y,
+        direction + Math.PI,
+        drawing.startStyle ?? 'none',
+        drawing.color,
+        drawing.lineWidth ?? 1.5,
+      );
+      drawDrawingEndpoint(
+        context,
+        endHandle.x,
+        endHandle.y,
+        direction,
+        drawing.endStyle ?? 'none',
+        drawing.color,
+        drawing.lineWidth ?? 1.5,
+      );
+    }
 
     if (isSelected) {
       const handles: ChartCoordinate[] = [startHandle];
