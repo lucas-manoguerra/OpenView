@@ -783,6 +783,110 @@ describe('canvas pointer event adapter', () => {
     expect(capturedPointers.has(7)).toBe(false);
   });
 
+  it('nudges selected drawings with one-bar and one-tick arrow key steps', () => {
+    const { canvas, dispatch } = createCanvasTarget();
+    const directions: string[] = [];
+    const preventDefault = vi.fn();
+
+    attachCanvasPointerEvents(
+      canvas,
+      createChartInteractionController(createChartFrame(900, 500, { min: 90, max: 120 }, 2)),
+      {
+        getSelectedDrawingIds: () => ['trend-1', 'trend-2'],
+        getPriceIncrement: () => 0.01,
+        onDrawingNudge: (direction) => directions.push(direction),
+      },
+    );
+
+    for (const key of ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']) {
+      dispatch(
+        'keydown',
+        {
+          key,
+          ctrlKey: false,
+          metaKey: false,
+          altKey: false,
+          preventDefault,
+        } as unknown as KeyboardEvent,
+      );
+    }
+
+    expect(directions).toEqual(['left', 'right', 'up', 'down']);
+    expect(preventDefault).toHaveBeenCalledTimes(4);
+  });
+
+  it('does not guess a vertical price step when the selected market has no tick size', () => {
+    const { canvas, dispatch } = createCanvasTarget();
+    const directions: string[] = [];
+    const verticalPreventDefault = vi.fn();
+    const horizontalPreventDefault = vi.fn();
+
+    attachCanvasPointerEvents(
+      canvas,
+      createChartInteractionController(createChartFrame(900, 500, { min: 90, max: 120 }, 2)),
+      {
+        getSelectedDrawingIds: () => ['trend-1'],
+        getPriceIncrement: () => null,
+        onDrawingNudge: (direction) => directions.push(direction),
+      },
+    );
+
+    dispatch(
+      'keydown',
+      {
+        key: 'ArrowUp',
+        ctrlKey: false,
+        metaKey: false,
+        altKey: false,
+        preventDefault: verticalPreventDefault,
+      } as unknown as KeyboardEvent,
+    );
+    dispatch(
+      'keydown',
+      {
+        key: 'ArrowLeft',
+        ctrlKey: false,
+        metaKey: false,
+        altKey: false,
+        preventDefault: horizontalPreventDefault,
+      } as unknown as KeyboardEvent,
+    );
+
+    expect(directions).toEqual(['left']);
+    expect(verticalPreventDefault).not.toHaveBeenCalled();
+    expect(horizontalPreventDefault).toHaveBeenCalledOnce();
+  });
+
+  it('leaves modified arrow shortcuts to the chart when a drawing is selected', () => {
+    const { canvas, dispatch } = createCanvasTarget();
+    const nudges: string[] = [];
+    const preventDefault = vi.fn();
+
+    attachCanvasPointerEvents(
+      canvas,
+      createChartInteractionController(createChartFrame(900, 500, { min: 90, max: 120 }, 2)),
+      {
+        getSelectedDrawingIds: () => ['trend-1'],
+        getPriceIncrement: () => 0.01,
+        onDrawingNudge: (direction) => nudges.push(direction),
+      },
+    );
+
+    dispatch(
+      'keydown',
+      {
+        key: 'ArrowRight',
+        ctrlKey: true,
+        metaKey: false,
+        altKey: false,
+        preventDefault,
+      } as unknown as KeyboardEvent,
+    );
+
+    expect(nudges).toEqual([]);
+    expect(preventDefault).not.toHaveBeenCalled();
+  });
+
   it('deletes the selected drawing on Delete and deselects on Escape', () => {
     const { canvas, dispatch } = createCanvasTarget();
     const deleted: string[] = [];
