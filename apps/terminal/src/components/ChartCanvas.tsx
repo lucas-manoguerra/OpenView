@@ -1425,6 +1425,12 @@ export function ChartCanvas({
   const selectedDrawingWidths = selectedDrawings
     .map((drawing) => String(drawing.lineWidth ?? 1.5))
     .join(',');
+  const selectedDrawingStartPrices = JSON.stringify(
+    selectedDrawings.map((drawing) => drawing.start.price),
+  );
+  const selectedDrawingStartTimestamps = JSON.stringify(
+    selectedDrawings.map((drawing) => drawing.start.timestamp),
+  );
   const allDrawingsLocked =
     drawings.length > 0 && drawings.every((drawing) => drawing.locked === true);
   const drawingStyleTemplates = [...BUILT_IN_DRAWING_STYLE_TEMPLATES, ...customDrawingTemplates];
@@ -1905,7 +1911,7 @@ export function ChartCanvas({
           aria-label={
             'Gráfico interactivo de velas y volumen para ' +
             symbol +
-            '. Arrastrar el gráfico para desplazar el tiempo, arrastrar el eje de precios para desplazar los precios, usar la rueda sobre cada área para acercar, hacer doble clic en el eje de precios para autoajustar y mantener Ctrl o Command para seleccionar varios dibujos o marcar un área.'
+            '. Arrastrar el gráfico para desplazar el tiempo, arrastrar el eje de precios para desplazar los precios, usar la rueda sobre cada área para acercar, hacer doble clic en el eje de precios para autoajustar, mantener Ctrl o Command para seleccionar varios dibujos y usar las flechas para mover los dibujos seleccionados.'
           }
           data-candles-count={renderCandles.length}
           data-chart-type={chartType}
@@ -1940,6 +1946,8 @@ export function ChartCanvas({
           data-selected-drawing-ids={selectedDrawingIds.join(',')}
           data-selected-drawing-colors={selectedDrawingColors}
           data-selected-drawing-widths={selectedDrawingWidths}
+          data-selected-drawing-start-prices={selectedDrawingStartPrices}
+          data-selected-drawing-start-timestamps={selectedDrawingStartTimestamps}
           data-selected-drawing-color={selectedDrawing?.color ?? ''}
           data-selected-drawing-width={
             selectedDrawing === null ? '' : String(selectedDrawing.lineWidth ?? 1.5)
