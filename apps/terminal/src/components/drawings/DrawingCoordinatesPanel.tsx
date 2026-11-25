@@ -75,7 +75,7 @@ export function DrawingCoordinatesPanel({
             aria-label="Precio de la línea horizontal"
             data-testid="drawing-horizontal-price"
             value={String(selectedDrawing.start.price)}
-            onChange={(event) =>
+            onInput={(event) =>
               onAnchorUpdate('start', { price: Number(event.currentTarget.value) })
             }
             class="w-28 rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-right text-[10px] text-slate-200 outline-none focus:border-blue-400"
@@ -90,7 +90,7 @@ export function DrawingCoordinatesPanel({
             aria-label="Fecha y hora de la línea vertical"
             data-testid="drawing-vertical-time"
             value={toLocalDateTimeValue(selectedDrawing.start.timestamp)}
-            onChange={(event) =>
+            onInput={(event) =>
               onAnchorUpdate('start', {
                 timestamp: new Date(event.currentTarget.value).getTime(),
               })
@@ -110,7 +110,7 @@ export function DrawingCoordinatesPanel({
                 aria-label="Precio inicial del dibujo"
                 data-testid="drawing-start-price"
                 value={String(selectedDrawing.start.price)}
-                onChange={(event) =>
+                onInput={(event) =>
                   onAnchorUpdate('start', { price: Number(event.currentTarget.value) })
                 }
                 class="w-28 rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-right text-[10px] text-slate-200 outline-none focus:border-blue-400"
@@ -124,7 +124,7 @@ export function DrawingCoordinatesPanel({
                 aria-label="Precio final del dibujo"
                 data-testid="drawing-end-price"
                 value={String(selectedDrawing.end.price)}
-                onChange={(event) =>
+                onInput={(event) =>
                   onAnchorUpdate('end', { price: Number(event.currentTarget.value) })
                 }
                 class="w-28 rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-right text-[10px] text-slate-200 outline-none focus:border-blue-400"
@@ -142,7 +142,7 @@ export function DrawingCoordinatesPanel({
               aria-label="Precio del primer punto del rectángulo"
               data-testid="drawing-rectangle-start-price"
               value={String(selectedDrawing.start.price)}
-              onChange={(event) =>
+              onInput={(event) =>
                 onAnchorUpdate('start', { price: Number(event.currentTarget.value) })
               }
               class="w-28 rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-right text-[10px] text-slate-200 outline-none focus:border-blue-400"
@@ -156,7 +156,7 @@ export function DrawingCoordinatesPanel({
               aria-label="Precio del segundo punto del rectángulo"
               data-testid="drawing-rectangle-end-price"
               value={String(selectedDrawing.end.price)}
-              onChange={(event) =>
+              onInput={(event) =>
                 onAnchorUpdate('end', { price: Number(event.currentTarget.value) })
               }
               class="w-28 rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-right text-[10px] text-slate-200 outline-none focus:border-blue-400"
