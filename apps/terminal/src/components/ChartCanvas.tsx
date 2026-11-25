@@ -1345,6 +1345,11 @@ export function ChartCanvas({
   };
 
   const selectedDrawing = drawings.find((drawing) => drawing.id === selectedDrawingId) ?? null;
+  const selectedDrawings = drawings.filter((drawing) => selectedDrawingIds.includes(drawing.id));
+  const selectedDrawingColors = selectedDrawings.map((drawing) => drawing.color).join(',');
+  const selectedDrawingWidths = selectedDrawings
+    .map((drawing) => String(drawing.lineWidth ?? 1.5))
+    .join(',');
   const allDrawingsLocked =
     drawings.length > 0 && drawings.every((drawing) => drawing.locked === true);
   const drawingStyleTemplates = [...BUILT_IN_DRAWING_STYLE_TEMPLATES, ...customDrawingTemplates];
@@ -1852,6 +1857,8 @@ export function ChartCanvas({
           }
           data-selected-drawing-count={selectedDrawingIds.length}
           data-selected-drawing-ids={selectedDrawingIds.join(',')}
+          data-selected-drawing-colors={selectedDrawingColors}
+          data-selected-drawing-widths={selectedDrawingWidths}
           data-selected-drawing-color={selectedDrawing?.color ?? ''}
           data-selected-drawing-width={
             selectedDrawing === null ? '' : String(selectedDrawing.lineWidth ?? 1.5)
