@@ -20,8 +20,8 @@ class MemoryStorage {
   }
 }
 
-const createTemplate = (id = 'custom-blueprint') =>
-  createDrawingStyleTemplate(id, 'Mi plantilla', {
+const createTemplate = (id = 'custom-blueprint', name = 'Mi plantilla') =>
+  createDrawingStyleTemplate(id, name, {
     color: '#EF5350',
     lineWidth: 2,
     lineStyle: 'dashed',
@@ -81,7 +81,7 @@ describe('drawing style templates', () => {
           version: 1,
           templates: [
             createTemplate(),
-            createTemplate('custom-second'),
+            createTemplate('custom-second', 'Otra plantilla'),
             {
               ...createTemplate('custom-third'),
               name: 'MI PLANTILLA',
@@ -95,7 +95,7 @@ describe('drawing style templates', () => {
   it('persists, restores and caps custom templates', () => {
     const storage = new MemoryStorage();
     const templates = Array.from({ length: 25 }, (_, index) =>
-      createTemplate('custom-template-' + String(index)),
+      createTemplate('custom-template-' + String(index), 'Estilo ' + String(index)),
     ).filter((template) => template !== null);
 
     saveDrawingStyleTemplates(storage, templates);
