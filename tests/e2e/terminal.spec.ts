@@ -1945,8 +1945,12 @@ test('manages individual drawing visibility and lock from the object tree', asyn
 
   await page.getByTestId('drawing-object-lock-drawing-1').click();
   await expect(firstRow).toHaveAttribute('data-drawing-locked', 'false');
-  await page.mouse.click((firstStart.x + firstEnd.x) / 2, (firstStart.y + firstEnd.y) / 2);
+  await page.getByTestId('drawing-object-select-drawing-1').click();
   await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-1');
+  await expect(firstRow.getByTestId('drawing-object-select-drawing-1')).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
 
   await page.getByTestId('drawing-object-delete-drawing-1').click();
   await expect(canvas).toHaveAttribute('data-drawing-count', '1');
@@ -2102,9 +2106,32 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
   await expect(coordinatePanel).toBeVisible();
 
   const selectedImage = await canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL());
-  await page.mouse.move(middleX, middleY);
+  const unobstructedDrawingPoint = await page.evaluate(
+    ({ canvasElement, start, end }) => {
+      const chart = canvasElement as HTMLCanvasElement;
+      const candidates = [0.25, 0.35, 0.65, 0.75];
+      for (const ratio of candidates) {
+        const x = start.x + (end.x - start.x) * ratio;
+        const y = start.y + (end.y - start.y) * ratio;
+        if (document.elementFromPoint(x, y) === chart) {
+          return { x, y };
+        }
+      }
+      return null;
+    },
+    {
+      canvasElement: await canvas.elementHandle(),
+      start: { x: startX, y: startY },
+      end: { x: endX, y: endY },
+    },
+  );
+  expect(unobstructedDrawingPoint).not.toBeNull();
+  if (unobstructedDrawingPoint === null) {
+    throw new Error('The drawing must have an unobstructed point on the chart canvas.');
+  }
+  await page.mouse.move(unobstructedDrawingPoint.x, unobstructedDrawingPoint.y);
   await page.mouse.down();
-  await page.mouse.move(middleX + 35, middleY - 18);
+  await page.mouse.move(unobstructedDrawingPoint.x + 35, unobstructedDrawingPoint.y - 18);
   await page.mouse.up();
 
   await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-1');
