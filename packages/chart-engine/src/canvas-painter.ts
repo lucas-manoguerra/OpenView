@@ -219,10 +219,7 @@ export const createChartRenderScene = (
   const frozenCandles = Object.freeze(normalizedCandles);
   const frozenIndicators = normalizeChartIndicators(indicators);
   const frozenDrawings = normalizeChartDrawings(drawings);
-  const frozenSelectedDrawingIds = normalizeSelectedDrawingIds(
-    selectedDrawingIds,
-    frozenDrawings,
-  );
+  const frozenSelectedDrawingIds = normalizeSelectedDrawingIds(selectedDrawingIds, frozenDrawings);
 
   return Object.freeze({
     frame,
@@ -275,8 +272,7 @@ export const updateChartRenderScene = (
     drawings === scene.drawings
       ? scene.selectedDrawingIds
       : normalizeSelectedDrawingIds(requestedSelectedDrawingIds, drawings);
-  const selectedDrawingId =
-    selectedDrawingIds[selectedDrawingIds.length - 1] ?? null;
+  const selectedDrawingId = selectedDrawingIds[selectedDrawingIds.length - 1] ?? null;
 
   if (crosshair !== null && (!Number.isFinite(crosshair.x) || !Number.isFinite(crosshair.y))) {
     throw new RangeError('Crosshair coordinates must be finite numbers.');
