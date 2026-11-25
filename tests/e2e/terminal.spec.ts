@@ -2105,10 +2105,15 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
   await page.getByTestId('drawing-panel-toggle-coordinates').click();
   await expect(coordinatePanel).toBeVisible();
 
-  // Close both floating panels before dragging on the chart. Their overlays
-  // intentionally intercept pointer input even when a line remains visible.
-  await page.getByTestId('drawing-editor-close').click();
-  await page.getByTestId('drawing-coordinate-close').click();
+  // Hide both panels through their persistent toolbar toggles. The close
+  // buttons live inside conditionally rendered panels and may not exist if a
+  // previous interaction has already changed the selection or visibility.
+  const appearanceToggle = page.getByTestId('drawing-panel-toggle-appearance');
+  const coordinateToggle = page.getByTestId('drawing-panel-toggle-coordinates');
+  await expect(appearanceToggle).toHaveAttribute('aria-pressed', 'true');
+  await expect(coordinateToggle).toHaveAttribute('aria-pressed', 'true');
+  await appearanceToggle.click();
+  await coordinateToggle.click();
   await expect(propertiesPanel).toBeHidden();
   await expect(coordinatePanel).toBeHidden();
 
@@ -2168,7 +2173,9 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
     String(endAnchorBefore.timestamp),
   );
 
-  await page.getByTestId('drawing-editor-close').click();
+  if ((await appearanceToggle.getAttribute('aria-pressed')) === 'true') {
+    await appearanceToggle.click();
+  }
   await expect(propertiesPanel).toBeHidden();
   await expect(coordinatePanel).toBeVisible();
 
