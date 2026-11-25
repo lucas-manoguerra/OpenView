@@ -269,9 +269,17 @@ describe('canvas chart painter', () => {
 
     drawChartScene(context, scene);
 
-    expect(scene.drawings[0]?.color).toBe('#ef4444');
-    expect(scene.drawings[0]?.lineWidth).toBe(4);
-    expect(scene.drawings[0]?.lineStyle).toBe('dashed');
+    expect(scene.drawings[0]).toMatchObject({
+      color: '#ef4444',
+      lineWidth: 4,
+      lineStyle: 'dashed',
+      fillColor: '#ef4444',
+      fillOpacity: 0,
+      extendStart: false,
+      extendEnd: false,
+      startStyle: 'none',
+      endStyle: 'none',
+    });
     expect(calls.some((call) => call.name === 'setLineDash' && call.args.join(',') === '8,5')).toBe(
       true,
     );
@@ -285,6 +293,70 @@ describe('canvas chart painter', () => {
         [{ ...drawings[0]!, id: 'invalid-width', lineWidth: 9 }],
       ),
     ).toThrow(RangeError);
+    expect(() =>
+      createChartRenderScene(
+        frame,
+        createCandles(),
+        null,
+        'candles',
+        [],
+        [{ ...drawings[0]!, id: 'invalid-opacity', fillOpacity: 1.1 }],
+      ),
+    ).toThrow(RangeError);
+    expect(() =>
+      createChartRenderScene(
+        frame,
+        createCandles(),
+        null,
+        'candles',
+        [],
+        [{ ...drawings[0]!, id: 'invalid-endpoint', endStyle: 'diamond' as 'none' }],
+      ),
+    ).toThrow(RangeError);
+  });
+
+  it('renders rectangle fill and configurable line endpoints', () => {
+    const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 10);
+    const drawings: readonly ChartRenderDrawing[] = [
+      {
+        id: 'filled-rectangle',
+        type: 'rectangle',
+        start: { timestamp: 1_700_000_000_000, price: 110 },
+        end: { timestamp: 1_700_000_120_000, price: 100 },
+        color: '#ab47bc',
+        fillColor: '#22c55e',
+        fillOpacity: 0.35,
+      },
+      {
+        id: 'extended-trend',
+        type: 'trend-line',
+        start: { timestamp: 1_700_000_000_000, price: 100 },
+        end: { timestamp: 1_700_000_120_000, price: 110 },
+        color: '#60a5fa',
+        extendStart: true,
+        extendEnd: true,
+        startStyle: 'circle',
+        endStyle: 'arrow',
+      },
+    ];
+    const scene = createChartRenderScene(frame, createCandles(), null, 'line', [], drawings);
+    const { context, calls } = createMockContext();
+
+    drawChartScene(context, scene);
+
+    expect(scene.drawings[0]).toMatchObject({
+      fillColor: '#22c55e',
+      fillOpacity: 0.35,
+    });
+    expect(scene.drawings[1]).toMatchObject({
+      extendStart: true,
+      extendEnd: true,
+      startStyle: 'circle',
+      endStyle: 'arrow',
+    });
+    expect(calls.some((call) => call.name === 'closePath')).toBe(true);
+    expect(calls.filter((call) => call.name === 'arc').length).toBeGreaterThan(0);
+    expect(calls.filter((call) => call.name === 'fill').length).toBeGreaterThan(0);
   });
 
   it('renders ray, vertical line and rectangle geometry', () => {
