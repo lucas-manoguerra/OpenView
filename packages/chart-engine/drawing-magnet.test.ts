@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createChartFrame } from './src/chart-frame';
-import {
-  resolveChartDrawingMagnetMode,
-  snapChartDrawingPointToOhlc,
-} from './src/drawing-magnet';
+import { resolveChartDrawingMagnetMode, snapChartDrawingPointToOhlc } from './src/drawing-magnet';
 import type { ChartRenderCandle } from './src/canvas-painter';
 
 const candles: readonly ChartRenderCandle[] = Object.freeze([
@@ -69,9 +66,7 @@ describe('chart drawing magnet', () => {
 
     const distantPoint = Object.freeze({ logicalIndex: 1, price: 100 });
 
-    expect(snapChartDrawingPointToOhlc(distantPoint, candles, frame, 'weak', 8)).toBe(
-      distantPoint,
-    );
+    expect(snapChartDrawingPointToOhlc(distantPoint, candles, frame, 'weak', 8)).toBe(distantPoint);
   });
 
   it('uses the configured magnet mode unless the temporary modifier is pressed', () => {
