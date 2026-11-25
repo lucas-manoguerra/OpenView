@@ -2618,3 +2618,27 @@ test('renders timestamp based time labels instead of logical bar indices', async
   expect(labels).not.toContain('1');
   expect(labels).not.toContain('2');
 });
+
+test('discovers drawing tools by family and activates implemented tools', async ({ page }) => {
+  await page.goto('/');
+
+  const canvas = page.locator('canvas[data-candles-count]');
+  await expect(canvas).toHaveAttribute('data-chart-ready', 'true');
+
+  await page.getByTestId('drawing-tool-catalog-toggle').click();
+  const catalog = page.getByTestId('drawing-tool-catalog');
+  await expect(catalog).toBeVisible();
+  await expect(catalog.getByRole('navigation', { name: 'Familias de herramientas' }).getByRole('button')).toHaveCount(11);
+
+  await expect(catalog.getByTestId('drawing-tool-catalog-item-trend-line')).toBeEnabled();
+  await expect(catalog.getByTestId('drawing-tool-catalog-item-fib-retracement')).toBeDisabled();
+
+  await catalog.getByTestId('drawing-tool-catalog-search').fill('retroceso');
+  await expect(catalog.getByTestId('drawing-tool-catalog-item-fib-retracement')).toBeVisible();
+  await expect(catalog.getByTestId('drawing-tool-catalog-item-trend-line')).toHaveCount(0);
+
+  await catalog.getByTestId('drawing-tool-catalog-search').fill('');
+  await catalog.getByTestId('drawing-tool-catalog-item-trend-line').click();
+  await expect(catalog).toHaveCount(0);
+  await expect(page.getByTestId('drawing-tool-trend-line')).toHaveAttribute('aria-pressed', 'true');
+});
