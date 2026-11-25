@@ -2443,7 +2443,7 @@ test('selects drawings with Control and moves and deletes the group together', a
   await page.mouse.click(firstEnd.x, firstEnd.y);
   await page.keyboard.up('Control');
   await expect(canvas).toHaveAttribute('data-selected-drawing-count', '2');
-  await expect(canvas).toHaveAttribute('data-selected-drawing-ids', 'drawing-1,drawing-2');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-ids', 'drawing-2,drawing-1');
 
   const beforeGroupMove = await canvas.evaluate((element: HTMLCanvasElement) =>
     element.toDataURL(),
