@@ -1885,6 +1885,79 @@ test('nudges every selected drawing by one bar and one provider tick', async ({ 
   await expect(canvas).toHaveAttribute('data-drawing-undo-count', '4');
 });
 
+test('manages individual drawing visibility and lock from the object tree', async ({ page }) => {
+  await page.goto('/');
+
+  const canvas = page.getByRole('img', {
+    name: /Gráfico interactivo de velas y volumen para BTC \/ USDT/,
+  });
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+
+  const bounds = await canvas.boundingBox();
+
+  if (bounds === null) {
+    throw new Error('The chart canvas must have a visible bounding box.');
+  }
+
+  const firstStart = { x: bounds.x + bounds.width * 0.28, y: bounds.y + bounds.height * 0.3 };
+  const firstEnd = { x: bounds.x + bounds.width * 0.52, y: bounds.y + bounds.height * 0.44 };
+  const secondStart = { x: bounds.x + bounds.width * 0.28, y: bounds.y + bounds.height * 0.56 };
+  const secondEnd = { x: bounds.x + bounds.width * 0.52, y: bounds.y + bounds.height * 0.7 };
+  const drawLine = async (
+    start: { x: number; y: number },
+    end: { x: number; y: number },
+  ): Promise<void> => {
+    await page.getByTestId('drawing-tool-trend-line').click();
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    await page.mouse.move(end.x, end.y);
+    await page.mouse.up();
+  };
+
+  await drawLine(firstStart, firstEnd);
+  await drawLine(secondStart, secondEnd);
+  await expect(canvas).toHaveAttribute('data-drawing-count', '2');
+
+  await page.getByTestId('drawing-object-tree-toggle').click();
+  const tree = page.getByTestId('drawing-object-tree');
+  await expect(tree).toBeVisible();
+  const firstRow = page.getByTestId('drawing-object-row-drawing-1');
+  const secondRow = page.getByTestId('drawing-object-row-drawing-2');
+  await expect(firstRow).toBeVisible();
+  await expect(secondRow).toBeVisible();
+
+  await page.getByTestId('drawing-object-visibility-drawing-1').click();
+  await expect(firstRow).toHaveAttribute('data-drawing-visible', 'false');
+  await expect(canvas).toHaveAttribute('data-drawing-count', '2');
+  await expect(canvas).toHaveAttribute('data-renderable-drawing-count', '1');
+
+  await page.getByTestId('drawing-object-visibility-drawing-1').click();
+  await expect(firstRow).toHaveAttribute('data-drawing-visible', 'true');
+  await expect(canvas).toHaveAttribute('data-renderable-drawing-count', '2');
+
+  await page.getByTestId('drawing-object-lock-drawing-1').click();
+  await expect(firstRow).toHaveAttribute('data-drawing-locked', 'true');
+  await page.getByTestId('drawing-tool-select').click();
+  await page.mouse.click((firstStart.x + firstEnd.x) / 2, (firstStart.y + firstEnd.y) / 2);
+  await expect(canvas).toHaveAttribute('data-selected-drawing-id', '');
+
+  await page.getByTestId('drawing-object-lock-drawing-1').click();
+  await expect(firstRow).toHaveAttribute('data-drawing-locked', 'false');
+  await page.getByTestId('drawing-object-select-drawing-1').click();
+  await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-1');
+  await expect(firstRow.getByTestId('drawing-object-select-drawing-1')).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+
+  await page.getByTestId('drawing-object-delete-drawing-1').click();
+  await expect(canvas).toHaveAttribute('data-drawing-count', '1');
+  await expect(tree.getByTestId('drawing-object-row-drawing-1')).toHaveCount(0);
+  await expect(tree.getByTestId('drawing-object-row-drawing-2')).toBeVisible();
+});
+
 test('selects, moves, edits and deletes a drawing individually', async ({ page }) => {
   await page.goto('/');
 
@@ -2032,10 +2105,37 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
   await page.getByTestId('drawing-panel-toggle-coordinates').click();
   await expect(coordinatePanel).toBeVisible();
 
+  // Hide both panels through their persistent toolbar toggles. The close
+  // buttons live inside conditionally rendered panels and may not exist if a
+  // previous interaction has already changed the selection or visibility.
+  const appearanceToggle = page.getByTestId('drawing-panel-toggle-appearance');
+  const coordinateToggle = page.getByTestId('drawing-panel-toggle-coordinates');
+  await expect(appearanceToggle).toHaveAttribute('aria-pressed', 'true');
+  await expect(coordinateToggle).toHaveAttribute('aria-pressed', 'true');
+  await appearanceToggle.click();
+  await coordinateToggle.click();
+  await expect(propertiesPanel).toBeHidden();
+  await expect(coordinatePanel).toBeHidden();
+
+  // Re-read the canvas geometry after the floating panels have been moved and
+  // closed. Their layout changes can resize the chart between drawing and drag.
+  const dragBounds = await canvas.boundingBox();
+  expect(dragBounds).not.toBeNull();
+
+  if (dragBounds === null) {
+    throw new Error('The chart canvas must remain visible before moving a drawing.');
+  }
+
+  const dragStartX = dragBounds.x + dragBounds.width * 0.3;
+  const dragStartY = dragBounds.y + dragBounds.height * 0.34;
+  const dragEndX = dragBounds.x + dragBounds.width * 0.58;
+  const dragEndY = dragBounds.y + dragBounds.height * 0.56;
+  const dragMiddleX = (dragStartX + dragEndX) / 2;
+  const dragMiddleY = (dragStartY + dragEndY) / 2;
   const selectedImage = await canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL());
-  await page.mouse.move(middleX, middleY);
+  await page.mouse.move(dragMiddleX, dragMiddleY);
   await page.mouse.down();
-  await page.mouse.move(middleX + 35, middleY - 18);
+  await page.mouse.move(dragMiddleX + 35, dragMiddleY - 18);
   await page.mouse.up();
 
   await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-1');
@@ -2043,8 +2143,8 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
     .poll(() => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL()))
     .not.toBe(selectedImage);
 
-  const movedStartX = startX + 35;
-  const movedStartY = startY - 18;
+  const movedStartX = dragStartX + 35;
+  const movedStartY = dragStartY - 18;
   const startAnchorBefore = {
     price: Number(await canvas.getAttribute('data-selected-drawing-start-price')),
     timestamp: Number(await canvas.getAttribute('data-selected-drawing-start-timestamp')),
@@ -2073,8 +2173,14 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
     String(endAnchorBefore.timestamp),
   );
 
-  await page.getByTestId('drawing-editor-close').click();
+  if ((await appearanceToggle.getAttribute('aria-pressed')) === 'true') {
+    await appearanceToggle.click();
+  }
   await expect(propertiesPanel).toBeHidden();
+  await expect(coordinateToggle).toBeVisible();
+  if ((await coordinateToggle.getAttribute('aria-pressed')) !== 'true') {
+    await coordinateToggle.click();
+  }
   await expect(coordinatePanel).toBeVisible();
 
   const deleteSelected = page.getByTestId('drawing-delete-selected');

@@ -269,11 +269,22 @@ describe('canvas chart painter', () => {
         color: '#60a5fa',
         locked: true,
       },
+      {
+        id: 'hidden-trend',
+        type: 'trend-line',
+        start: { timestamp: 1_700_000_000_000, price: 100 },
+        end: { timestamp: 1_700_000_120_000, price: 110 },
+        color: '#a78bfa',
+        visible: false,
+      },
     ];
     const scene = createChartRenderScene(frame, createCandles(), null, 'candles', [], drawings);
 
     expect(scene.drawings[0]?.locked).toBe(false);
+    expect(scene.drawings[0]?.visible).toBe(true);
     expect(scene.drawings[1]?.locked).toBe(true);
+    expect(scene.drawings[1]?.visible).toBe(true);
+    expect(scene.drawings[2]?.visible).toBe(false);
   });
 
   it('normalizes drawing color, width and line pattern', () => {

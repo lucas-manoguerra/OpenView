@@ -320,6 +320,7 @@ export function ChartCanvas({
     DEFAULT_DRAWING_INTERACTION_PREFERENCES.keepDrawing,
   );
   const [drawingsVisible, setDrawingsVisible] = useState(true);
+  const [drawingObjectTreeOpen, setDrawingObjectTreeOpen] = useState(false);
   const [drawingInteractionPreferencesLoaded, setDrawingInteractionPreferencesLoaded] =
     useState(false);
   const [drawingMagnetMenuOpen, setDrawingMagnetMenuOpen] = useState(false);
@@ -363,13 +364,17 @@ export function ChartCanvas({
   keepDrawingRef.current = keepDrawing;
   drawingsVisibleRef.current = drawingsVisible;
   drawingsRef.current = drawings;
-  renderableDrawingsRef.current = drawingsVisible ? drawings : [];
+  renderableDrawingsRef.current = drawingsVisible
+    ? drawings.filter((drawing) => drawing.visible !== false)
+    : [];
   selectedDrawingIdRef.current = selectedDrawingId;
   selectedDrawingIdsRef.current = selectedDrawingIds;
   const getRenderableDrawings = (
     source: readonly ChartRenderDrawing[] = drawingsRef.current,
   ): readonly ChartRenderDrawing[] => {
-    const renderable = drawingsVisibleRef.current ? source : [];
+    const renderable = drawingsVisibleRef.current
+      ? source.filter((drawing) => drawing.visible !== false)
+      : [];
     renderableDrawingsRef.current = renderable;
     return renderable;
   };
@@ -587,7 +592,7 @@ export function ChartCanvas({
           null,
           chartTypeRef.current,
           indicatorsRef.current,
-          drawingsRef.current,
+          getRenderableDrawings(drawingsRef.current),
           selectedDrawingIdRef.current,
           selectedDrawingIdsRef.current,
         );
@@ -788,7 +793,7 @@ export function ChartCanvas({
           controller.snapshot.crosshair,
           chartTypeRef.current,
           indicatorsRef.current,
-          drawingsRef.current,
+          getRenderableDrawings(drawingsRef.current),
           selectedDrawingIdRef.current,
           selectedDrawingIdsRef.current,
         );
@@ -817,7 +822,7 @@ export function ChartCanvas({
           controller.snapshot.crosshair,
           chartTypeRef.current,
           indicatorsRef.current,
-          drawingsRef.current,
+          getRenderableDrawings(drawingsRef.current),
           selectedDrawingIdRef.current,
           selectedDrawingIdsRef.current,
         );
@@ -884,7 +889,7 @@ export function ChartCanvas({
           null,
           chartTypeRef.current,
           indicatorsRef.current,
-          drawingsRef.current,
+          getRenderableDrawings(drawingsRef.current),
           selectedDrawingIdRef.current,
           selectedDrawingIdsRef.current,
         );
@@ -1308,6 +1313,92 @@ export function ChartCanvas({
     }
   };
 
+  const handleSelectDrawingFromObjectTree = (drawingId: string): void => {
+    const currentDrawings = drawingsRef.current;
+    const drawing = currentDrawings.find((candidate) => candidate.id === drawingId);
+
+    if (drawing === undefined) {
+      return;
+    }
+
+    if (!drawingsVisibleRef.current) {
+      drawingsVisibleRef.current = true;
+      setDrawingsVisible(true);
+    }
+
+    const nextDrawings = currentDrawings.map((candidate) =>
+      candidate.id === drawingId && candidate.visible === false
+        ? Object.freeze({ ...candidate, visible: true })
+        : candidate,
+    );
+
+    if (nextDrawings.some((candidate, index) => candidate !== currentDrawings[index])) {
+      commitDrawingsRef.current(nextDrawings);
+    } else {
+      runtimeRef.current?.setDrawings(getRenderableDrawings(currentDrawings));
+    }
+
+    drawingToolRef.current = 'select';
+    setDrawingTool('select');
+    updateDrawingSelection([drawingId]);
+  };
+
+  const handleToggleDrawingObjectVisibility = (drawingId: string): void => {
+    const currentDrawings = drawingsRef.current;
+    const drawing = currentDrawings.find((candidate) => candidate.id === drawingId);
+
+    if (drawing === undefined) {
+      return;
+    }
+
+    const nextVisible = drawing.visible === false;
+    commitDrawingsRef.current(
+      currentDrawings.map((candidate) =>
+        candidate.id === drawingId
+          ? Object.freeze({ ...candidate, visible: nextVisible })
+          : candidate,
+      ),
+    );
+
+    if (!nextVisible) {
+      updateDrawingSelection(selectedDrawingIdsRef.current.filter((id) => id !== drawingId));
+    }
+  };
+
+  const handleToggleDrawingObjectLock = (drawingId: string): void => {
+    const currentDrawings = drawingsRef.current;
+    const drawing = currentDrawings.find((candidate) => candidate.id === drawingId);
+
+    if (drawing === undefined) {
+      return;
+    }
+
+    const nextLocked = drawing.locked !== true;
+    commitDrawingsRef.current(
+      currentDrawings.map((candidate) =>
+        candidate.id === drawingId
+          ? Object.freeze({ ...candidate, locked: nextLocked })
+          : candidate,
+      ),
+    );
+
+    if (nextLocked) {
+      updateDrawingSelection(selectedDrawingIdsRef.current.filter((id) => id !== drawingId));
+    }
+  };
+
+  const handleDeleteDrawingObject = (drawingId: string): void => {
+    const currentDrawings = drawingsRef.current;
+    const nextDrawings = currentDrawings.filter((drawing) => drawing.id !== drawingId);
+
+    if (nextDrawings.length === currentDrawings.length) {
+      return;
+    }
+
+    commitDrawingsRef.current(nextDrawings);
+    updateDrawingSelection(selectedDrawingIdsRef.current.filter((id) => id !== drawingId));
+  };
+
   const handleToggleAllDrawingsLock = (): void => {
     const currentDrawings = drawingsRef.current;
 
@@ -1325,7 +1416,9 @@ export function ChartCanvas({
   const handleToggleDrawingsVisibility = (): void => {
     const nextVisible = !drawingsVisibleRef.current;
     drawingsVisibleRef.current = nextVisible;
-    renderableDrawingsRef.current = nextVisible ? drawingsRef.current : [];
+    renderableDrawingsRef.current = nextVisible
+      ? drawingsRef.current.filter((drawing) => drawing.visible !== false)
+      : [];
     setDrawingsVisible(nextVisible);
     runtimeRef.current?.setDrawings(renderableDrawingsRef.current);
 
@@ -1848,6 +1941,37 @@ export function ChartCanvas({
             )}
           </svg>
         </button>
+        <button
+          type="button"
+          aria-label="Árbol de objetos"
+          aria-expanded={drawingObjectTreeOpen}
+          aria-pressed={drawingObjectTreeOpen}
+          data-testid="drawing-object-tree-toggle"
+          title="Árbol de objetos"
+          onClick={() => setDrawingObjectTreeOpen((open) => !open)}
+          class={
+            'grid size-8 place-items-center rounded text-sm transition-colors ' +
+            (drawingObjectTreeOpen
+              ? 'bg-blue-500/20 text-blue-200'
+              : 'text-slate-400 hover:bg-white/5 hover:text-slate-100')
+          }
+        >
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            class="size-[18px]"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M9 5h11M9 12h11M9 19h11" />
+            <circle cx="4" cy="5" r="1" />
+            <circle cx="4" cy="12" r="1" />
+            <circle cx="4" cy="19" r="1" />
+          </svg>
+        </button>
         <span class="my-1 h-px w-6 bg-white/10" />
         <button
           type="button"
@@ -1976,6 +2100,121 @@ export function ChartCanvas({
               height: Math.abs(drawingSelectionArea.current.y - drawingSelectionArea.start.y),
             }}
           />
+        )}
+        {drawingObjectTreeOpen && (
+          <aside
+            aria-label="Árbol de objetos"
+            data-testid="drawing-object-tree"
+            class="absolute right-3 top-12 z-40 flex max-h-[min(70%,36rem)] w-64 flex-col overflow-hidden rounded-xl border border-white/10 bg-[#101723]/95 shadow-2xl backdrop-blur"
+          >
+            <header class="flex items-center justify-between border-b border-white/10 px-3 py-2.5">
+              <div class="min-w-0">
+                <div class="text-[11px] font-semibold text-slate-100">Árbol de objetos</div>
+                <div class="text-[10px] text-slate-500">{drawings.length} dibujos</div>
+              </div>
+              <button
+                type="button"
+                aria-label="Cerrar árbol de objetos"
+                data-testid="drawing-object-tree-close"
+                onClick={() => setDrawingObjectTreeOpen(false)}
+                class="grid size-6 place-items-center rounded text-slate-400 hover:bg-white/10 hover:text-white"
+              >
+                ×
+              </button>
+            </header>
+            <div class="min-h-0 flex-1 space-y-1 overflow-y-auto p-1.5">
+              {drawings.length === 0 ? (
+                <div class="px-2 py-5 text-center text-[10px] text-slate-500">
+                  No hay dibujos en este gráfico.
+                </div>
+              ) : (
+                [...drawings].reverse().map((drawing) => {
+                  const isVisible = drawing.visible !== false;
+                  const isLocked = drawing.locked === true;
+                  const isSelected = selectedDrawingIds.includes(drawing.id);
+                  const drawingName =
+                    drawing.type === 'trend-line'
+                      ? 'Línea de tendencia'
+                      : drawing.type === 'horizontal-line'
+                        ? 'Línea horizontal'
+                        : drawing.type === 'vertical-line'
+                          ? 'Línea vertical'
+                          : drawing.type === 'rectangle'
+                            ? 'Rectángulo'
+                            : 'Rayo';
+
+                  return (
+                    <div
+                      data-testid={`drawing-object-row-${drawing.id}`}
+                      data-drawing-visible={String(isVisible)}
+                      data-drawing-locked={String(isLocked)}
+                      class={
+                        'flex items-center gap-1 rounded-md px-1 py-1 ' +
+                        (isSelected ? 'bg-blue-500/15' : 'hover:bg-white/5')
+                      }
+                    >
+                      <button
+                        type="button"
+                        aria-label={`Seleccionar ${drawingName.toLowerCase()} ${drawing.id}`}
+                        aria-pressed={isSelected}
+                        data-testid={`drawing-object-select-${drawing.id}`}
+                        onClick={() => handleSelectDrawingFromObjectTree(drawing.id)}
+                        class="flex min-w-0 flex-1 items-center gap-2 rounded px-1 py-1 text-left"
+                      >
+                        <span
+                          aria-hidden="true"
+                          class="size-2 shrink-0 rounded-full"
+                          style={{ backgroundColor: drawing.color }}
+                        />
+                        <span
+                          class={
+                            'truncate text-[10px] ' +
+                            (isVisible ? 'text-slate-200' : 'text-slate-500 line-through')
+                          }
+                        >
+                          {drawingName}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={isVisible ? `Ocultar ${drawing.id}` : `Mostrar ${drawing.id}`}
+                        aria-pressed={!isVisible}
+                        data-testid={`drawing-object-visibility-${drawing.id}`}
+                        title={isVisible ? 'Ocultar dibujo' : 'Mostrar dibujo'}
+                        onClick={() => handleToggleDrawingObjectVisibility(drawing.id)}
+                        class="grid size-6 shrink-0 place-items-center rounded text-[11px] text-slate-400 hover:bg-white/10 hover:text-slate-100"
+                      >
+                        {isVisible ? '◉' : '○'}
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={
+                          isLocked ? `Desbloquear ${drawing.id}` : `Bloquear ${drawing.id}`
+                        }
+                        aria-pressed={isLocked}
+                        data-testid={`drawing-object-lock-${drawing.id}`}
+                        title={isLocked ? 'Desbloquear dibujo' : 'Bloquear dibujo'}
+                        onClick={() => handleToggleDrawingObjectLock(drawing.id)}
+                        class="grid size-6 shrink-0 place-items-center rounded text-[11px] text-slate-400 hover:bg-white/10 hover:text-slate-100"
+                      >
+                        {isLocked ? '🔒' : '🔓'}
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Eliminar ${drawing.id}`}
+                        data-testid={`drawing-object-delete-${drawing.id}`}
+                        title="Eliminar dibujo"
+                        onClick={() => handleDeleteDrawingObject(drawing.id)}
+                        class="grid size-6 shrink-0 place-items-center rounded text-[12px] text-slate-500 hover:bg-rose-500/15 hover:text-rose-200"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </aside>
         )}
         <span ref={bindDataUpdate} class="hidden" aria-hidden="true" />
         <span ref={bindIndicatorsUpdate} class="hidden" aria-hidden="true" />

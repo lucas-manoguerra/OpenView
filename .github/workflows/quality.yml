@@ -101,8 +101,12 @@ jobs:
         run: pnpm build
 
   e2e:
-    name: Browser tests · Chromium
+    name: Browser tests · Chromium · shard ${{ matrix.shard }}/4
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -113,14 +117,14 @@ jobs:
       - name: Install Chromium
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Run Playwright
-        run: pnpm test:e2e
+      - name: Run Playwright shard
+        run: pnpm exec playwright test --shard=${{ matrix.shard }}/4
 
       - name: Upload browser test reports
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v6
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.shard }}
           path: |
             playwright-report/
             test-results/
