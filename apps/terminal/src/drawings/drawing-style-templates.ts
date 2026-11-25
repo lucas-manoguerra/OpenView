@@ -44,7 +44,9 @@ const createTemplate = (value: unknown): DrawingStyleTemplate | null => {
     lineWidth < 0.5 ||
     lineWidth > 8 ||
     !isLineStyle(lineStyle)
-  ) return null;
+  ) {
+    return null;
+  }
   return Object.freeze({
     id,
     name: name.trim(),
@@ -60,8 +62,7 @@ export const createDrawingStyleTemplate = (
   name: string,
   tool: DrawingToolType,
   style: DrawingStyle,
-): DrawingStyleTemplate | null =>
-  createTemplate({ id, name, tool, ...style });
+): DrawingStyleTemplate | null => createTemplate({ id, name, tool, ...style });
 
 export const restoreDrawingStyleTemplates = (
   serialized: string | null,
@@ -74,7 +75,9 @@ export const restoreDrawingStyleTemplates = (
       parsed === null ||
       Reflect.get(parsed, 'version') !== STORAGE_VERSION ||
       !Array.isArray(Reflect.get(parsed, 'templates'))
-    ) return Object.freeze([]);
+    ) {
+      return Object.freeze([]);
+    }
     const templates: DrawingStyleTemplate[] = [];
     const ids = new Set<string>();
     const names = new Set<string>();
@@ -98,8 +101,11 @@ export const loadDrawingStyleTemplates = (
   storage: StringStorage | null,
 ): readonly DrawingStyleTemplate[] => {
   if (storage === null) return Object.freeze([]);
-  try { return restoreDrawingStyleTemplates(storage.getItem(STORAGE_KEY)); }
-  catch { return Object.freeze([]); }
+  try {
+    return restoreDrawingStyleTemplates(storage.getItem(STORAGE_KEY));
+  } catch {
+    return Object.freeze([]);
+  }
 };
 
 export const saveDrawingStyleTemplates = (
@@ -111,13 +117,22 @@ export const saveDrawingStyleTemplates = (
     const normalized = restoreDrawingStyleTemplates(
       JSON.stringify({ version: STORAGE_VERSION, templates }),
     );
-    storage.setItem(STORAGE_KEY, JSON.stringify({ version: STORAGE_VERSION, templates: normalized }));
-  } catch { return; }
+    storage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ version: STORAGE_VERSION, templates: normalized }),
+    );
+  } catch {
+    return;
+  }
 };
 
 const getBrowserStorage = (): StringStorage | null => {
   if (typeof window === 'undefined') return null;
-  try { return window.localStorage; } catch { return null; }
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
 };
 
 export const loadBrowserDrawingStyleTemplates = (): readonly DrawingStyleTemplate[] =>
