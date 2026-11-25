@@ -48,3 +48,29 @@ test('toggles icon button active state and loading state', async ({ page }) => {
   await loadingButton.click();
   await expect(page.getByRole('button', { name: 'Cargando' })).toBeDisabled();
 });
+
+test('inspects form controls in isolation and updates their values', async ({ page }) => {
+  await page.goto('/component-lab');
+
+  await page.getByRole('link', { name: 'Forms · Inputs & Selects' }).click();
+  await expect(page).toHaveURL(/\/component-lab\/forms$/);
+  await expect(page.getByRole('heading', { name: 'Inputs & Selects' })).toBeVisible();
+
+  const symbolInput = page.getByTestId('forms-symbol-input');
+  await expect(symbolInput).toHaveValue('BTCUSDT');
+  await symbolInput.fill('ethusdt');
+  await expect(symbolInput).toHaveValue('ETHUSDT');
+  await expect(page.getByTestId('forms-symbol-value')).toHaveText('ETHUSDT');
+
+  const timeframeSelect = page.getByTestId('forms-timeframe-select');
+  await timeframeSelect.selectOption('60');
+  await expect(page.getByTestId('forms-timeframe-value')).toHaveText('60');
+
+  const queryInput = page.getByTestId('forms-query-input');
+  await queryInput.fill('volume');
+  await expect(page.getByTestId('forms-query-length')).toHaveText('6');
+
+  await expect(page.getByLabel('Con error')).toHaveAttribute('aria-invalid', 'true');
+  await expect(page.getByText('Formato de símbolo no válido.')).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Deshabilitado' })).toBeDisabled();
+});

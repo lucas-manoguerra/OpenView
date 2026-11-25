@@ -8,3 +8,7 @@ export { IconButton } from './IconButton';
 export type { IconButtonProps } from './IconButton';
 export { Tooltip } from './Tooltip';
 export type { TooltipProps } from './Tooltip';
+export { Select } from './Select';
+export type { SelectProps, SelectSize } from './Select';
+export { TextField } from './TextField';
+export type { TextFieldProps, TextFieldSize } from './TextField';

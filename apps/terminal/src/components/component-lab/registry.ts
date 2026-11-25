@@ -69,8 +69,8 @@ export const componentLabRegistry: readonly ComponentLabEntry[] = [
     name: 'Forms',
     family: 'Forms',
     route: '/component-lab/forms',
-    status: 'planned',
-    description: 'Inputs, selects, checkboxes y selectores de color.',
+    status: 'available',
+    description: 'TextField y Select con estados, tamaños y accesibilidad.',
   },
   {
     id: 'layout',

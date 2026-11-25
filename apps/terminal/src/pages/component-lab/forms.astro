@@ -1,0 +1,26 @@
+---
+import TerminalLayout from '../../layouts/TerminalLayout.astro';
+import { FormsPlayground } from '../../components/component-lab/FormsPlayground';
+---
+
+<TerminalLayout title="Forms — Component Lab">
+  <main class="min-h-screen bg-[#0b0e14] text-[#d1d4dc]">
+    <header class="flex h-12 items-center justify-between border-b border-[#2a2e39] bg-[#131722] px-4">
+      <a href="/component-lab" class="text-sm font-semibold text-white no-underline">← Component Lab</a>
+      <span class="text-xs text-[#787b86]">Forms / Inputs & Selects</span>
+    </header>
+    <div class="mx-auto max-w-5xl space-y-6 px-5 py-8">
+      <div>
+        <p class="text-[10px] font-semibold uppercase tracking-widest text-[#2962ff]">Form components</p>
+        <h1 class="mt-2 text-2xl font-semibold tracking-tight text-white">Inputs & Selects</h1>
+        <p class="mt-2 text-sm leading-6 text-[#787b86]">Campos de texto y selectores con tamaños, estados, accesibilidad y comportamiento verificable.</p>
+      </div>
+      <div class="grid gap-3 sm:grid-cols-3">
+        <div class="rounded-md border border-[#2a2e39] bg-[#131722] p-3"><p class="text-xs text-[#787b86]">Componentes</p><p class="mt-1 text-xl font-semibold text-white">2</p></div>
+        <div class="rounded-md border border-[#2a2e39] bg-[#131722] p-3"><p class="text-xs text-[#787b86]">Tamaños</p><p class="mt-1 text-xl font-semibold text-white">3</p></div>
+        <div class="rounded-md border border-[#2a2e39] bg-[#131722] p-3"><p class="text-xs text-[#787b86]">Estados</p><p class="mt-1 text-xl font-semibold text-white">4+</p></div>
+      </div>
+      <FormsPlayground client:load />
+    </div>
+  </main>
+</TerminalLayout>
