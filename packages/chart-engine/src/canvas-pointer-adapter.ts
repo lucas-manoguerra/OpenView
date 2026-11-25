@@ -305,7 +305,10 @@ export const attachCanvasPointerEvents = (
       if (options.onDrawingDeleteMany !== undefined) {
         options.onDrawingDeleteMany(selectedIds);
       } else {
-        options.onDrawingDelete?.(selectedIds[selectedIds.length - 1] ?? '');
+        const selectedId = selectedIds[selectedIds.length - 1];
+        if (selectedId !== undefined) {
+          options.onDrawingDelete?.(selectedId);
+        }
       }
       event.preventDefault();
       return;
