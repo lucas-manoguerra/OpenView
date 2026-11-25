@@ -29,6 +29,7 @@ export type ChartCommand =
   | Readonly<{ type: 'set-drawings'; drawings: readonly ChartRenderDrawing[] }>
   | Readonly<{ type: 'set-drawings-visible'; visible: boolean }>
   | Readonly<{ type: 'set-drawing-selection'; drawingIds: readonly string[] }>
+  | Readonly<{ type: 'set-drawing-hover'; hit: ChartDrawingHit | null }>
   | Readonly<{ type: 'move-object'; target: ChartObjectOrderItem; action: ChartObjectOrderAction }>
   | Readonly<{ type: 'resize'; width: number; height: number; devicePixelRatio?: number }>
   | Readonly<{ type: 'render-now' }>;
@@ -122,6 +123,7 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
           drawings: scene.drawings,
           selectedDrawingId: scene.selectedDrawingId,
           selectedDrawingIds: scene.selectedDrawingIds,
+          hoveredDrawingHit: scene.hoveredDrawingHit,
         });
         objectOrder = reconcileChartObjectOrder(objectOrder, getAvailableObjects(scene));
         render();
@@ -138,10 +140,20 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
           scene.selectedDrawingId !== null && drawingIds.has(scene.selectedDrawingId)
             ? scene.selectedDrawingId
             : (selectedDrawingIds[selectedDrawingIds.length - 1] ?? null);
+        const hoveredDrawingHit =
+          scene.hoveredDrawingHit !== null &&
+          drawingIds.has(scene.hoveredDrawingHit.drawingId) &&
+          command.drawings.some(
+            (drawing) =>
+              drawing.id === scene.hoveredDrawingHit?.drawingId && drawing.visible !== false,
+          )
+            ? scene.hoveredDrawingHit
+            : null;
         scene = updateChartRenderScene(scene, {
           drawings: command.drawings,
           selectedDrawingId,
           selectedDrawingIds,
+          hoveredDrawingHit,
         });
         objectOrder = reconcileChartObjectOrder(objectOrder, getAvailableObjects(scene));
         render();
@@ -152,6 +164,10 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
 
       if (command.type === 'set-drawings-visible') {
         drawingsVisible = command.visible;
+        if (!drawingsVisible && scene.hoveredDrawingHit !== null) {
+          scene = updateChartRenderScene(scene, { hoveredDrawingHit: null });
+          emit(Object.freeze({ type: 'scene-changed', scene }));
+        }
         render();
         return;
       }
@@ -165,6 +181,26 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
         scene = updateChartRenderScene(scene, { selectedDrawingId, selectedDrawingIds });
         render();
         emitDrawingState();
+        return;
+      }
+
+      if (command.type === 'set-drawing-hover') {
+        const hitIsVisible =
+          command.hit !== null &&
+          drawingsVisible &&
+          scene.drawings.some(
+            (drawing) => drawing.id === command.hit?.drawingId && drawing.visible !== false,
+          );
+        const nextHit = hitIsVisible ? command.hit : null;
+        if (
+          scene.hoveredDrawingHit?.drawingId === nextHit?.drawingId &&
+          scene.hoveredDrawingHit?.target === nextHit?.target
+        ) {
+          return;
+        }
+        scene = updateChartRenderScene(scene, { hoveredDrawingHit: nextHit });
+        render();
+        emit(Object.freeze({ type: 'scene-changed', scene }));
         return;
       }
 
