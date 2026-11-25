@@ -19,11 +19,14 @@ class MemoryStorage {
 }
 
 describe('drawing interaction preferences', () => {
-  it('defaults to magnet mode off', () => {
-    expect(DEFAULT_DRAWING_INTERACTION_PREFERENCES).toEqual({ magnetMode: 'off', snapToIndicators: false });
+  it('defaults to magnet mode off and indicator snapping disabled', () => {
+    expect(DEFAULT_DRAWING_INTERACTION_PREFERENCES).toEqual({
+      magnetMode: 'off',
+      snapToIndicators: false,
+    });
   });
 
-  it('restores supported magnet modes', () => {
+  it('restores supported magnet modes and optional indicator snapping', () => {
     expect(
       restoreDrawingInteractionPreferences(JSON.stringify({ version: 1, magnetMode: 'weak' })),
     ).toEqual({ magnetMode: 'weak', snapToIndicators: false });
@@ -44,12 +47,18 @@ describe('drawing interaction preferences', () => {
     ).toBe(DEFAULT_DRAWING_INTERACTION_PREFERENCES);
   });
 
-  it('persists and restores preferences through the browser storage contract', () => {
+  it('persists and restores both interaction preferences through storage', () => {
     const storage = new MemoryStorage();
 
-    saveDrawingInteractionPreferences(storage, { magnetMode: 'strong', snapToIndicators: true });
+    saveDrawingInteractionPreferences(storage, {
+      magnetMode: 'strong',
+      snapToIndicators: true,
+    });
 
-    expect(loadDrawingInteractionPreferences(storage)).toEqual({ magnetMode: 'strong', snapToIndicators: true });
+    expect(loadDrawingInteractionPreferences(storage)).toEqual({
+      magnetMode: 'strong',
+      snapToIndicators: true,
+    });
   });
 
   it('uses defaults when storage is unavailable or throws', () => {
@@ -67,7 +76,10 @@ describe('drawing interaction preferences', () => {
       DEFAULT_DRAWING_INTERACTION_PREFERENCES,
     );
     expect(() =>
-      saveDrawingInteractionPreferences(blockedStorage, { magnetMode: 'weak', snapToIndicators: false }),
+      saveDrawingInteractionPreferences(blockedStorage, {
+        magnetMode: 'weak',
+        snapToIndicators: false,
+      }),
     ).not.toThrow();
   });
 });
