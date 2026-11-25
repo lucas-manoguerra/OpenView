@@ -738,12 +738,8 @@ export function ChartCanvas({
               return;
             }
 
-            let drawingIdSequence = drawingsRef.current.length + 1;
-            while (drawingsRef.current.some((item) => item.id === 'drawing-' + drawingIdSequence)) {
-              drawingIdSequence += 1;
-            }
             const drawing: ChartRenderDrawing = Object.freeze({
-              id: 'drawing-' + drawingIdSequence,
+              id: crypto.randomUUID(),
               type: gesture.type,
               start: Object.freeze({
                 timestamp: startTimestamp,
@@ -2077,6 +2073,10 @@ export function ChartCanvas({
           data-drawing-snap-to-indicators={String(snapToIndicators)}
           data-keep-drawing={String(keepDrawing)}
           data-selected-drawing-id={selectedDrawingId ?? ''}
+          data-selected-drawing-order={selectedDrawingIds
+            .map((id) => drawings.findIndex((drawing) => drawing.id === id) + 1)
+            .filter((order) => order > 0)
+            .join(',')}
           data-selected-drawing-type={selectedDrawing?.type ?? ''}
           data-selected-drawing-start-price={
             selectedDrawing === null ? '' : String(selectedDrawing.start.price)
@@ -2160,7 +2160,8 @@ export function ChartCanvas({
                   No hay dibujos en este gráfico.
                 </div>
               ) : (
-                [...drawings].reverse().map((drawing) => {
+                [...drawings].reverse().map((drawing, index) => {
+                  const drawingOrder = drawings.length - index;
                   const isVisible = drawing.visible !== false;
                   const isLocked = drawing.locked === true;
                   const isSelected = selectedDrawingIds.includes(drawing.id);
@@ -2177,7 +2178,7 @@ export function ChartCanvas({
 
                   return (
                     <div
-                      data-testid={`drawing-object-row-${drawing.id}`}
+                      data-testid={`drawing-object-row-${drawingOrder}`}
                       data-drawing-visible={String(isVisible)}
                       data-drawing-locked={String(isLocked)}
                       class={
@@ -2189,7 +2190,7 @@ export function ChartCanvas({
                         type="button"
                         aria-label={`Seleccionar ${drawingName.toLowerCase()} ${drawing.id}`}
                         aria-pressed={isSelected}
-                        data-testid={`drawing-object-select-${drawing.id}`}
+                        data-testid={`drawing-object-select-${drawingOrder}`}
                         onClick={() => handleSelectDrawingFromObjectTree(drawing.id)}
                         class="flex min-w-0 flex-1 items-center gap-2 rounded px-1 py-1 text-left"
                       >
@@ -2211,7 +2212,7 @@ export function ChartCanvas({
                         type="button"
                         aria-label={isVisible ? `Ocultar ${drawing.id}` : `Mostrar ${drawing.id}`}
                         aria-pressed={!isVisible}
-                        data-testid={`drawing-object-visibility-${drawing.id}`}
+                        data-testid={`drawing-object-visibility-${drawingOrder}`}
                         title={isVisible ? 'Ocultar dibujo' : 'Mostrar dibujo'}
                         onClick={() => handleToggleDrawingObjectVisibility(drawing.id)}
                         class="grid size-6 shrink-0 place-items-center rounded text-[11px] text-slate-400 hover:bg-white/10 hover:text-slate-100"
@@ -2224,7 +2225,7 @@ export function ChartCanvas({
                           isLocked ? `Desbloquear ${drawing.id}` : `Bloquear ${drawing.id}`
                         }
                         aria-pressed={isLocked}
-                        data-testid={`drawing-object-lock-${drawing.id}`}
+                        data-testid={`drawing-object-lock-${drawingOrder}`}
                         title={isLocked ? 'Desbloquear dibujo' : 'Bloquear dibujo'}
                         onClick={() => handleToggleDrawingObjectLock(drawing.id)}
                         class="grid size-6 shrink-0 place-items-center rounded text-[11px] text-slate-400 hover:bg-white/10 hover:text-slate-100"
@@ -2234,7 +2235,7 @@ export function ChartCanvas({
                       <button
                         type="button"
                         aria-label={`Eliminar ${drawing.id}`}
-                        data-testid={`drawing-object-delete-${drawing.id}`}
+                        data-testid={`drawing-object-delete-${drawingOrder}`}
                         title="Eliminar dibujo"
                         onClick={() => handleDeleteDrawingObject(drawing.id)}
                         class="grid size-6 shrink-0 place-items-center rounded text-[12px] text-slate-500 hover:bg-rose-500/15 hover:text-rose-200"
