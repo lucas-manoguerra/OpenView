@@ -42,14 +42,14 @@ export function DrawingToolCatalogMenu({ activeTool, onSelect }: DrawingToolCata
   }, [group, query]);
 
   return (
-    <div class="absolute left-0 top-[84px] z-40 w-full px-1">
+    <div class="pointer-events-none absolute left-0 top-[84px] z-40 w-full px-1">
       <button
         type="button"
         data-testid="drawing-tool-catalog-toggle"
         aria-label="Abrir catálogo de herramientas de dibujo"
         aria-expanded={open}
         onClick={() => setOpen(!open)}
-        class="grid size-8 place-items-center rounded text-sm text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
+        class="pointer-events-auto grid size-8 place-items-center rounded text-sm text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
         title="Todas las herramientas de dibujo"
       >
         ▦
@@ -58,7 +58,7 @@ export function DrawingToolCatalogMenu({ activeTool, onSelect }: DrawingToolCata
         <section
           data-testid="drawing-tool-catalog"
           aria-label="Catálogo de herramientas de dibujo"
-          class="absolute left-full top-0 ml-2 flex max-h-[min(560px,80vh)] w-[min(620px,calc(100vw-64px))] overflow-hidden rounded-lg border border-white/10 bg-[#101723] text-slate-200 shadow-2xl"
+          class="pointer-events-auto absolute left-full top-0 ml-2 flex max-h-[min(560px,80vh)] w-[min(620px,calc(100vw-64px))] overflow-hidden rounded-lg border border-white/10 bg-[#101723] text-slate-200 shadow-2xl"
         >
           <nav
             aria-label="Familias de herramientas"
