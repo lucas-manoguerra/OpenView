@@ -156,6 +156,7 @@ export const startDrawingPanelDrag = (
   event: PointerEvent,
   panel: HTMLElement,
   onPositionChange: (position: DrawingPanelPosition) => void,
+  onDragEnd: () => void,
 ): (() => void) | null => {
   const parent = panel.parentElement;
 
@@ -181,6 +182,7 @@ export const startDrawingPanelDrag = (
     window.removeEventListener('pointermove', handlePointerMove, true);
     window.removeEventListener('pointerup', handlePointerEnd, true);
     window.removeEventListener('pointercancel', handlePointerEnd, true);
+    onDragEnd();
   };
 
   const handlePointerMove = (pointerEvent: PointerEvent): void => {
