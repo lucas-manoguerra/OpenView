@@ -1404,6 +1404,73 @@ test('draws geometric annotations and supports undo, redo and clearing', async (
   await expect(canvas).toHaveAttribute('data-drawing-count', '0');
 });
 
+test('selects, moves, edits and deletes a drawing individually', async ({ page }) => {
+  await page.goto('/');
+
+  const canvas = page.getByRole('img', {
+    name: /Gráfico interactivo de velas y volumen para BTC \/ USDT/,
+  });
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+
+  const bounds = await canvas.boundingBox();
+  expect(bounds).not.toBeNull();
+
+  if (bounds === null) {
+    throw new Error('The chart canvas must have a visible bounding box.');
+  }
+
+  const startX = bounds.x + bounds.width * 0.3;
+  const startY = bounds.y + bounds.height * 0.34;
+  const endX = bounds.x + bounds.width * 0.58;
+  const endY = bounds.y + bounds.height * 0.56;
+
+  await page.getByTestId('drawing-tool-trend-line').click();
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await page.mouse.move(endX, endY);
+  await page.mouse.up();
+  await expect(canvas).toHaveAttribute('data-drawing-count', '1');
+
+  const selectTool = page.getByTestId('drawing-tool-select');
+  await selectTool.click();
+  const middleX = (startX + endX) / 2;
+  const middleY = (startY + endY) / 2;
+  await page.mouse.click(middleX, middleY);
+
+  await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-1');
+
+  const selectedImage = await canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL());
+  await page.mouse.move(middleX, middleY);
+  await page.mouse.down();
+  await page.mouse.move(middleX + 35, middleY - 18);
+  await page.mouse.up();
+
+  await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-1');
+  await expect
+    .poll(() => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL()))
+    .not.toBe(selectedImage);
+
+  const movedStartX = startX + 35;
+  const movedStartY = startY - 18;
+  await page.mouse.move(movedStartX, movedStartY);
+  await page.mouse.down();
+  await page.mouse.move(movedStartX + 18, movedStartY + 14);
+  await page.mouse.up();
+
+  const deleteSelected = page.getByTestId('drawing-delete-selected');
+  await expect(deleteSelected).toBeEnabled();
+  await deleteSelected.click();
+  await expect(canvas).toHaveAttribute('data-drawing-count', '0');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-id', '');
+
+  await page.getByTestId('drawing-undo').click();
+  await expect(canvas).toHaveAttribute('data-drawing-count', '1');
+  await page.getByTestId('drawing-redo').click();
+  await expect(canvas).toHaveAttribute('data-drawing-count', '0');
+});
+
 test('renders timestamp based time labels instead of logical bar indices', async ({ page }) => {
   await page.addInitScript(() => {
     const labels: string[] = [];

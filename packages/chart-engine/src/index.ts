@@ -31,6 +31,7 @@ export {
 export {
   attachCanvasPointerEvents,
   type CanvasPointerAdapter,
+  type CanvasDrawingEditGesture,
   type CanvasDrawingGesture,
   type CanvasDrawingTool,
 } from './canvas-pointer-adapter';
@@ -108,3 +109,11 @@ export {
   type MovingAverageInput,
   type MovingAveragePoint,
 } from './indicators';
+
+export {
+  getLogicalIndexAtTimestamp,
+  getTimestampAtLogicalIndex,
+  hitTestChartDrawing,
+  updateChartDrawing,
+  type ChartDrawingHit,
+} from './drawing-geometry';

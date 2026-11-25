@@ -325,6 +325,47 @@ describe('canvas chart painter', () => {
     ).toThrow(RangeError);
   });
 
+  it('renders visible control handles for the selected drawing', () => {
+    const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 10);
+    const drawings: readonly ChartRenderDrawing[] = [
+      {
+        id: 'trend-selected',
+        type: 'trend-line',
+        start: { timestamp: 1_700_000_000_000, price: 100 },
+        end: { timestamp: 1_700_000_120_000, price: 110 },
+        color: '#60a5fa',
+      },
+    ];
+    const normalScene = createChartRenderScene(
+      frame,
+      createCandles(),
+      null,
+      'candles',
+      [],
+      drawings,
+    );
+    const selectedScene = createChartRenderScene(
+      frame,
+      createCandles(),
+      null,
+      'candles',
+      [],
+      drawings,
+      'trend-selected',
+    );
+    const normalContext = createMockContext();
+    const selectedContext = createMockContext();
+
+    drawChartScene(normalContext.context, normalScene);
+    drawChartScene(selectedContext.context, selectedScene);
+
+    expect(selectedScene.selectedDrawingId).toBe('trend-selected');
+    expect(
+      selectedContext.calls.filter((call) => call.name === 'fillRect').length -
+        normalContext.calls.filter((call) => call.name === 'fillRect').length,
+    ).toBe(4);
+  });
+
   it('draws a separate volume panel with bars relative to the visible maximum', () => {
     const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 10, {
       layout: { volumeHeight: 80 },
