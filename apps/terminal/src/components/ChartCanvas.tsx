@@ -1953,7 +1953,7 @@ export function ChartCanvas({
                 <option value="dotted">Puntos</option>
               </select>
             </div>
-            {selectedDrawingsShareType && selectedDrawing.type === 'rectangle' && (
+            {selectedDrawing !== null && selectedDrawingsShareType && selectedDrawing.type === 'rectangle' && (
               <div
                 class="mt-3 space-y-2 border-t border-white/10 pt-3"
                 data-testid="drawing-rectangle-properties"
@@ -1997,7 +1997,8 @@ export function ChartCanvas({
                 </label>
               </div>
             )}
-            {selectedDrawingsShareType &&
+            {selectedDrawing !== null &&
+              selectedDrawingsShareType &&
               (selectedDrawing.type === 'trend-line' || selectedDrawing.type === 'ray') && (
                 <div
                   class="mt-3 space-y-2 border-t border-white/10 pt-3"
