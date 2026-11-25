@@ -2432,7 +2432,7 @@ test('selects drawings with Control and moves and deletes the group together', a
     y: selectionBounds.y + selectionBounds.height * 0.3,
   };
   const secondBody = {
-    x: selectionBounds.x + selectionBounds.width * 0.4,
+    x: selectionBounds.x + selectionBounds.width * 0.68,
     y: selectionBounds.y + selectionBounds.height * 0.46,
   };
 
