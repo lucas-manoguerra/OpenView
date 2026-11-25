@@ -2427,28 +2427,28 @@ test('selects drawings with Control and moves and deletes the group together', a
     throw new Error('The chart canvas must remain visible before selecting drawings.');
   }
 
-  const firstMidpoint = {
-    x: selectionBounds.x + selectionBounds.width * 0.68,
-    y: selectionBounds.y + selectionBounds.height * 0.3,
+  const firstEnd = {
+    x: selectionBounds.x + selectionBounds.width * 0.78,
+    y: selectionBounds.y + selectionBounds.height * 0.34,
   };
-  const secondBody = {
-    x: selectionBounds.x + selectionBounds.width * 0.68,
-    y: selectionBounds.y + selectionBounds.height * 0.46,
+  const secondEnd = {
+    x: selectionBounds.x + selectionBounds.width * 0.78,
+    y: selectionBounds.y + selectionBounds.height * 0.5,
   };
 
-  await page.mouse.click(secondBody.x, secondBody.y);
+  await page.mouse.click(secondEnd.x, secondEnd.y);
   await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-2');
 
-  await page.mouse.click(firstMidpoint.x, firstMidpoint.y, { modifiers: ['Control'] });
+  await page.mouse.click(firstEnd.x, firstEnd.y, { modifiers: ['Control'] });
   await expect(canvas).toHaveAttribute('data-selected-drawing-count', '2');
   await expect(canvas).toHaveAttribute('data-selected-drawing-ids', 'drawing-1,drawing-2');
 
   const beforeGroupMove = await canvas.evaluate((element: HTMLCanvasElement) =>
     element.toDataURL(),
   );
-  await page.mouse.move(firstMidpoint.x, firstMidpoint.y);
+  await page.mouse.move(firstEnd.x, firstEnd.y);
   await page.mouse.down();
-  await page.mouse.move(firstMidpoint.x + 35, firstMidpoint.y - 18);
+  await page.mouse.move(firstEnd.x + 35, firstEnd.y - 18);
   await page.mouse.up();
 
   await expect
