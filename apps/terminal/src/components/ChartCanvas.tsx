@@ -1855,6 +1855,11 @@ export function ChartCanvas({
           data-selected-drawing-start-timestamp={
             selectedDrawing === null ? '' : String(selectedDrawing.start.timestamp)
           }
+          data-selected-drawing-end-timestamp={
+            selectedDrawing?.end === null || selectedDrawing === null
+              ? ''
+              : String(selectedDrawing.end.timestamp)
+          }
           data-selected-drawing-count={selectedDrawingIds.length}
           data-selected-drawing-ids={selectedDrawingIds.join(',')}
           data-selected-drawing-colors={selectedDrawingColors}
