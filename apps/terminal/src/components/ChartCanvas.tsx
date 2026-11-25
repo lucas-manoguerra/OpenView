@@ -2073,7 +2073,7 @@ export function ChartCanvas({
           data-drawing-snap-to-indicators={String(snapToIndicators)}
           data-keep-drawing={String(keepDrawing)}
           data-selected-drawing-id={selectedDrawingId ?? ''}
-          data-selected-drawing-order={selectedDrawingIds
+          data-selected-drawing-indexes={selectedDrawingIds
             .map((id) => drawings.findIndex((drawing) => drawing.id === id) + 1)
             .filter((order) => order > 0)
             .join(',')}
