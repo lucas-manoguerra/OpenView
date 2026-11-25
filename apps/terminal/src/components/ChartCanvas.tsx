@@ -1207,6 +1207,20 @@ export function ChartCanvas({
     }
   };
 
+  const handleToggleAllDrawingsLock = (): void => {
+    const currentDrawings = drawingsRef.current;
+
+    if (currentDrawings.length === 0) {
+      return;
+    }
+
+    const nextLocked = !currentDrawings.every((drawing) => drawing.locked === true);
+    commitDrawingsRef.current(
+      currentDrawings.map((drawing) => Object.freeze({ ...drawing, locked: nextLocked })),
+    );
+    updateDrawingSelection([]);
+  };
+
   const handleDeleteSelectedDrawing = (): void => {
     const selectedIds = new Set(selectedDrawingIdsRef.current);
 
@@ -1289,6 +1303,8 @@ export function ChartCanvas({
   };
 
   const selectedDrawing = drawings.find((drawing) => drawing.id === selectedDrawingId) ?? null;
+  const allDrawingsLocked =
+    drawings.length > 0 && drawings.every((drawing) => drawing.locked === true);
   const drawingStyleTemplates = [...BUILT_IN_DRAWING_STYLE_TEMPLATES, ...customDrawingTemplates];
   const selectedDrawingHasSingleSelection =
     selectedDrawing !== null && selectedDrawingIds.length === 1;
@@ -1631,6 +1647,45 @@ export function ChartCanvas({
         <span class="my-1 h-px w-6 bg-white/10" />
         <button
           type="button"
+          aria-label={allDrawingsLocked ? 'Desbloquear todos los dibujos' : 'Bloquear todos los dibujos'}
+          aria-pressed={allDrawingsLocked}
+          data-testid="drawings-lock-toggle"
+          title={allDrawingsLocked ? 'Desbloquear todos los dibujos' : 'Bloquear todos los dibujos'}
+          disabled={drawings.length === 0}
+          onClick={handleToggleAllDrawingsLock}
+          class={
+            'grid size-8 place-items-center rounded text-sm transition-colors disabled:opacity-30 ' +
+            (allDrawingsLocked
+              ? 'bg-blue-500/20 text-blue-200'
+              : 'text-slate-400 hover:bg-white/5 hover:text-slate-100')
+          }
+        >
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            class="size-[18px]"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            {allDrawingsLocked ? (
+              <>
+                <rect x="4" y="10" width="16" height="11" rx="2" />
+                <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+              </>
+            ) : (
+              <>
+                <rect x="4" y="10" width="16" height="11" rx="2" />
+                <path d="M8 10V7a4 4 0 0 1 7.3-2.3" />
+              </>
+            )}
+          </svg>
+        </button>
+        <span class="my-1 h-px w-6 bg-white/10" />
+        <button
+          type="button"
           aria-label="Borrar dibujo seleccionado"
           data-testid="drawing-delete-selected"
           title="Borrar selección"
@@ -1693,6 +1748,7 @@ export function ChartCanvas({
           data-chart-type={chartType}
           data-indicator-count={renderIndicators.length}
           data-drawing-count={drawings.length}
+          data-drawings-locked={String(allDrawingsLocked)}
           data-drawing-magnet-mode={drawingMagnetMode}
           data-drawing-snap-to-indicators={String(snapToIndicators)}
           data-keep-drawing={String(keepDrawing)}
