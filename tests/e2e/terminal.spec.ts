@@ -1375,7 +1375,7 @@ test('draws geometric annotations and supports undo, redo and clearing', async (
   await expect(canvas).toHaveAttribute('data-drawing-count', '2');
 
   await page.getByTestId('drawing-tool-horizontal-line').click();
-  await page.mouse.click(bounds.x + bounds.width * 0.64, bounds.y + bounds.height * 0.62);
+  await page.mouse.click(bounds.x + bounds.width * 0.64, bounds.y + bounds.height * 0.5);
   await expect(canvas).toHaveAttribute('data-drawing-count', '3');
 
   await page.getByTestId('drawing-tool-vertical-line').click();
@@ -1387,7 +1387,7 @@ test('draws geometric annotations and supports undo, redo and clearing', async (
     bounds.x + bounds.width * 0.36,
     bounds.y + bounds.height * 0.24,
     bounds.x + bounds.width * 0.58,
-    bounds.y + bounds.height * 0.68,
+    bounds.y + bounds.height * 0.58,
   );
   await expect(canvas).toHaveAttribute('data-drawing-count', '5');
   await expect(canvas).toHaveAttribute('data-drawing-undo-count', '5');
@@ -1600,8 +1600,6 @@ test('hides drawings without deleting them and restores their selection', async 
   const startY = bounds.y + bounds.height * 0.34;
   const endX = bounds.x + bounds.width * 0.58;
   const endY = bounds.y + bounds.height * 0.56;
-  const middleX = (startX + endX) / 2;
-  const middleY = (startY + endY) / 2;
 
   await page.getByTestId('drawing-tool-trend-line').click();
   await page.mouse.move(startX, startY);
@@ -1627,8 +1625,18 @@ test('hides drawings without deleting them and restores their selection', async 
   await expect(canvas).toHaveAttribute('data-drawing-count', '1');
   await expect(canvas).toHaveAttribute('data-renderable-drawing-count', '1');
 
+  const restoredBounds = await canvas.boundingBox();
+  expect(restoredBounds).not.toBeNull();
+
+  if (restoredBounds === null) {
+    throw new Error('The chart canvas must remain visible after restoring drawings.');
+  }
+
   await page.getByTestId('drawing-tool-select').click();
-  await page.mouse.click(middleX, middleY - 12);
+  await page.mouse.click(
+    restoredBounds.x + restoredBounds.width * 0.44,
+    restoredBounds.y + restoredBounds.height * 0.45,
+  );
   await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-1');
 });
 
@@ -1699,10 +1707,38 @@ test('selects multiple drawings with Ctrl click and marquee, then moves them tog
   await page.mouse.click(bounds.x + bounds.width * 0.84, bounds.y + bounds.height * 0.48);
   await expect(canvas).toHaveAttribute('data-selected-drawing-count', '0');
 
+  const marqueeBounds = await canvas.boundingBox();
+  expect(marqueeBounds).not.toBeNull();
+
+  if (marqueeBounds === null) {
+    throw new Error('The chart canvas must remain visible before marquee selection.');
+  }
+
+  const marqueeStart = {
+    x: marqueeBounds.x + marqueeBounds.width * 0.12,
+    y: marqueeBounds.y + marqueeBounds.height * 0.24,
+  };
+  const marqueeEnd = {
+    x: marqueeBounds.x + marqueeBounds.width * 0.7,
+    y: marqueeBounds.y + marqueeBounds.height * 0.74,
+  };
+
+  await page.mouse.click(marqueeStart.x, marqueeStart.y);
+  await canvas.evaluate((element) => {
+    element.dataset.lastPointerControl = 'unset';
+    element.addEventListener(
+      'pointerdown',
+      (event) => {
+        element.dataset.lastPointerControl = String(event.ctrlKey);
+      },
+      { capture: true },
+    );
+  });
   await page.keyboard.down('Control');
-  await page.mouse.move(bounds.x + bounds.width * 0.22, bounds.y + bounds.height * 0.2);
+  await page.mouse.move(marqueeStart.x, marqueeStart.y);
   await page.mouse.down();
-  await page.mouse.move(bounds.x + bounds.width * 0.64, bounds.y + bounds.height * 0.74);
+  await expect(canvas).toHaveAttribute('data-last-pointer-control', 'true');
+  await page.mouse.move(marqueeEnd.x, marqueeEnd.y);
   await expect(page.getByTestId('drawing-selection-marquee')).toBeVisible();
   await page.mouse.up();
   await page.keyboard.up('Control');
@@ -2018,8 +2054,13 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
   await page.getByTestId('drawing-end-style').selectOption('circle');
   await expect(canvas).toHaveAttribute('data-selected-drawing-end-style', 'circle');
 
-  const panelBeforeDrag = await propertiesPanel.boundingBox();
+  const coordinatePanelToggle = page.getByTestId('drawing-panel-toggle-coordinates');
+  await coordinatePanelToggle.click();
+  await expect(page.getByTestId('drawing-coordinate-panel')).toHaveCount(0);
+
   const dragHandle = page.getByTestId('drawing-properties-drag-handle');
+  await dragHandle.scrollIntoViewIfNeeded();
+  const panelBeforeDrag = await propertiesPanel.boundingBox();
   const dragHandleBounds = await dragHandle.boundingBox();
   expect(panelBeforeDrag).not.toBeNull();
   expect(dragHandleBounds).not.toBeNull();
@@ -2028,17 +2069,30 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
     throw new Error('The drawing properties panel must be visible before dragging.');
   }
 
-  await page.mouse.move(
-    dragHandleBounds.x + dragHandleBounds.width / 2,
-    dragHandleBounds.y + dragHandleBounds.height / 2,
-  );
+  const dragPoint = {
+    x: dragHandleBounds.x + dragHandleBounds.width / 2,
+    y: dragHandleBounds.y + dragHandleBounds.height / 2,
+  };
+  const pointerTarget = await page.evaluate(({ x, y }) => {
+    const target = document.elementFromPoint(x, y);
+    const handle = target?.closest('[data-testid="drawing-properties-drag-handle"]');
+    return {
+      handleReceivesPointer: handle !== null && handle !== undefined,
+      topElement: target?.tagName ?? null,
+      topTestId: target?.getAttribute('data-testid') ?? null,
+      topClass: typeof target?.className === 'string' ? target.className : '',
+    };
+  }, dragPoint);
+  expect(pointerTarget.handleReceivesPointer, JSON.stringify(pointerTarget)).toBe(true);
+
+  await page.mouse.move(dragPoint.x, dragPoint.y);
   await page.mouse.down();
   await page.mouse.move(
     dragHandleBounds.x + dragHandleBounds.width / 2 + 45,
     dragHandleBounds.y + dragHandleBounds.height / 2 + 30,
+    { steps: 8 },
   );
   await page.mouse.up();
-
   const panelAfterDrag = await propertiesPanel.boundingBox();
   expect(panelAfterDrag).not.toBeNull();
 
@@ -2046,9 +2100,21 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
     throw new Error('The drawing properties panel must remain visible after dragging.');
   }
 
-  expect(panelAfterDrag.x).toBeGreaterThan(panelBeforeDrag.x + 20);
+  const panelDragMetrics = await propertiesPanel.evaluate((element: HTMLElement) => ({
+    styleLeft: element.style.left,
+    styleTop: element.style.top,
+    offsetLeft: element.offsetLeft,
+    offsetWidth: element.offsetWidth,
+    parentWidth: element.parentElement?.clientWidth ?? null,
+    parentHeight: element.parentElement?.clientHeight ?? null,
+    parentLeft: element.parentElement?.getBoundingClientRect().left ?? null,
+  }));
+  expect(panelAfterDrag.x, JSON.stringify(panelDragMetrics)).toBeGreaterThan(
+    panelBeforeDrag.x + 20,
+  );
   expect(panelAfterDrag.y).toBeGreaterThan(panelBeforeDrag.y + 10);
 
+  await coordinatePanelToggle.click();
   const coordinatePanel = page.getByTestId('drawing-coordinate-panel');
   await expect(coordinatePanel).toBeVisible();
   const coordinateBeforeDrag = await coordinatePanel.boundingBox();
@@ -2062,15 +2128,28 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
     throw new Error('The drawing coordinate panel must be visible before dragging.');
   }
 
-  await page.mouse.move(
-    coordinateHandleBounds.x + coordinateHandleBounds.width / 2,
-    coordinateHandleBounds.y + coordinateHandleBounds.height / 2,
-  );
+  const coordinateDragPoint = {
+    x: coordinateHandleBounds.x + coordinateHandleBounds.width / 2,
+    y: coordinateHandleBounds.y + coordinateHandleBounds.height / 2,
+  };
+  const coordinatePointerTarget = await page.evaluate(({ x, y }) => {
+    const target = document.elementFromPoint(x, y);
+    const handle = target?.closest('[data-testid="drawing-coordinate-drag-handle"]');
+    return {
+      handleReceivesPointer: handle !== null && handle !== undefined,
+      topElement: target?.tagName ?? null,
+      topTestId: target?.getAttribute('data-testid') ?? null,
+      topClass: typeof target?.className === 'string' ? target.className : '',
+    };
+  }, coordinateDragPoint);
+  expect(
+    coordinatePointerTarget.handleReceivesPointer,
+    JSON.stringify(coordinatePointerTarget),
+  ).toBe(true);
+
+  await page.mouse.move(coordinateDragPoint.x, coordinateDragPoint.y);
   await page.mouse.down();
-  await page.mouse.move(
-    coordinateHandleBounds.x + coordinateHandleBounds.width / 2 + 38,
-    coordinateHandleBounds.y + coordinateHandleBounds.height / 2 + 24,
-  );
+  await page.mouse.move(coordinateDragPoint.x + 38, coordinateDragPoint.y + 24);
   await page.mouse.up();
 
   const coordinateAfterDrag = await coordinatePanel.boundingBox();
@@ -2344,7 +2423,7 @@ test('edits rectangle fill color and opacity', async ({ page }) => {
   await expect(page.getByTestId('drawing-fill-opacity')).toHaveValue('45');
 });
 
-test('selects drawings with Shift and moves and deletes the group together', async ({ page }) => {
+test('selects drawings with Control and moves and deletes the group together', async ({ page }) => {
   await page.goto('/');
 
   const canvas = page.getByRole('img', {
@@ -2362,44 +2441,57 @@ test('selects drawings with Shift and moves and deletes the group together', asy
   }
 
   const drawLine = async (startY: number, endY: number) => {
-    const startX = bounds.x + bounds.width * 0.28;
-    const endX = bounds.x + bounds.width * 0.52;
     await page.getByTestId('drawing-tool-trend-line').click();
-    await page.mouse.move(startX, bounds.y + bounds.height * startY);
+    const currentBounds = await canvas.boundingBox();
+
+    if (currentBounds === null) {
+      throw new Error('The chart canvas must remain visible while drawing.');
+    }
+
+    const startX = currentBounds.x + currentBounds.width * 0.58;
+    const endX = currentBounds.x + currentBounds.width * 0.78;
+    await page.mouse.move(startX, currentBounds.y + currentBounds.height * startY);
     await page.mouse.down();
-    await page.mouse.move(endX, bounds.y + bounds.height * endY);
+    await page.mouse.move(endX, currentBounds.y + currentBounds.height * endY);
     await page.mouse.up();
   };
 
-  await drawLine(0.28, 0.4);
-  await drawLine(0.6, 0.72);
+  await drawLine(0.26, 0.34);
+  await expect(canvas).toHaveAttribute('data-drawing-count', '1');
+  await drawLine(0.42, 0.5);
   await expect(canvas).toHaveAttribute('data-drawing-count', '2');
 
-  const firstMidpoint = {
-    x: bounds.x + bounds.width * 0.4,
-    y: bounds.y + bounds.height * 0.34,
-  };
-  const secondMidpoint = {
-    x: bounds.x + bounds.width * 0.4,
-    y: bounds.y + bounds.height * 0.66,
-  };
-
   await page.getByTestId('drawing-tool-select').click();
-  await page.mouse.click(firstMidpoint.x, firstMidpoint.y);
-  await expect(canvas).toHaveAttribute('data-selected-drawing-count', '1');
+  const selectionBounds = await canvas.boundingBox();
 
-  await page.keyboard.down('Shift');
-  await page.mouse.click(secondMidpoint.x, secondMidpoint.y);
-  await page.keyboard.up('Shift');
+  if (selectionBounds === null) {
+    throw new Error('The chart canvas must remain visible before selecting drawings.');
+  }
+
+  const firstEnd = {
+    x: selectionBounds.x + selectionBounds.width * 0.78,
+    y: selectionBounds.y + selectionBounds.height * 0.34,
+  };
+  const secondEnd = {
+    x: selectionBounds.x + selectionBounds.width * 0.78,
+    y: selectionBounds.y + selectionBounds.height * 0.5,
+  };
+
+  await page.mouse.click(secondEnd.x, secondEnd.y);
+  await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-2');
+
+  await page.keyboard.down('Control');
+  await page.mouse.click(firstEnd.x, firstEnd.y);
+  await page.keyboard.up('Control');
   await expect(canvas).toHaveAttribute('data-selected-drawing-count', '2');
-  await expect(canvas).toHaveAttribute('data-selected-drawing-ids', 'drawing-1,drawing-2');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-ids', 'drawing-2,drawing-1');
 
   const beforeGroupMove = await canvas.evaluate((element: HTMLCanvasElement) =>
     element.toDataURL(),
   );
-  await page.mouse.move(firstMidpoint.x, firstMidpoint.y);
+  await page.mouse.move(firstEnd.x, firstEnd.y);
   await page.mouse.down();
-  await page.mouse.move(firstMidpoint.x + 35, firstMidpoint.y - 18);
+  await page.mouse.move(firstEnd.x + 35, firstEnd.y - 18);
   await page.mouse.up();
 
   await expect
@@ -2617,4 +2709,32 @@ test('renders timestamp based time labels instead of logical bar indices', async
   expect(labels).not.toContain('0');
   expect(labels).not.toContain('1');
   expect(labels).not.toContain('2');
+});
+
+test('discovers drawing tools by family and activates implemented tools', async ({ page }) => {
+  await page.goto('/');
+
+  const canvas = page.locator('canvas[data-candles-count]');
+  await expect(canvas).toHaveAttribute('data-chart-ready', 'true');
+
+  await page.getByTestId('drawing-tool-catalog-toggle').click();
+  const catalog = page.getByTestId('drawing-tool-catalog');
+  await expect(catalog).toBeVisible();
+  await expect(
+    catalog.getByRole('navigation', { name: 'Familias de herramientas' }).getByRole('button'),
+  ).toHaveCount(11);
+
+  await expect(catalog.getByTestId('drawing-tool-catalog-item-trend-line')).toBeEnabled();
+  await catalog.getByTestId('drawing-tool-group-fibonacci').click();
+  await expect(catalog.getByTestId('drawing-tool-catalog-item-fib-retracement')).toBeDisabled();
+
+  await catalog.getByTestId('drawing-tool-catalog-search').fill('retroceso');
+  await expect(catalog.getByTestId('drawing-tool-catalog-item-fib-retracement')).toBeVisible();
+  await expect(catalog.getByTestId('drawing-tool-catalog-item-trend-line')).toHaveCount(0);
+
+  await catalog.getByTestId('drawing-tool-catalog-search').fill('');
+  await catalog.getByTestId('drawing-tool-group-lines').click();
+  await catalog.getByTestId('drawing-tool-catalog-item-trend-line').click();
+  await expect(catalog).toHaveCount(0);
+  await expect(page.getByTestId('drawing-tool-trend-line')).toHaveAttribute('aria-pressed', 'true');
 });

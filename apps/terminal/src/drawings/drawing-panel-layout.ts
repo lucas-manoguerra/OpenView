@@ -167,6 +167,7 @@ export const startDrawingPanelDrag = (
   event.preventDefault();
 
   const pointerId = event.pointerId;
+  const dragTarget = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
   const startX = event.clientX;
   const startY = event.clientY;
   const startLeft = panel.offsetLeft;
@@ -179,6 +180,9 @@ export const startDrawingPanelDrag = (
     }
 
     active = false;
+    if (dragTarget?.hasPointerCapture(pointerId)) {
+      dragTarget.releasePointerCapture(pointerId);
+    }
     window.removeEventListener('pointermove', handlePointerMove, true);
     window.removeEventListener('pointerup', handlePointerEnd, true);
     window.removeEventListener('pointercancel', handlePointerEnd, true);
@@ -207,6 +211,8 @@ export const startDrawingPanelDrag = (
       cleanup();
     }
   };
+
+  dragTarget?.setPointerCapture(pointerId);
 
   window.addEventListener('pointermove', handlePointerMove, true);
   window.addEventListener('pointerup', handlePointerEnd, true);

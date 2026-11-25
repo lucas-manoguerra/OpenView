@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef, useState } from 'preact/hooks';
 import type { Candle } from '@openview/market-domain';
 import type { CandleInterval } from '@openview/market-data';
 import { ChartTypeSelector, PriceScaleSelector, type ChartControlOption } from './ui';
+import { DrawingToolCatalogMenu } from './DrawingToolCatalogMenu';
 import {
   DEFAULT_DRAWING_INTERACTION_PREFERENCES,
   loadBrowserDrawingInteractionPreferences,
@@ -1549,7 +1550,7 @@ export function ChartCanvas({
 
   return (
     <div class="grid h-[390px] min-h-[340px] w-full grid-cols-[38px_minmax(0,1fr)] bg-[#0b0f17]">
-      <aside class="flex min-w-0 flex-col items-center gap-1 border-r border-white/10 bg-[#101723] py-2">
+      <aside class="relative flex max-h-full min-w-0 flex-col items-center gap-1 overflow-y-auto border-r border-white/10 bg-[#101723] py-2">
         <button
           type="button"
           aria-label="Cursor y navegación"
@@ -1582,6 +1583,10 @@ export function ChartCanvas({
         >
           ◉
         </button>
+        <DrawingToolCatalogMenu
+          activeTool={drawingTool}
+          onSelect={(tool) => handleDrawingToolChange(tool)}
+        />
         <div class="relative z-30">
           <button
             type="button"
@@ -2243,7 +2248,7 @@ export function ChartCanvas({
           </span>
         </div>
         {selectedDrawing !== null && (
-          <div class="absolute left-4 top-12 z-30 flex items-center gap-1">
+          <div class="absolute right-3 top-12 z-30 flex items-center justify-end gap-1">
             <button
               type="button"
               aria-label="Mostrar u ocultar panel de estilo"
@@ -2461,7 +2466,7 @@ export function ChartCanvas({
               data-panel-left={drawingPanelLayout.positions.coordinates?.left ?? 'default'}
               data-panel-top={drawingPanelLayout.positions.coordinates?.top ?? 'default'}
               aria-label="Coordenadas del dibujo"
-              class="absolute left-3 top-24 z-20 w-56 rounded-xl border border-white/10 bg-[#101723]/95 p-3 shadow-xl backdrop-blur"
+              class="absolute left-3 top-24 z-20 w-56 max-w-[calc(100%_-_3rem)] max-h-[25%] overflow-y-auto rounded-xl border border-white/10 bg-[#101723]/95 p-3 shadow-xl backdrop-blur"
               style={
                 drawingPanelLayout.positions.coordinates === null
                   ? undefined
@@ -2613,7 +2618,7 @@ export function ChartCanvas({
             data-testid="drawing-properties-panel"
             data-panel-left={drawingPanelLayout.positions.appearance?.left ?? 'default'}
             data-panel-top={drawingPanelLayout.positions.appearance?.top ?? 'default'}
-            class="absolute bottom-10 left-3 z-20 w-64 rounded-xl border border-white/10 bg-[#101723]/95 p-3 shadow-2xl backdrop-blur"
+            class="absolute bottom-10 left-3 z-20 w-64 max-w-[calc(100%_-_3rem)] max-h-[60%] overflow-y-auto rounded-xl border border-white/10 bg-[#101723]/95 p-3 shadow-2xl backdrop-blur"
             style={
               drawingPanelLayout.positions.appearance === null
                 ? undefined
