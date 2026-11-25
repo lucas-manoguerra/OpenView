@@ -1765,7 +1765,9 @@ test('moves all selected drawings by one bar and one market tick with arrow keys
     await page.mouse.up();
   };
   const readSelectedPrices = async (): Promise<number[]> =>
-    JSON.parse((await canvas.getAttribute('data-selected-drawing-start-prices')) ?? '[]') as number[];
+    JSON.parse(
+      (await canvas.getAttribute('data-selected-drawing-start-prices')) ?? '[]',
+    ) as number[];
   const readSelectedTimestamps = async (): Promise<number[]> =>
     JSON.parse(
       (await canvas.getAttribute('data-selected-drawing-start-timestamps')) ?? '[]',
@@ -1790,12 +1792,16 @@ test('moves all selected drawings by one bar and one market tick with arrow keys
 
   await canvas.focus();
   await page.keyboard.press('ArrowRight');
-  await expect.poll(readSelectedTimestamps).toEqual(timestampsBefore.map((value) => value + 60_000));
+  await expect
+    .poll(readSelectedTimestamps)
+    .toEqual(timestampsBefore.map((value) => value + 60_000));
   await expect.poll(readSelectedPrices).toEqual(pricesBefore);
 
   const timestampsAfterRight = await readSelectedTimestamps();
   await page.keyboard.press('ArrowUp');
-  await expect.poll(readSelectedPrices).toEqual(pricesBefore.map((value) => value + tickSize));
+  await expect
+    .poll(readSelectedPrices)
+    .toEqual(pricesBefore.map((value) => value + tickSize));
   await expect.poll(readSelectedTimestamps).toEqual(timestampsAfterRight);
   await expect(canvas).toHaveAttribute('data-selected-drawing-count', '2');
   await expect(canvas).toHaveAttribute('data-drawing-undo-count', '4');
@@ -1839,7 +1845,9 @@ test('nudges every selected drawing by one bar and one provider tick', async ({ 
     await page.mouse.up();
   };
   const readSelectedPrices = async (): Promise<number[]> =>
-    JSON.parse((await canvas.getAttribute('data-selected-drawing-start-prices')) ?? '[]') as number[];
+    JSON.parse(
+      (await canvas.getAttribute('data-selected-drawing-start-prices')) ?? '[]',
+    ) as number[];
   const readSelectedTimestamps = async (): Promise<number[]> =>
     JSON.parse(
       (await canvas.getAttribute('data-selected-drawing-start-timestamps')) ?? '[]',
