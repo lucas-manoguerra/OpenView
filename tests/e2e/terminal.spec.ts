@@ -2628,7 +2628,7 @@ test('discovers drawing tools by family and activates implemented tools', async 
   await page.getByTestId('drawing-tool-catalog-toggle').click();
   const catalog = page.getByTestId('drawing-tool-catalog');
   await expect(catalog).toBeVisible();
-  await expect(catalog.getByRole('navigation', { name: 'Familias de herramientas' }).getByRole('button')).toHaveCount(11);
+  await expect(\n    catalog.getByRole('navigation', { name: 'Familias de herramientas' }).getByRole('button'),\n  ).toHaveCount(11);
 
   await expect(catalog.getByTestId('drawing-tool-catalog-item-trend-line')).toBeEnabled();
   await expect(catalog.getByTestId('drawing-tool-catalog-item-fib-retracement')).toBeDisabled();
