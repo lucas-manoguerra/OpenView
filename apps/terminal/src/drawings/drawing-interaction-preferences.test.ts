@@ -20,16 +20,18 @@ class MemoryStorage {
 
 describe('drawing interaction preferences', () => {
   it('defaults to magnet mode off', () => {
-    expect(DEFAULT_DRAWING_INTERACTION_PREFERENCES).toEqual({ magnetMode: 'off' });
+    expect(DEFAULT_DRAWING_INTERACTION_PREFERENCES).toEqual({ magnetMode: 'off', snapToIndicators: false });
   });
 
   it('restores supported magnet modes', () => {
     expect(
       restoreDrawingInteractionPreferences(JSON.stringify({ version: 1, magnetMode: 'weak' })),
-    ).toEqual({ magnetMode: 'weak' });
+    ).toEqual({ magnetMode: 'weak', snapToIndicators: false });
     expect(
-      restoreDrawingInteractionPreferences(JSON.stringify({ version: 1, magnetMode: 'strong' })),
-    ).toEqual({ magnetMode: 'strong' });
+      restoreDrawingInteractionPreferences(
+        JSON.stringify({ version: 1, magnetMode: 'strong', snapToIndicators: true }),
+      ),
+    ).toEqual({ magnetMode: 'strong', snapToIndicators: true });
   });
 
   it('falls back for malformed or unsupported preferences', () => {
@@ -45,9 +47,9 @@ describe('drawing interaction preferences', () => {
   it('persists and restores preferences through the browser storage contract', () => {
     const storage = new MemoryStorage();
 
-    saveDrawingInteractionPreferences(storage, { magnetMode: 'strong' });
+    saveDrawingInteractionPreferences(storage, { magnetMode: 'strong', snapToIndicators: true });
 
-    expect(loadDrawingInteractionPreferences(storage)).toEqual({ magnetMode: 'strong' });
+    expect(loadDrawingInteractionPreferences(storage)).toEqual({ magnetMode: 'strong', snapToIndicators: true });
   });
 
   it('uses defaults when storage is unavailable or throws', () => {
@@ -65,7 +67,7 @@ describe('drawing interaction preferences', () => {
       DEFAULT_DRAWING_INTERACTION_PREFERENCES,
     );
     expect(() =>
-      saveDrawingInteractionPreferences(blockedStorage, { magnetMode: 'weak' }),
+      saveDrawingInteractionPreferences(blockedStorage, { magnetMode: 'weak', snapToIndicators: false }),
     ).not.toThrow();
   });
 });
