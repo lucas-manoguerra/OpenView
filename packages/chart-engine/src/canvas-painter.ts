@@ -254,8 +254,6 @@ export const updateChartRenderScene = (
   const frame = update.frame ?? scene.frame;
   const crosshair = update.crosshair === undefined ? scene.crosshair : update.crosshair;
   const chartType = update.chartType ?? scene.chartType;
-  const selectedDrawingId =
-    update.selectedDrawingId === undefined ? scene.selectedDrawingId : update.selectedDrawingId;
   const indicators =
     update.indicators === undefined || update.indicators === scene.indicators
       ? scene.indicators
