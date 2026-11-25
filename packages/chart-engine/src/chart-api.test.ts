@@ -59,6 +59,44 @@ describe('chart public API', () => {
     expect(() => chart.exportSnapshot()).toThrow('destroyed');
   });
 
+  it('owns drawing mutations and selection through public commands', () => {
+    const { surface } = createSurface();
+    const chart = createChart({
+      surface,
+      initialScene: createScene(),
+      renderer: { scheduler: { requestFrame: () => 1, cancelFrame: () => {} } },
+    });
+    const listener = vi.fn();
+    chart.subscribe(listener);
+    const drawing = {
+      id: 'drawing-1',
+      type: 'trend-line' as const,
+      start: { time: 1, price: 2 },
+      end: { time: 2, price: 3 },
+      color: '#ffffff',
+    };
+
+    chart.execute({ type: 'set-drawings', drawings: [drawing] });
+    expect(chart.exportSnapshot().scene.drawings).toEqual([drawing]);
+    expect(listener).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'drawing-state-changed',
+        drawings: [drawing],
+        selectedDrawingId: null,
+        selectedDrawingIds: [],
+      }),
+    );
+
+    chart.execute({ type: 'set-drawing-selection', drawingIds: ['missing', 'drawing-1'] });
+    expect(chart.exportSnapshot().scene.selectedDrawingId).toBe('drawing-1');
+    expect(chart.exportSnapshot().scene.selectedDrawingIds).toEqual(['drawing-1']);
+
+    chart.execute({ type: 'set-drawings', drawings: [] });
+    expect(chart.exportSnapshot().scene.selectedDrawingId).toBeNull();
+    expect(chart.exportSnapshot().scene.selectedDrawingIds).toEqual([]);
+    chart.destroy();
+  });
+
   it('round-trips a serializable object order snapshot', () => {
     const { surface } = createSurface();
     const chart = createChart({
