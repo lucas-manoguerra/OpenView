@@ -1148,6 +1148,7 @@ export const drawChartScene = (
   drawAxes(context, scene, theme);
   drawVolumeBackground(context, scene, theme);
   drawGrid(context, scene, theme);
+  let drawingsRendered = false;
   for (const item of scene.objectOrder) {
     if (item.kind === 'price-series' && item.id === 'main') {
       if (scene.chartType === 'candles') {
@@ -1164,13 +1165,13 @@ export const drawChartScene = (
       if (indicator !== undefined) {
         drawIndicators(context, { ...scene, indicators: [indicator] });
       }
-    } else if (item.kind === 'drawing') {
+    } else if (item.kind === 'drawing' && !drawingsRendered) {
       const orderedDrawings = scene.objectOrder
         .filter((candidate) => candidate.kind === 'drawing')
         .map((candidate) => scene.drawings.find((drawing) => drawing.id === candidate.id))
         .filter((drawing): drawing is ChartRenderDrawing => drawing !== undefined);
       drawDrawings(context, { ...scene, drawings: orderedDrawings });
-      break;
+      drawingsRendered = true;
     }
   }
   drawCrosshair(context, scene, theme);
