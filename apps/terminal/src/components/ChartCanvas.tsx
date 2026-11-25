@@ -9,7 +9,6 @@ import {
   saveBrowserDrawingInteractionPreferences,
 } from '../drawings/drawing-interaction-preferences';
 import {
-  BUILT_IN_DRAWING_STYLE_TEMPLATES,
   MAX_CUSTOM_DRAWING_TEMPLATES,
   createDrawingStyleTemplate,
   loadBrowserDrawingStyleTemplates,
@@ -319,7 +318,7 @@ export function ChartCanvas({
   >([]);
   const [drawingTemplatesExpanded, setDrawingTemplatesExpanded] = useState(false);
   const [drawingTemplatesLoaded, setDrawingTemplatesLoaded] = useState(false);
-  const [selectedDrawingTemplateId, setSelectedDrawingTemplateId] = useState('builtin-blue');
+  const [selectedDrawingTemplateId, setSelectedDrawingTemplateId] = useState('');
   const [newDrawingTemplateName, setNewDrawingTemplateName] = useState('');
   const [drawingTemplateError, setDrawingTemplateError] = useState<string | null>(null);
   const [drawingToolPreferences, setDrawingToolPreferences] = useState<DrawingToolPreferences>(
@@ -1262,6 +1261,10 @@ export function ChartCanvas({
   };
 
   const handleApplyDrawingTemplate = (): void => {
+    if (selectedDrawingTemplateId === 'default' && activeTemplateTool !== null) {
+      handleSelectedDrawingUpdate(DEFAULT_DRAWING_TOOL_PREFERENCES[activeTemplateTool]);
+      return;
+    }
     const template = drawingStyleTemplates.find(
       (candidate) => candidate.id === selectedDrawingTemplateId,
     );
@@ -1282,9 +1285,12 @@ export function ChartCanvas({
       return;
     }
 
+    const templateTool = selectedDrawing?.type ?? (drawingTool === 'cursor' || drawingTool === 'select' ? null : drawingTool);
+    if (templateTool === null) return;
     const template = createDrawingStyleTemplate(
       'custom-' + crypto.randomUUID(),
       newDrawingTemplateName,
+      templateTool,
       {
         color: selectedDrawing.color,
         lineWidth: selectedDrawing.lineWidth ?? 1.5,
@@ -1318,7 +1324,7 @@ export function ChartCanvas({
 
     setCustomDrawingTemplates(nextTemplates);
     saveBrowserDrawingStyleTemplates(nextTemplates);
-    setSelectedDrawingTemplateId('builtin-blue');
+    setSelectedDrawingTemplateId('');
     setDrawingTemplateError(null);
   };
 
@@ -1538,7 +1544,9 @@ export function ChartCanvas({
   );
   const allDrawingsLocked =
     drawings.length > 0 && drawings.every((drawing) => drawing.locked === true);
-  const drawingStyleTemplates = [...BUILT_IN_DRAWING_STYLE_TEMPLATES, ...customDrawingTemplates];
+  const activeTemplateTool = selectedDrawing?.type ?? (drawingTool === 'cursor' || drawingTool === 'select' ? null : drawingTool);
+  const drawingStyleTemplates = customDrawingTemplates.filter((template) => template.tool === activeTemplateTool);
+  const activeDefaultStyle = activeTemplateTool === null ? null : DEFAULT_DRAWING_TOOL_PREFERENCES[activeTemplateTool];
   const selectedDrawingHasSingleSelection =
     selectedDrawing !== null && selectedDrawingIds.length === 1;
   const selectedDrawingsShareType =
@@ -2864,7 +2872,8 @@ export function ChartCanvas({
                     onChange={(event) => setSelectedDrawingTemplateId(event.currentTarget.value)}
                     class="w-full rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-[10px] text-slate-200 outline-none focus:border-blue-400"
                   >
-                    {drawingStyleTemplates.map((template) => (
+                    {activeDefaultStyle !== null && <option value="default">Default</option>}
+                  {drawingStyleTemplates.map((template) => (
                       <option key={template.id} value={template.id}>
                         {template.name}
                       </option>
@@ -2880,7 +2889,7 @@ export function ChartCanvas({
                       Aplicar
                     </button>
                     {customDrawingTemplates.some(
-                      (template) => template.id === selectedDrawingTemplateId,
+                      (template) => template.id === selectedDrawingTemplateId && template.tool === activeTemplateTool,
                     ) && (
                       <button
                         type="button"
