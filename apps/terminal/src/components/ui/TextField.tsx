@@ -54,6 +54,7 @@ export function TextField({
   id,
   class: className = '',
   disabled = false,
+  type = 'text',
   ...props
 }: TextFieldProps) {
   const describedBy =
@@ -84,6 +85,7 @@ export function TextField({
         {leading ? <span class="shrink-0 pl-2.5 text-xs text-[#787b86]">{leading}</span> : null}
         <input
           {...props}
+          type={type as 'text'}
           id={id}
           disabled={disabled}
           aria-invalid={error ? 'true' : undefined}
