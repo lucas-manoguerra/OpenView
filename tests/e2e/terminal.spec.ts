@@ -2053,6 +2053,7 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
 
   const panelBeforeDrag = await propertiesPanel.boundingBox();
   const dragHandle = page.getByTestId('drawing-properties-drag-handle');
+  await dragHandle.hover();
   const dragHandleBounds = await dragHandle.boundingBox();
   expect(panelBeforeDrag).not.toBeNull();
   expect(dragHandleBounds).not.toBeNull();
@@ -2405,13 +2406,13 @@ test('selects drawings with Control and moves and deletes the group together', a
     await page.mouse.up();
   };
 
-  await drawLine(0.22, 0.3);
+  await drawLine(0.2, 0.28);
   await drawLine(0.42, 0.5);
   await expect(canvas).toHaveAttribute('data-drawing-count', '2');
 
   const firstMidpoint = {
     x: bounds.x + bounds.width * 0.4,
-    y: bounds.y + bounds.height * 0.26,
+    y: bounds.y + bounds.height * 0.24,
   };
   const secondBody = {
     x: bounds.x + bounds.width * 0.4,
