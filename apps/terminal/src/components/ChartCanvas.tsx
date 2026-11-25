@@ -97,6 +97,7 @@ type ChartRuntime = Readonly<{
   invertPriceScale(): void;
   setIndicators(indicators: readonly ChartIndicatorSeries[]): void;
   setDrawings(drawings: readonly ChartRenderDrawing[]): void;
+  setDrawingsVisible(visible: boolean): void;
   setSelectedDrawingId(drawingId: string | null): void;
   setSelectedDrawingIds(drawingIds: readonly string[]): void;
   destroy(): void;
@@ -388,25 +389,19 @@ export function ChartCanvas({
     : [];
   selectedDrawingIdRef.current = selectedDrawingId;
   selectedDrawingIdsRef.current = selectedDrawingIds;
-  const getRenderableDrawings = (
-    source: readonly ChartRenderDrawing[] = drawingsRef.current,
-  ): readonly ChartRenderDrawing[] => {
-    const renderable = drawingsVisibleRef.current
-      ? source.filter((drawing) => drawing.visible !== false)
-      : [];
-    renderableDrawingsRef.current = renderable;
-    return renderable;
-  };
   commitDrawingsRef.current = (nextDrawings): void => {
     const previousDrawings = drawingsRef.current;
     const nextUndoStack = [...drawingUndoStackRef.current, previousDrawings].slice(-50);
     drawingUndoStackRef.current = Object.freeze(nextUndoStack);
     drawingRedoStackRef.current = Object.freeze([]);
     drawingsRef.current = Object.freeze([...nextDrawings]);
+    renderableDrawingsRef.current = drawingsVisibleRef.current
+      ? drawingsRef.current.filter((drawing) => drawing.visible !== false)
+      : [];
     setDrawings(drawingsRef.current);
     setDrawingUndoCount(drawingUndoStackRef.current.length);
     setDrawingRedoCount(0);
-    runtimeRef.current?.setDrawings(getRenderableDrawings(drawingsRef.current));
+    runtimeRef.current?.setDrawings(drawingsRef.current);
   };
   const ensureDrawingPanelLayoutLoaded = (): void => {
     if (drawingPanelLayoutLoadedRef.current) {
@@ -559,6 +554,27 @@ export function ChartCanvas({
       scene = nextScene;
       if (chartApi === null) {
         chartApi = createChart({ surface: canvas, initialScene: nextScene });
+        chartApi.subscribe((event) => {
+          if (event.type !== 'drawing-state-changed') {
+            return;
+          }
+          if (scene !== null) {
+            scene = updateChartRenderScene(scene, {
+              drawings: event.drawings,
+              selectedDrawingId: event.selectedDrawingId,
+              selectedDrawingIds: event.selectedDrawingIds,
+            });
+          }
+          drawingsRef.current = event.drawings;
+          renderableDrawingsRef.current = drawingsVisibleRef.current
+            ? event.drawings.filter((drawing) => drawing.visible !== false)
+            : [];
+          selectedDrawingIdRef.current = event.selectedDrawingId;
+          selectedDrawingIdsRef.current = event.selectedDrawingIds;
+          setDrawings(event.drawings);
+          setSelectedDrawingId(event.selectedDrawingId);
+          setSelectedDrawingIds(event.selectedDrawingIds);
+        });
         if (lastSize !== null) {
           chartApi.execute({
             type: 'resize',
@@ -633,7 +649,7 @@ export function ChartCanvas({
           null,
           chartTypeRef.current,
           indicatorsRef.current,
-          getRenderableDrawings(drawingsRef.current),
+          drawingsRef.current,
           selectedDrawingIdRef.current,
           selectedDrawingIdsRef.current,
         );
@@ -724,7 +740,7 @@ export function ChartCanvas({
 
             if (gesture === null) {
               scene = updateChartRenderScene(scene, {
-                drawings: getRenderableDrawings(drawingsRef.current),
+                drawings: drawingsRef.current,
               });
               publishScene(scene);
               return;
@@ -748,7 +764,7 @@ export function ChartCanvas({
               candidate.id === gesture.drawingId ? previewDrawing : candidate,
             );
             scene = updateChartRenderScene(scene, {
-              drawings: getRenderableDrawings(previewDrawings),
+              drawings: previewDrawings,
             });
             publishScene(scene);
           },
@@ -759,7 +775,7 @@ export function ChartCanvas({
 
             if (gesture === null) {
               scene = updateChartRenderScene(scene, {
-                drawings: getRenderableDrawings(drawingsRef.current),
+                drawings: drawingsRef.current,
               });
               publishScene(scene);
               return;
@@ -778,7 +794,7 @@ export function ChartCanvas({
                 : drawing,
             );
             scene = updateChartRenderScene(scene, {
-              drawings: getRenderableDrawings(previewDrawings),
+              drawings: previewDrawings,
             });
             publishScene(scene);
           },
@@ -906,7 +922,7 @@ export function ChartCanvas({
           controller.snapshot.crosshair,
           chartTypeRef.current,
           indicatorsRef.current,
-          getRenderableDrawings(drawingsRef.current),
+          drawingsRef.current,
           selectedDrawingIdRef.current,
           selectedDrawingIdsRef.current,
         );
@@ -935,7 +951,7 @@ export function ChartCanvas({
           controller.snapshot.crosshair,
           chartTypeRef.current,
           indicatorsRef.current,
-          getRenderableDrawings(drawingsRef.current),
+          drawingsRef.current,
           selectedDrawingIdRef.current,
           selectedDrawingIdsRef.current,
         );
@@ -956,23 +972,33 @@ export function ChartCanvas({
         }
 
         scene = updateChartRenderScene(scene, { drawings: nextDrawings });
-        publishScene(scene);
+        chartApi?.execute({ type: 'set-drawings', drawings: nextDrawings });
+      },
+      setDrawingsVisible: (visible: boolean): void => {
+        chartApi?.execute({ type: 'set-drawings-visible', visible });
       },
       setSelectedDrawingId: (drawingId: string | null): void => {
         if (scene === null) {
           return;
         }
 
-        scene = updateChartRenderScene(scene, { selectedDrawingId: drawingId });
-        publishScene(scene);
+        const drawingIds = drawingId === null ? [] : [drawingId];
+        scene = updateChartRenderScene(scene, {
+          selectedDrawingId: drawingId,
+          selectedDrawingIds: drawingIds,
+        });
+        chartApi?.execute({ type: 'set-drawing-selection', drawingIds });
       },
       setSelectedDrawingIds: (drawingIds: readonly string[]): void => {
         if (scene === null) {
           return;
         }
 
-        scene = updateChartRenderScene(scene, { selectedDrawingIds: drawingIds });
-        publishScene(scene);
+        scene = updateChartRenderScene(scene, {
+          selectedDrawingId: drawingIds[drawingIds.length - 1] ?? null,
+          selectedDrawingIds: drawingIds,
+        });
+        chartApi?.execute({ type: 'set-drawing-selection', drawingIds });
       },
       setChartType: (nextChartType: ChartType): void => {
         if (scene === null) {
@@ -1002,7 +1028,7 @@ export function ChartCanvas({
           null,
           chartTypeRef.current,
           indicatorsRef.current,
-          getRenderableDrawings(drawingsRef.current),
+          drawingsRef.current,
           selectedDrawingIdRef.current,
           selectedDrawingIdsRef.current,
         );
@@ -1060,7 +1086,7 @@ export function ChartCanvas({
           setDrawings(drawingsRef.current);
           setDrawingUndoCount(0);
           setDrawingRedoCount(0);
-          runtimeRef.current?.setDrawings(getRenderableDrawings(drawingsRef.current));
+          runtimeRef.current?.setDrawings(drawingsRef.current);
         }
 
         runtimeRef.current?.updateCandles(renderDataRef.current.candles, priceScaleMode);
@@ -1458,7 +1484,7 @@ export function ChartCanvas({
     if (nextDrawings.some((candidate, index) => candidate !== currentDrawings[index])) {
       commitDrawingsRef.current(nextDrawings);
     } else {
-      runtimeRef.current?.setDrawings(getRenderableDrawings(currentDrawings));
+      runtimeRef.current?.setDrawings(currentDrawings);
     }
 
     drawingToolRef.current = 'select';
@@ -1543,7 +1569,7 @@ export function ChartCanvas({
       ? drawingsRef.current.filter((drawing) => drawing.visible !== false)
       : [];
     setDrawingsVisible(nextVisible);
-    runtimeRef.current?.setDrawings(renderableDrawingsRef.current);
+    runtimeRef.current?.setDrawingsVisible(nextVisible);
 
     if (!nextVisible) {
       updateDrawingSelection([]);
@@ -1578,7 +1604,7 @@ export function ChartCanvas({
     setDrawings(previousDrawings);
     setDrawingUndoCount(drawingUndoStackRef.current.length);
     setDrawingRedoCount(drawingRedoStackRef.current.length);
-    runtimeRef.current?.setDrawings(getRenderableDrawings(previousDrawings));
+    runtimeRef.current?.setDrawings(previousDrawings);
   };
 
   const handleDrawingRedo = (): void => {
@@ -1596,7 +1622,7 @@ export function ChartCanvas({
     setDrawings(nextDrawings);
     setDrawingUndoCount(drawingUndoStackRef.current.length);
     setDrawingRedoCount(drawingRedoStackRef.current.length);
-    runtimeRef.current?.setDrawings(getRenderableDrawings(nextDrawings));
+    runtimeRef.current?.setDrawings(nextDrawings);
   };
 
   const handleAutoScaleChange = (): void => {
