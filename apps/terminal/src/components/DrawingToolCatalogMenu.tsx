@@ -4,7 +4,7 @@ import {
   DRAWING_TOOL_GROUPS,
   getDrawingToolsByGroup,
   type DrawingToolGroup,
-} from '../../drawings/drawing-tool-catalog';
+} from '../drawings/drawing-tool-catalog';
 
 export type ImplementedDrawingToolId =
   | 'trend-line'
