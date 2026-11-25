@@ -146,3 +146,19 @@ test('opens modal dialogs with focus containment, Escape and focus restoration',
   await page.mouse.click(12, 12);
   await expect(dialog).toBeHidden();
 });
+
+test('inspects the centralized Lucide icon catalog and its accessible variants', async ({ page }) => {
+  await page.goto('/component-lab/core/icons');
+
+  await expect(page.getByRole('heading', { name: 'Icons' })).toBeVisible();
+  await expect(page.getByTestId('icon-item')).toHaveCount(38);
+  await expect(page.getByTestId('icons-current-size')).toHaveText('18px · stroke 1.8');
+
+  await page.getByLabel('Tamaño del icono').selectOption('28');
+  await expect(page.getByTestId('icons-current-size')).toHaveText('28px · stroke 1.8');
+
+  await page.getByLabel('Grosor del trazo').selectOption('2.2');
+  await expect(page.getByTestId('icons-current-size')).toHaveText('28px · stroke 2.2');
+
+  await expect(page.getByRole('img', { name: 'Tendencia alcista' })).toBeVisible();
+});
