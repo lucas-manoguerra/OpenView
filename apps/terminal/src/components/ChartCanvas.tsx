@@ -4,6 +4,7 @@ import type { CandleInterval } from '@openview/market-data';
 import {
   attachCanvasPointerEvents,
   type CanvasDrawingEditGesture,
+  type CanvasDrawingGroupEditGesture,
   type CanvasDrawingGesture,
   type CanvasDrawingTool,
   attachCanvasResizeObserver,
@@ -57,6 +58,7 @@ type ChartRuntime = Readonly<{
   setIndicators(indicators: readonly ChartIndicatorSeries[]): void;
   setDrawings(drawings: readonly ChartRenderDrawing[]): void;
   setSelectedDrawingId(drawingId: string | null): void;
+  setSelectedDrawingIds(drawingIds: readonly string[]): void;
   destroy(): void;
 }>;
 
@@ -261,6 +263,7 @@ export function ChartCanvas({
   const [drawingTool, setDrawingTool] = useState<CanvasDrawingTool>('cursor');
   const [drawings, setDrawings] = useState<readonly ChartRenderDrawing[]>([]);
   const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null);
+  const [selectedDrawingIds, setSelectedDrawingIds] = useState<readonly string[]>([]);
   const [drawingUndoCount, setDrawingUndoCount] = useState(0);
   const [drawingRedoCount, setDrawingRedoCount] = useState(0);
   const [drawingPanelPosition, setDrawingPanelPosition] = useState<DrawingPanelPosition | null>(
@@ -275,6 +278,7 @@ export function ChartCanvas({
   const drawingToolRef = useRef<CanvasDrawingTool>(drawingTool);
   const drawingsRef = useRef<readonly ChartRenderDrawing[]>(drawings);
   const selectedDrawingIdRef = useRef<string | null>(selectedDrawingId);
+  const selectedDrawingIdsRef = useRef<readonly string[]>(selectedDrawingIds);
   const drawingUndoStackRef = useRef<readonly (readonly ChartRenderDrawing[])[]>([]);
   const drawingRedoStackRef = useRef<readonly (readonly ChartRenderDrawing[])[]>([]);
   const commitDrawingsRef = useRef<(nextDrawings: readonly ChartRenderDrawing[]) => void>(() => {});
@@ -289,6 +293,7 @@ export function ChartCanvas({
   drawingToolRef.current = drawingTool;
   drawingsRef.current = drawings;
   selectedDrawingIdRef.current = selectedDrawingId;
+  selectedDrawingIdsRef.current = selectedDrawingIds;
   commitDrawingsRef.current = (nextDrawings): void => {
     const previousDrawings = drawingsRef.current;
     const nextUndoStack = [...drawingUndoStackRef.current, previousDrawings].slice(-50);
@@ -299,6 +304,17 @@ export function ChartCanvas({
     setDrawingUndoCount(drawingUndoStackRef.current.length);
     setDrawingRedoCount(0);
     runtimeRef.current?.setDrawings(drawingsRef.current);
+  };
+  const updateDrawingSelection = (drawingIds: readonly string[]): void => {
+    const availableIds = new Set(drawingsRef.current.map((drawing) => drawing.id));
+    const nextSelection = Object.freeze(
+      [...new Set(drawingIds)].filter((drawingId) => availableIds.has(drawingId)),
+    );
+    selectedDrawingIdsRef.current = nextSelection;
+    selectedDrawingIdRef.current = nextSelection[nextSelection.length - 1] ?? null;
+    setSelectedDrawingIds(nextSelection);
+    setSelectedDrawingId(selectedDrawingIdRef.current);
+    runtimeRef.current?.setSelectedDrawingIds(nextSelection);
   };
   autoScaleRef.current = autoScale;
   priceScaleLockedRef.current = priceScaleLocked;
@@ -403,6 +419,7 @@ export function ChartCanvas({
           indicatorsRef.current,
           drawingsRef.current,
           selectedDrawingIdRef.current,
+          selectedDrawingIdsRef.current,
         );
         const interactionController = createChartInteractionController(frame, {
           onChange: handleControllerChange,
@@ -424,13 +441,35 @@ export function ChartCanvas({
           getDrawings: () => drawingsRef.current,
           getCandles: () => currentCandles,
           getSelectedDrawingId: () => selectedDrawingIdRef.current,
-          onDrawingSelect: (drawingId: string | null): void => {
-            selectedDrawingIdRef.current = drawingId;
-            setSelectedDrawingId(drawingId);
-            if (scene !== null) {
-              scene = updateChartRenderScene(scene, { selectedDrawingId: drawingId });
-              renderer.setScene(scene);
+          getSelectedDrawingIds: () => selectedDrawingIdsRef.current,
+          onDrawingSelectionChange: (drawingIds: readonly string[]): void => {
+            updateDrawingSelection(drawingIds);
+          },
+          onDrawingGroupEdit: (gesture: CanvasDrawingGroupEditGesture): void => {
+            const selectedIds = new Set(gesture.drawingIds);
+            const nextDrawings = drawingsRef.current.map((drawing) =>
+              selectedIds.has(drawing.id)
+                ? updateChartDrawing(
+                    drawing,
+                    'body',
+                    gesture.origin,
+                    gesture.current,
+                    currentCandles,
+                  )
+                : drawing,
+            );
+            commitDrawingsRef.current(nextDrawings);
+          },
+          onDrawingDeleteMany: (drawingIds: readonly string[]): void => {
+            const deletedIds = new Set(drawingIds);
+            const nextDrawings = drawingsRef.current.filter((drawing) => !deletedIds.has(drawing.id));
+
+            if (nextDrawings.length === drawingsRef.current.length) {
+              return;
             }
+
+            commitDrawingsRef.current(nextDrawings);
+            updateDrawingSelection([]);
           },
           onDrawingEdit: (gesture: CanvasDrawingEditGesture): void => {
             const drawing = drawingsRef.current.find(
@@ -462,12 +501,7 @@ export function ChartCanvas({
             }
 
             commitDrawingsRef.current(nextDrawings);
-            selectedDrawingIdRef.current = null;
-            setSelectedDrawingId(null);
-            if (scene !== null) {
-              scene = updateChartRenderScene(scene, { selectedDrawingId: null });
-              renderer.setScene(scene);
-            }
+            updateDrawingSelection([]);
           },
           onDrawingComplete: (gesture: CanvasDrawingGesture): void => {
             const startTimestamp = getTimestampAtLogicalIndex(
@@ -561,6 +595,7 @@ export function ChartCanvas({
           indicatorsRef.current,
           drawingsRef.current,
           selectedDrawingIdRef.current,
+          selectedDrawingIdsRef.current,
         );
         controller.setFrame(frame);
         if (autoScaleRef.current) {
@@ -589,6 +624,7 @@ export function ChartCanvas({
           indicatorsRef.current,
           drawingsRef.current,
           selectedDrawingIdRef.current,
+          selectedDrawingIdsRef.current,
         );
         controller.setFrame(frame);
         renderer.setScene(scene);
@@ -615,6 +651,14 @@ export function ChartCanvas({
         }
 
         scene = updateChartRenderScene(scene, { selectedDrawingId: drawingId });
+        renderer.setScene(scene);
+      },
+      setSelectedDrawingIds: (drawingIds: readonly string[]): void => {
+        if (scene === null) {
+          return;
+        }
+
+        scene = updateChartRenderScene(scene, { selectedDrawingIds: drawingIds });
         renderer.setScene(scene);
       },
       setChartType: (nextChartType: ChartType): void => {
@@ -647,6 +691,7 @@ export function ChartCanvas({
           indicatorsRef.current,
           drawingsRef.current,
           selectedDrawingIdRef.current,
+          selectedDrawingIdsRef.current,
         );
         controller.setFrame(frame);
         renderer.setScene(scene);
@@ -693,6 +738,8 @@ export function ChartCanvas({
           drawingSequenceRef.current = 0;
           selectedDrawingIdRef.current = null;
           setSelectedDrawingId(null);
+          selectedDrawingIdsRef.current = Object.freeze([]);
+          setSelectedDrawingIds(selectedDrawingIdsRef.current);
           drawingsRef.current = Object.freeze([]);
           drawingUndoStackRef.current = Object.freeze([]);
           drawingRedoStackRef.current = Object.freeze([]);
@@ -733,14 +780,14 @@ export function ChartCanvas({
   const handleSelectedDrawingUpdate = (
     updates: Partial<Pick<ChartRenderDrawing, 'color' | 'lineWidth' | 'lineStyle'>>,
   ): void => {
-    const selectedId = selectedDrawingIdRef.current;
+    const selectedIds = new Set(selectedDrawingIdsRef.current);
 
-    if (selectedId === null) {
+    if (selectedIds.size === 0) {
       return;
     }
 
     const nextDrawings = drawingsRef.current.map((drawing) =>
-      drawing.id === selectedId ? Object.freeze({ ...drawing, ...updates }) : drawing,
+      selectedIds.has(drawing.id) ? Object.freeze({ ...drawing, ...updates }) : drawing,
     );
     commitDrawingsRef.current(nextDrawings);
   };
@@ -748,23 +795,19 @@ export function ChartCanvas({
   const handleClearDrawings = (): void => {
     if (drawingsRef.current.length > 0) {
       commitDrawingsRef.current([]);
-      selectedDrawingIdRef.current = null;
-      setSelectedDrawingId(null);
-      runtimeRef.current?.setSelectedDrawingId(null);
+      updateDrawingSelection([]);
     }
   };
 
   const handleDeleteSelectedDrawing = (): void => {
-    const selectedId = selectedDrawingIdRef.current;
+    const selectedIds = new Set(selectedDrawingIdsRef.current);
 
-    if (selectedId === null) {
+    if (selectedIds.size === 0) {
       return;
     }
 
-    commitDrawingsRef.current(drawingsRef.current.filter((drawing) => drawing.id !== selectedId));
-    selectedDrawingIdRef.current = null;
-    setSelectedDrawingId(null);
-    runtimeRef.current?.setSelectedDrawingId(null);
+    commitDrawingsRef.current(drawingsRef.current.filter((drawing) => !selectedIds.has(drawing.id)));
+    updateDrawingSelection([]);
   };
 
   const handleDrawingUndo = (): void => {
@@ -959,7 +1002,7 @@ export function ChartCanvas({
           aria-label="Borrar dibujo seleccionado"
           data-testid="drawing-delete-selected"
           title="Borrar selección"
-          disabled={selectedDrawingId === null}
+          disabled={selectedDrawingIds.length === 0}
           onClick={handleDeleteSelectedDrawing}
           class="grid size-8 place-items-center rounded text-xs text-slate-400 transition-colors hover:bg-rose-500/10 hover:text-rose-200 disabled:opacity-30"
         >
@@ -1019,6 +1062,8 @@ export function ChartCanvas({
           data-indicator-count={renderIndicators.length}
           data-drawing-count={drawings.length}
           data-selected-drawing-id={selectedDrawingId ?? ''}
+          data-selected-drawing-count={selectedDrawingIds.length}
+          data-selected-drawing-ids={selectedDrawingIds.join(',')}
           data-selected-drawing-color={selectedDrawing?.color ?? ''}
           data-selected-drawing-width={
             selectedDrawing === null ? '' : String(selectedDrawing.lineWidth ?? 1.5)
@@ -1312,16 +1357,18 @@ export function ChartCanvas({
                 <span aria-hidden="true" class="text-slate-500">
                   ⠿
                 </span>
-                <span class="truncate">Editar {selectedDrawing.type}</span>
+                <span class="truncate">
+                  {selectedDrawingIds.length > 1
+                    ? 'Editar ' + selectedDrawingIds.length + ' dibujos'
+                    : 'Editar ' + selectedDrawing.type}
+                </span>
               </div>
               <button
                 type="button"
                 aria-label="Cerrar editor de dibujo"
                 data-testid="drawing-editor-close"
                 onClick={() => {
-                  selectedDrawingIdRef.current = null;
-                  setSelectedDrawingId(null);
-                  runtimeRef.current?.setSelectedDrawingId(null);
+                  updateDrawingSelection([]);
                 }}
                 class="grid size-6 shrink-0 place-items-center rounded text-xs text-slate-400 hover:bg-white/10 hover:text-white"
               >
