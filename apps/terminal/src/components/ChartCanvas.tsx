@@ -2065,6 +2065,7 @@ export function ChartCanvas({
           data-chart-type={chartType}
           data-indicator-count={renderIndicators.length}
           data-drawing-count={drawings.length}
+          data-drawing-ids={drawings.map((drawing) => drawing.id).join(',')}
           data-renderable-drawing-count={renderableDrawingsRef.current.length}
           data-price-increment={priceIncrement ?? ''}
           data-drawings-locked={String(allDrawingsLocked)}
