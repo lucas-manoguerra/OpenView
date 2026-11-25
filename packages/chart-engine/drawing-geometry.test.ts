@@ -93,11 +93,10 @@ describe('chart drawing geometry', () => {
       locked: true,
     });
     const start = dataPointToChartCoordinate({ logicalIndex: 0, price: 100 }, frame);
+    const end = dataPointToChartCoordinate({ logicalIndex: 2, price: 110 }, frame);
     const middle = {
-      x: dataPointToChartCoordinate({ logicalIndex: 0, price: 100 }, frame).x * 0.5 +
-        dataPointToChartCoordinate({ logicalIndex: 2, price: 110 }, frame).x * 0.5,
-      y: dataPointToChartCoordinate({ logicalIndex: 0, price: 100 }, frame).y * 0.5 +
-        dataPointToChartCoordinate({ logicalIndex: 2, price: 110 }, frame).y * 0.5,
+      x: (start.x + end.x) / 2,
+      y: (start.y + end.y) / 2,
     };
 
     expect(hitTestChartDrawing(start, [lockedDrawing], candles, frame)).toBeNull();
