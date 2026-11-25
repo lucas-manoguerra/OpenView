@@ -21,6 +21,7 @@ describe('Bybit Spot instrument discovery', () => {
               status: 'Trading',
               baseCoin: 'BTC',
               quoteCoin: 'USDT',
+              priceFilter: { tickSize: '0.1' },
             },
             {
               symbol: 'ETHBTC',
@@ -55,6 +56,7 @@ describe('Bybit Spot instrument discovery', () => {
         symbol: 'BTC/USDT',
         baseAsset: 'BTC',
         quoteAsset: 'USDT',
+        priceIncrement: 0.1,
       },
       {
         id: 'ETH-BTC',
