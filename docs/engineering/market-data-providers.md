@@ -20,6 +20,10 @@ Los rangos históricos utilizan timestamps Unix en milisegundos y la semántica 
 
 La selección del proveedor es siempre explícita. El servicio no cambia automáticamente de exchange ni reinterpreta símbolos: un fallback silencioso podría mostrar otro mercado. Conserva el `AbortSignal` y los errores del adaptador, no agrega caché y no modifica las velas devueltas.
 
+## Frontera con la librería de gráficos
+
+`@openview/chart-engine` es una librería de visualización independiente, no un cliente de proveedores. Los proveedores y sus adaptadores pertenecen a la aplicación host (`@openview/market-data` en OpenView Terminal). La terminal obtiene los datos, aplica la normalización al contrato neutral de `@openview/market-domain` y entrega al chart series OHLCV estandarizadas. El chart no conoce proveedores, símbolos específicos de exchanges, endpoints, autenticación, paginación, límites ni streams de mercado. Esta separación permite conectar cualquier proveedor compatible o datos estáticos desde otra aplicación host.
+
 ## Integración en la terminal
 
 La terminal utiliza `HistoricalCandleService` desde el componente `MarketChart` y entrega las velas normalizadas a `ChartCanvas`. El componente visual no conoce endpoints ni formatos de exchanges.

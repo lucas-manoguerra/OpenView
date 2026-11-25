@@ -177,6 +177,75 @@ describe('chart public API', () => {
     chart.destroy();
   });
 
+  it('commits single and grouped drawing edits inside chart-owned canonical state', () => {
+    const { surface } = createSurface();
+    const candles = [
+      { timestamp: 1, open: 2, high: 4, low: 1, close: 3, volume: 10, logicalIndex: 0 },
+      { timestamp: 2, open: 3, high: 5, low: 2, close: 4, volume: 12, logicalIndex: 1 },
+    ];
+    const frame = createChartFrame(320, 240, { min: 0, max: 10 }, 1);
+    const chart = createChart({
+      surface,
+      initialScene: createChartRenderScene(frame, candles),
+      renderer: { scheduler: { requestFrame: () => 1, cancelFrame: () => {} } },
+    });
+    const drawings = [
+      {
+        id: 'drawing-single',
+        type: 'trend-line' as const,
+        start: { timestamp: 1, price: 2 },
+        end: { timestamp: 2, price: 3 },
+        color: '#ffffff',
+      },
+      {
+        id: 'drawing-group',
+        type: 'trend-line' as const,
+        start: { timestamp: 1, price: 4 },
+        end: { timestamp: 2, price: 5 },
+        color: '#ffffff',
+      },
+    ];
+    chart.execute({ type: 'set-drawings', drawings });
+    chart.execute({ type: 'set-drawing-selection', drawingIds: ['drawing-single'] });
+
+    chart.execute({
+      type: 'set-drawing-edit-preview',
+      gesture: {
+        kind: 'single',
+        drawingId: 'drawing-single',
+        target: 'end',
+        origin: { logicalIndex: 1, price: 3 },
+        current: { logicalIndex: 1, price: 4 },
+      },
+    });
+    chart.execute({
+      type: 'commit-drawing-edit',
+      gesture: {
+        kind: 'single',
+        drawingId: 'drawing-single',
+        target: 'end',
+        origin: { logicalIndex: 1, price: 3 },
+        current: { logicalIndex: 1, price: 4 },
+      },
+    });
+    expect(chart.exportSnapshot().scene.drawings[0]?.end?.price).toBe(4);
+    expect(chart.exportSnapshot().scene.selectedDrawingIds).toEqual(['drawing-single']);
+
+    chart.execute({
+      type: 'commit-drawing-edit',
+      gesture: {
+        kind: 'group',
+        drawingIds: ['drawing-single', 'drawing-group'],
+        origin: { logicalIndex: 0, price: 2 },
+        current: { logicalIndex: 0, price: 3 },
+      },
+    });
+    const committed = chart.exportSnapshot().scene.drawings;
+    expect(committed[0]?.start.price).toBe(3);
+    expect(committed[1]?.start.price).toBe(5);
+    chart.destroy();
+  });
+
   it('preserves chart-owned drawings and selection when the host updates the scene', () => {
     const { surface } = createSurface();
     const chart = createChart({
