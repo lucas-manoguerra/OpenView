@@ -130,7 +130,13 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
   };
 
   const emitHistoryState = (): void => {
-    emit(Object.freeze({ type: 'history-state-changed', undoCount: drawingUndoStack.length, redoCount: drawingRedoStack.length }));
+    emit(
+      Object.freeze({
+        type: 'history-state-changed',
+        undoCount: drawingUndoStack.length,
+        redoCount: drawingRedoStack.length,
+      }),
+    );
   };
 
   const emitDrawingState = (): void => {
@@ -211,12 +217,18 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
         if (destination.length > 50) destination.shift();
         drawingPreview = null;
         const availableIds = new Set(previousDrawings.map((drawing) => drawing.id));
-        const selectedDrawingIds = Object.freeze(scene.selectedDrawingIds.filter((id) => availableIds.has(id)));
+        const selectedDrawingIds = Object.freeze(
+          scene.selectedDrawingIds.filter((id) => availableIds.has(id)),
+        );
         const selectedDrawingId =
           scene.selectedDrawingId !== null && availableIds.has(scene.selectedDrawingId)
             ? scene.selectedDrawingId
             : (selectedDrawingIds[selectedDrawingIds.length - 1] ?? null);
-        scene = updateChartRenderScene(scene, { drawings: previousDrawings, selectedDrawingId, selectedDrawingIds });
+        scene = updateChartRenderScene(scene, {
+          drawings: previousDrawings,
+          selectedDrawingId,
+          selectedDrawingIds,
+        });
         objectOrder = reconcileChartObjectOrder(objectOrder, getAvailableObjects(scene));
         render();
         emitDrawingState();
