@@ -132,14 +132,9 @@ describe('chart drawing geometry', () => {
     const selectedStart = dataPointToChartCoordinate({ logicalIndex: 0, price: 100 }, frame);
 
     expect(
-      hitTestChartDrawing(
-        selectedStart,
-        [trendDrawing, overlappingLine],
-        candles,
-        frame,
-        8,
-        ['trend-1'],
-      ),
+      hitTestChartDrawing(selectedStart, [trendDrawing, overlappingLine], candles, frame, 8, [
+        'trend-1',
+      ]),
     ).toEqual({
       drawingId: 'trend-1',
       target: 'start',
