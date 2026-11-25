@@ -128,3 +128,12 @@ export {
   snapChartDrawingPointToOhlc,
   type ChartDrawingMagnetMode,
 } from './drawing-magnet';
+
+export {
+  createChartObjectOrder,
+  moveChartObjectInOrder,
+  reconcileChartObjectOrder,
+  type ChartObjectKind,
+  type ChartObjectOrderAction,
+  type ChartObjectOrderItem,
+} from './chart-object-order';
