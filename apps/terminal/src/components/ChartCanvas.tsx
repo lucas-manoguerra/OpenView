@@ -2248,7 +2248,7 @@ export function ChartCanvas({
           </span>
         </div>
         {selectedDrawing !== null && (
-          <div class="absolute left-4 top-12 z-30 flex items-center gap-1">
+          <div class="absolute right-3 top-12 z-30 flex items-center justify-end gap-1">
             <button
               type="button"
               aria-label="Mostrar u ocultar panel de estilo"
