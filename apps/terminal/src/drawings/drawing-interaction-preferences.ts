@@ -2,6 +2,7 @@ import type { ChartDrawingMagnetMode } from '@openview/chart-engine';
 
 export type DrawingInteractionPreferences = Readonly<{
   magnetMode: ChartDrawingMagnetMode;
+  snapToIndicators: boolean;
 }>;
 
 type StringStorage = Pick<Storage, 'getItem' | 'setItem'>;
@@ -10,7 +11,7 @@ const STORAGE_KEY = 'openview.chart.drawing-interaction-preferences';
 const STORAGE_VERSION = 1;
 
 export const DEFAULT_DRAWING_INTERACTION_PREFERENCES: DrawingInteractionPreferences = Object.freeze(
-  { magnetMode: 'off' },
+  { magnetMode: 'off', snapToIndicators: false },
 );
 
 const isChartDrawingMagnetMode = (value: unknown): value is ChartDrawingMagnetMode =>
@@ -37,6 +38,10 @@ export const restoreDrawingInteractionPreferences = (
 
     return Object.freeze({
       magnetMode: Reflect.get(parsed, 'magnetMode'),
+      snapToIndicators:
+        typeof Reflect.get(parsed, 'snapToIndicators') === 'boolean'
+          ? Reflect.get(parsed, 'snapToIndicators')
+          : false,
     });
   } catch {
     return DEFAULT_DRAWING_INTERACTION_PREFERENCES;
@@ -71,6 +76,7 @@ export const saveDrawingInteractionPreferences = (
       JSON.stringify({
         version: STORAGE_VERSION,
         magnetMode: preferences.magnetMode,
+        snapToIndicators: preferences.snapToIndicators,
       }),
     );
   } catch {
