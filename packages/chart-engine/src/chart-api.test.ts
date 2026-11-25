@@ -43,6 +43,15 @@ describe('chart public API', () => {
     const snapshot = chart.exportSnapshot();
     expect(snapshot.version).toBe(1);
     expect(snapshot.objectOrder).toHaveLength(2);
+    chart.execute({
+      type: 'move-object',
+      target: { kind: 'price-series', id: 'main' },
+      action: 'front',
+    });
+    expect(chart.exportSnapshot().objectOrder.at(-1)).toEqual({
+      kind: 'price-series',
+      id: 'main',
+    });
 
     unsubscribe();
     chart.destroy();
