@@ -2470,7 +2470,8 @@ export function ChartCanvas({
         </fieldset>
         {selectedDrawingHasSingleSelection &&
           selectedDrawing !== null &&
-          drawingPanelLayout.visible.coordinates && (
+          drawingPanelLayout.visible.coordinates &&
+          (drawingTool === 'cursor' || drawingTool === 'select') && (
             <DrawingCoordinatesPanel
               selectedDrawing={selectedDrawing}
               panelPosition={drawingPanelLayout.positions.coordinates}
@@ -2481,7 +2482,9 @@ export function ChartCanvas({
             />
           )}
 
-        {selectedDrawing !== null && drawingPanelLayout.visible.appearance && (
+        {selectedDrawing !== null &&
+          drawingPanelLayout.visible.appearance &&
+          (drawingTool === 'cursor' || drawingTool === 'select') && (
           <DrawingPropertiesPanel
             selectedDrawing={selectedDrawing}
             selectedDrawingIds={selectedDrawingIds}
