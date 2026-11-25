@@ -78,6 +78,10 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
     renderer.setScene(updateChartRenderScene(scene, { objectOrder }));
   };
 
+  renderer.resize(
+    scene.frame.layout.bounds.width,
+    scene.frame.layout.bounds.height,
+  );
   render();
 
   return Object.freeze({
