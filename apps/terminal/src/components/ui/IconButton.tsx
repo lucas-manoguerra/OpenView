@@ -1,6 +1,6 @@
 import type { ComponentChildren, JSX } from 'preact';
 
-export type IconButtonProps = Omit<JSX.ButtonHTMLAttributes<HTMLButtonElement>, 'size'> & {
+export type IconButtonProps = Omit<JSX.HTMLAttributes<HTMLButtonElement>, 'size'> & {
   label: string;
   size?: 'small' | 'medium' | 'large';
   active?: boolean;
@@ -25,7 +25,7 @@ export function IconButton({
   return (
     <button
       {...props}
-      type={props.type ?? 'button'}
+      type={props['type'] ?? 'button'}
       aria-label={label}
       aria-pressed={active}
       disabled={disabled}
@@ -40,7 +40,9 @@ export function IconButton({
           ? 'border-[#2962ff]/40 bg-[#2962ff]/15 text-[#6b9eff]'
           : 'border-transparent bg-transparent hover:border-[#434651] hover:bg-[#2a2e39] hover:text-[#d1d4dc]',
         className,
-      ].filter(Boolean).join(' ')}
+      ]
+        .filter(Boolean)
+        .join(' ')}
     >
       {children}
     </button>
