@@ -50,21 +50,41 @@ describe('drawing style templates', () => {
       lineWidth: 2,
       lineStyle: 'dashed',
     });
-    expect(createDrawingStyleTemplate('custom-name', '   ', {
-      color: '#60a5fa',
-      lineWidth: 1.5,
-      lineStyle: 'solid',
-    })).toBeNull();
+    expect(
+      createDrawingStyleTemplate('custom-name', '   ', {
+        color: '#60a5fa',
+        lineWidth: 1.5,
+        lineStyle: 'solid',
+      }),
+    ).toBeNull();
   });
 
   it('rejects invalid identifiers, colors, widths and line patterns', () => {
     const invalidTemplates = [
       { id: 'builtin-blue', name: 'Overwrite', color: '#ffffff', lineWidth: 1, lineStyle: 'solid' },
       { id: 'custom-invalid', name: 'No color', color: 'blue', lineWidth: 1, lineStyle: 'solid' },
-      { id: 'custom-invalid', name: 'Too thin', color: '#ffffff', lineWidth: 0, lineStyle: 'solid' },
-      { id: 'custom-invalid', name: 'Too thick', color: '#ffffff', lineWidth: 9, lineStyle: 'solid' },
+      {
+        id: 'custom-invalid',
+        name: 'Too thin',
+        color: '#ffffff',
+        lineWidth: 0,
+        lineStyle: 'solid',
+      },
+      {
+        id: 'custom-invalid',
+        name: 'Too thick',
+        color: '#ffffff',
+        lineWidth: 9,
+        lineStyle: 'solid',
+      },
       { id: 'custom-invalid', name: 'Unknown', color: '#ffffff', lineWidth: 1, lineStyle: 'wavy' },
-      { id: 'custom-invalid', name: 'A'.repeat(33), color: '#ffffff', lineWidth: 1, lineStyle: 'solid' },
+      {
+        id: 'custom-invalid',
+        name: 'A'.repeat(33),
+        color: '#ffffff',
+        lineWidth: 1,
+        lineStyle: 'solid',
+      },
     ];
 
     expect(
