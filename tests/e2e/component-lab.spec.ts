@@ -49,7 +49,6 @@ test('toggles icon button active state and loading state', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Cargando' })).toBeDisabled();
 });
 
-
 test('inspects form controls in isolation and updates their values', async ({ page }) => {
   await page.goto('/component-lab');
 
