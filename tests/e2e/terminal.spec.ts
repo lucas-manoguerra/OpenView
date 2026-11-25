@@ -2112,10 +2112,25 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
   await expect(propertiesPanel).toBeHidden();
   await expect(coordinatePanel).toBeHidden();
 
+  // Re-read the canvas geometry after the floating panels have been moved and
+  // closed. Their layout changes can resize the chart between drawing and drag.
+  const dragBounds = await canvas.boundingBox();
+  expect(dragBounds).not.toBeNull();
+
+  if (dragBounds === null) {
+    throw new Error('The chart canvas must remain visible before moving a drawing.');
+  }
+
+  const dragStartX = dragBounds.x + dragBounds.width * 0.3;
+  const dragStartY = dragBounds.y + dragBounds.height * 0.34;
+  const dragEndX = dragBounds.x + dragBounds.width * 0.58;
+  const dragEndY = dragBounds.y + dragBounds.height * 0.56;
+  const dragMiddleX = (dragStartX + dragEndX) / 2;
+  const dragMiddleY = (dragStartY + dragEndY) / 2;
   const selectedImage = await canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL());
-  await page.mouse.move(middleX, middleY);
+  await page.mouse.move(dragMiddleX, dragMiddleY);
   await page.mouse.down();
-  await page.mouse.move(middleX + 35, middleY - 18);
+  await page.mouse.move(dragMiddleX + 35, dragMiddleY - 18);
   await page.mouse.up();
 
   await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-1');
@@ -2123,8 +2138,8 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
     .poll(() => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL()))
     .not.toBe(selectedImage);
 
-  const movedStartX = startX + 35;
-  const movedStartY = startY - 18;
+  const movedStartX = dragStartX + 35;
+  const movedStartY = dragStartY - 18;
   const startAnchorBefore = {
     price: Number(await canvas.getAttribute('data-selected-drawing-start-price')),
     timestamp: Number(await canvas.getAttribute('data-selected-drawing-start-timestamp')),
