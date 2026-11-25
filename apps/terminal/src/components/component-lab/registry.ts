@@ -25,6 +25,14 @@ export const componentLabRegistry: readonly ComponentLabEntry[] = [
     description: 'Catálogo Lucide Preact con tamaños, grosor y accesibilidad estandarizados.',
   },
   {
+    id: 'toolbars',
+    name: 'Toolbars',
+    family: 'Core',
+    route: '/component-lab/core/toolbars',
+    status: 'available',
+    description: 'Barras de herramientas agrupadas con selección, atajos y navegación accesible.',
+  },
+  {
     id: 'navigation',
     name: 'Navigation',
     family: 'Navigation',
