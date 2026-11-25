@@ -26,16 +26,26 @@ export type CanvasDrawingEditGesture = Readonly<{
   current: ChartDataPoint;
 }>;
 
+export type CanvasDrawingGroupEditGesture = Readonly<{
+  drawingIds: readonly string[];
+  origin: ChartDataPoint;
+  current: ChartDataPoint;
+}>;
+
 export type CanvasPointerAdapterOptions = Readonly<{
   getAutoScalePriceRange?: () => NumericRange | null;
   getDrawingTool?: () => CanvasDrawingTool;
   getDrawings?: () => readonly ChartRenderDrawing[];
   getCandles?: () => readonly ChartRenderCandle[];
   getSelectedDrawingId?: () => string | null;
+  getSelectedDrawingIds?: () => readonly string[];
   onDrawingComplete?: (drawing: CanvasDrawingGesture) => void;
   onDrawingSelect?: (drawingId: string | null) => void;
+  onDrawingSelectionChange?: (drawingIds: readonly string[]) => void;
   onDrawingEdit?: (gesture: CanvasDrawingEditGesture) => void;
+  onDrawingGroupEdit?: (gesture: CanvasDrawingGroupEditGesture) => void;
   onDrawingDelete?: (drawingId: string) => void;
+  onDrawingDeleteMany?: (drawingIds: readonly string[]) => void;
 }>;
 
 export type CanvasPointerAdapter = Readonly<{
@@ -64,6 +74,26 @@ export const attachCanvasPointerEvents = (
   let activeDrawingTool: Exclude<CanvasDrawingTool, 'cursor' | 'select'> | null = null;
   let drawingStart: ChartDataPoint | null = null;
   let activeDrawingEdit: CanvasDrawingEditGesture | null = null;
+  let activeDrawingGroupEdit: CanvasDrawingGroupEditGesture | null = null;
+
+  const getSelectedDrawingIds = (): readonly string[] => {
+    const selectedIds = options.getSelectedDrawingIds?.();
+
+    if (selectedIds !== undefined) {
+      return selectedIds;
+    }
+
+    const selectedId = options.getSelectedDrawingId?.() ?? null;
+    return selectedId === null ? [] : [selectedId];
+  };
+
+  const emitDrawingSelection = (drawingIds: readonly string[]): void => {
+    if (options.onDrawingSelectionChange !== undefined) {
+      options.onDrawingSelectionChange(Object.freeze([...drawingIds]));
+    } else {
+      options.onDrawingSelect?.(drawingIds[drawingIds.length - 1] ?? null);
+    }
+  };
 
   const releaseActivePointer = (): void => {
     if (activePointerId === null) {
@@ -96,15 +126,42 @@ export const attachCanvasPointerEvents = (
         options.getCandles?.() ?? [],
         controller.snapshot.frame,
       );
-      options.onDrawingSelect?.(hit?.drawingId ?? null);
+      const selectedIds = getSelectedDrawingIds();
 
-      if (hit !== null) {
-        activeDrawingEdit = {
-          drawingId: hit.drawingId,
-          target: hit.target,
-          origin: chartCoordinateToDataPoint(position, controller.snapshot.frame),
-          current: chartCoordinateToDataPoint(position, controller.snapshot.frame),
-        };
+      if (event.shiftKey) {
+        if (hit !== null) {
+          const nextSelection = selectedIds.includes(hit.drawingId)
+            ? selectedIds.filter((drawingId) => drawingId !== hit.drawingId)
+            : [...selectedIds, hit.drawingId];
+          emitDrawingSelection(nextSelection);
+          event.preventDefault();
+          return;
+        }
+      } else if (hit === null) {
+        emitDrawingSelection([]);
+      } else {
+        const nextSelection = selectedIds.includes(hit.drawingId)
+          ? selectedIds
+          : [hit.drawingId];
+        emitDrawingSelection(nextSelection);
+
+        const origin = chartCoordinateToDataPoint(position, controller.snapshot.frame);
+
+        if (hit.target === 'body' && nextSelection.length > 1) {
+          activeDrawingGroupEdit = {
+            drawingIds: Object.freeze([...nextSelection]),
+            origin,
+            current: origin,
+          };
+        } else {
+          activeDrawingEdit = {
+            drawingId: hit.drawingId,
+            target: hit.target,
+            origin,
+            current: origin,
+          };
+        }
+
         activePointerId = event.pointerId;
         event.preventDefault();
         canvas.setPointerCapture(event.pointerId);
@@ -144,7 +201,11 @@ export const attachCanvasPointerEvents = (
       return;
     }
 
-    if (activeDrawingTool !== null || activeDrawingEdit !== null) {
+    if (
+      activeDrawingTool !== null ||
+      activeDrawingEdit !== null ||
+      activeDrawingGroupEdit !== null
+    ) {
       return;
     }
 
@@ -156,7 +217,7 @@ export const attachCanvasPointerEvents = (
       return;
     }
 
-    if (activeDrawingEdit !== null) {
+    if (activeDrawingEdit !== null || activeDrawingGroupEdit !== null) {
       const position = getCanvasPosition(canvas, event);
       const { plotArea } = controller.snapshot.frame.layout;
       const boundedPosition = Object.freeze({
@@ -164,17 +225,26 @@ export const attachCanvasPointerEvents = (
         y: Math.max(plotArea.y, Math.min(plotArea.y + plotArea.height, position.y)),
       });
       const current = chartCoordinateToDataPoint(boundedPosition, controller.snapshot.frame);
+      const origin = activeDrawingEdit?.origin ?? activeDrawingGroupEdit?.origin;
 
       if (
-        current.logicalIndex !== activeDrawingEdit.origin.logicalIndex ||
-        current.price !== activeDrawingEdit.origin.price
+        origin !== undefined &&
+        (current.logicalIndex !== origin.logicalIndex || current.price !== origin.price)
       ) {
-        options.onDrawingEdit?.({
-          ...activeDrawingEdit,
-          current,
-        });
+        if (activeDrawingGroupEdit !== null) {
+          options.onDrawingGroupEdit?.({
+            ...activeDrawingGroupEdit,
+            current,
+          });
+        } else if (activeDrawingEdit !== null) {
+          options.onDrawingEdit?.({
+            ...activeDrawingEdit,
+            current,
+          });
+        }
       }
       activeDrawingEdit = null;
+      activeDrawingGroupEdit = null;
       releaseActivePointer();
       return;
     }
@@ -210,8 +280,9 @@ export const attachCanvasPointerEvents = (
       return;
     }
 
-    if (activeDrawingEdit !== null) {
+    if (activeDrawingEdit !== null || activeDrawingGroupEdit !== null) {
       activeDrawingEdit = null;
+      activeDrawingGroupEdit = null;
       releaseActivePointer();
       return;
     }
@@ -228,16 +299,20 @@ export const attachCanvasPointerEvents = (
   };
 
   const handleKeyDown = (event: KeyboardEvent): void => {
-    const selectedDrawingId = options.getSelectedDrawingId?.() ?? null;
+    const selectedIds = getSelectedDrawingIds();
 
-    if ((event.key === 'Delete' || event.key === 'Backspace') && selectedDrawingId !== null) {
-      options.onDrawingDelete?.(selectedDrawingId);
+    if ((event.key === 'Delete' || event.key === 'Backspace') && selectedIds.length > 0) {
+      if (options.onDrawingDeleteMany !== undefined) {
+        options.onDrawingDeleteMany(selectedIds);
+      } else {
+        options.onDrawingDelete?.(selectedIds[selectedIds.length - 1] ?? '');
+      }
       event.preventDefault();
       return;
     }
 
-    if (event.key === 'Escape' && selectedDrawingId !== null) {
-      options.onDrawingSelect?.(null);
+    if (event.key === 'Escape' && selectedIds.length > 0) {
+      emitDrawingSelection([]);
       event.preventDefault();
     }
   };
@@ -294,6 +369,7 @@ export const attachCanvasPointerEvents = (
       canvas.removeEventListener('keydown', handleKeyDown);
       drawingStart = null;
       activeDrawingEdit = null;
+      activeDrawingGroupEdit = null;
       activeDrawingTool = null;
       releaseActivePointer();
       controller.pointerCancel();
