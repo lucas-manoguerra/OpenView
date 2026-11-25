@@ -2639,6 +2639,7 @@ test('discovers drawing tools by family and activates implemented tools', async 
   await expect(catalog.getByTestId('drawing-tool-catalog-item-trend-line')).toHaveCount(0);
 
   await catalog.getByTestId('drawing-tool-catalog-search').fill('');
+  await catalog.getByTestId('drawing-tool-group-lines').click();
   await catalog.getByTestId('drawing-tool-catalog-item-trend-line').click();
   await expect(catalog).toHaveCount(0);
   await expect(page.getByTestId('drawing-tool-trend-line')).toHaveAttribute('aria-pressed', 'true');
