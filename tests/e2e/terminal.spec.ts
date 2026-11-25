@@ -2054,6 +2054,10 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
   await page.getByTestId('drawing-end-style').selectOption('circle');
   await expect(canvas).toHaveAttribute('data-selected-drawing-end-style', 'circle');
 
+  const coordinatePanelToggle = page.getByTestId('drawing-panel-toggle-coordinates');
+  await coordinatePanelToggle.click();
+  await expect(page.getByTestId('drawing-coordinate-panel')).toHaveCount(0);
+
   const panelBeforeDrag = await propertiesPanel.boundingBox();
   const dragHandle = page.getByTestId('drawing-properties-drag-handle');
   await dragHandle.hover();
@@ -2087,6 +2091,7 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
   expect(panelAfterDrag.x).toBeGreaterThan(panelBeforeDrag.x + 20);
   expect(panelAfterDrag.y).toBeGreaterThan(panelBeforeDrag.y + 10);
 
+  await coordinatePanelToggle.click();
   const coordinatePanel = page.getByTestId('drawing-coordinate-panel');
   await expect(coordinatePanel).toBeVisible();
   const coordinateBeforeDrag = await coordinatePanel.boundingBox();
