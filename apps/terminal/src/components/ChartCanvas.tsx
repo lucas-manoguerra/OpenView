@@ -738,8 +738,12 @@ export function ChartCanvas({
               return;
             }
 
+            let drawingIdSequence = drawingsRef.current.length + 1;
+            while (drawingsRef.current.some((item) => item.id === 'drawing-' + drawingIdSequence)) {
+              drawingIdSequence += 1;
+            }
             const drawing: ChartRenderDrawing = Object.freeze({
-              id: 'drawing-' + crypto.randomUUID(),
+              id: 'drawing-' + drawingIdSequence,
               type: gesture.type,
               start: Object.freeze({
                 timestamp: startTimestamp,
