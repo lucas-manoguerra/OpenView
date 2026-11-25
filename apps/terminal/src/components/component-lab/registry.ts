@@ -61,8 +61,8 @@ export const componentLabRegistry: readonly ComponentLabEntry[] = [
     name: 'Dialogs',
     family: 'Dialogs',
     route: '/component-lab/dialogs',
-    status: 'planned',
-    description: 'Modales, diálogos de comandos y configuración.',
+    status: 'available',
+    description: 'Diálogos modales con foco administrado, Escape y cierre contextual.',
   },
   {
     id: 'forms',
