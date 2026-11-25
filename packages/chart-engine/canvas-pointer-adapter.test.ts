@@ -8,6 +8,7 @@ import { createChartInteractionController } from './src/chart-interaction';
 import type { ChartRenderCandle, ChartRenderDrawing } from './src/canvas-painter';
 import {
   attachCanvasPointerEvents,
+  type CanvasDrawingAreaSelection,
   type CanvasDrawingGesture,
   type CanvasDrawingGroupEditGesture,
 } from './src/canvas-pointer-adapter';
