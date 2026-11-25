@@ -63,13 +63,55 @@ describe('drawing style templates', () => {
 
   it('rejects invalid identifiers, tools, colors, widths and line patterns', () => {
     const invalidTemplates = [
-      { id: 'builtin-blue', name: 'Overwrite', tool: 'trend-line', color: '#ffffff', lineWidth: 1, lineStyle: 'solid' },
+      {
+        id: 'builtin-blue',
+        name: 'Overwrite',
+        tool: 'trend-line',
+        color: '#ffffff',
+        lineWidth: 1,
+        lineStyle: 'solid',
+      },
       { id: 'custom-invalid', name: 'No tool', color: '#ffffff', lineWidth: 1, lineStyle: 'solid' },
-      { id: 'custom-invalid', name: 'No color', tool: 'trend-line', color: 'blue', lineWidth: 1, lineStyle: 'solid' },
-      { id: 'custom-invalid', name: 'Too thin', tool: 'trend-line', color: '#ffffff', lineWidth: 0, lineStyle: 'solid' },
-      { id: 'custom-invalid', name: 'Too thick', tool: 'trend-line', color: '#ffffff', lineWidth: 9, lineStyle: 'solid' },
-      { id: 'custom-invalid', name: 'Unknown', tool: 'trend-line', color: '#ffffff', lineWidth: 1, lineStyle: 'wavy' },
-      { id: 'custom-invalid', name: 'A'.repeat(33), tool: 'trend-line', color: '#ffffff', lineWidth: 1, lineStyle: 'solid' },
+      {
+        id: 'custom-invalid',
+        name: 'No color',
+        tool: 'trend-line',
+        color: 'blue',
+        lineWidth: 1,
+        lineStyle: 'solid',
+      },
+      {
+        id: 'custom-invalid',
+        name: 'Too thin',
+        tool: 'trend-line',
+        color: '#ffffff',
+        lineWidth: 0,
+        lineStyle: 'solid',
+      },
+      {
+        id: 'custom-invalid',
+        name: 'Too thick',
+        tool: 'trend-line',
+        color: '#ffffff',
+        lineWidth: 9,
+        lineStyle: 'solid',
+      },
+      {
+        id: 'custom-invalid',
+        name: 'Unknown',
+        tool: 'trend-line',
+        color: '#ffffff',
+        lineWidth: 1,
+        lineStyle: 'wavy',
+      },
+      {
+        id: 'custom-invalid',
+        name: 'A'.repeat(33),
+        tool: 'trend-line',
+        color: '#ffffff',
+        lineWidth: 1,
+        lineStyle: 'solid',
+      },
     ];
 
     expect(
@@ -94,7 +136,7 @@ describe('drawing style templates', () => {
     ).toHaveLength(2);
   });
 
-  it('persists, restores and caps custom templates', () => {
+  it('persists, restores and caps custom templates per drawing tool', () => {
     const storage = new MemoryStorage();
     const templates = Array.from({ length: 25 }, (_, index) =>
       createTemplate('custom-template-' + String(index), 'Estilo ' + String(index)),
@@ -115,8 +157,12 @@ describe('drawing style templates', () => {
       createTemplate('custom-ray', 'Ray support', 'ray')!,
     ]);
 
-    expect(loadDrawingStyleTemplates(storage).filter((template) => template.tool === 'trend-line')).toHaveLength(1);
-    expect(loadDrawingStyleTemplates(storage).filter((template) => template.tool === 'ray')).toHaveLength(1);
+    expect(
+      loadDrawingStyleTemplates(storage).filter((template) => template.tool === 'trend-line'),
+    ).toHaveLength(1);
+    expect(
+      loadDrawingStyleTemplates(storage).filter((template) => template.tool === 'ray'),
+    ).toHaveLength(1);
   });
 
   it('uses an empty custom template list when browser storage is blocked', () => {
