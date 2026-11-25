@@ -45,7 +45,7 @@ export function DrawingPropertiesPanelPlayground() {
 
   const saveTemplate = () => {
     const template = createDrawingStyleTemplate(
-      'component-lab-' + crypto.randomUUID(),
+      'custom-component-lab-' + crypto.randomUUID(),
       templateName,
       'trend-line',
       {
