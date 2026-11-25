@@ -1469,14 +1469,13 @@ test('returns to the cursor by default and keeps the tool active when requested'
     .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
     .toBeGreaterThan(400);
 
-  const bounds = await canvas.boundingBox();
-  expect(bounds).not.toBeNull();
-
-  if (bounds === null) {
-    throw new Error('The chart canvas must have a visible bounding box.');
-  }
-
   const drawTrendLine = async (offset: number): Promise<void> => {
+    const bounds = await canvas.boundingBox();
+
+    if (bounds === null) {
+      throw new Error('The chart canvas must have a visible bounding box.');
+    }
+
     const startX = bounds.x + bounds.width * 0.3 + offset;
     const startY = bounds.y + bounds.height * 0.34;
     const endX = bounds.x + bounds.width * 0.56 + offset;
@@ -1523,6 +1522,7 @@ test('returns to the cursor by default and keeps the tool active when requested'
     .toBeGreaterThan(400);
   await trendLineTool.click();
   await expect(canvas).toHaveAttribute('data-keep-drawing', 'true');
+  await expect(trendLineTool).toHaveAttribute('aria-pressed', 'true');
   await drawTrendLine(160);
   await expect(canvas).toHaveAttribute('data-drawing-count', '3');
   await expect(trendLineTool).toHaveAttribute('aria-pressed', 'true');
