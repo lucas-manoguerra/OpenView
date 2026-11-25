@@ -18,6 +18,7 @@ import {
   type ChartInteractionSnapshot,
   type ChartRenderCandle,
   type ChartRenderScene,
+  type ChartType,
   type NumericRange,
   type PriceScaleMode,
 } from '@openview/chart-engine';
@@ -35,6 +36,7 @@ type ChartCanvasProps = Readonly<{
 type ChartRuntime = Readonly<{
   updateCandles(candles: readonly ChartRenderCandle[], mode: PriceScaleMode): void;
   setPriceScaleMode(mode: PriceScaleMode): void;
+  setChartType(chartType: ChartType): void;
   fitContent(mode: PriceScaleMode): void;
   fitPriceScale(): void;
   scrollTimeByBars(bars: number): void;
@@ -226,13 +228,16 @@ export function ChartCanvas({
   const runtimeRef = useRef<ChartRuntime | null>(null);
   const rightOffsetInputRef = useRef<HTMLInputElement | null>(null);
   const [priceScaleMode, setPriceScaleMode] = useState<PriceScaleMode>('linear');
+  const [chartType, setChartType] = useState<ChartType>('candles');
   const [autoScale, setAutoScale] = useState(true);
   const [priceScaleLocked, setPriceScaleLocked] = useState(false);
   const [priceScaleInverted, setPriceScaleInverted] = useState(false);
   const priceScaleModeRef = useRef<PriceScaleMode>(priceScaleMode);
+  const chartTypeRef = useRef<ChartType>(chartType);
   const autoScaleRef = useRef(autoScale);
   const priceScaleLockedRef = useRef(priceScaleLocked);
   priceScaleModeRef.current = priceScaleMode;
+  chartTypeRef.current = chartType;
   autoScaleRef.current = autoScale;
   priceScaleLockedRef.current = priceScaleLocked;
   const renderCandles = useMemo(() => createRenderCandles(candles), [candles]);
@@ -309,7 +314,7 @@ export function ChartCanvas({
       );
 
       if (controller === null) {
-        scene = createChartRenderScene(frame, currentCandles);
+        scene = createChartRenderScene(frame, currentCandles, null, chartTypeRef.current);
         const interactionController = createChartInteractionController(frame, {
           onChange: handleControllerChange,
           onPriceScaleInteraction: () => {
@@ -375,7 +380,12 @@ export function ChartCanvas({
           false,
           nextRightOffset,
         );
-        scene = createChartRenderScene(frame, currentCandles, controller.snapshot.crosshair);
+        scene = createChartRenderScene(
+          frame,
+          currentCandles,
+          controller.snapshot.crosshair,
+          chartTypeRef.current,
+        );
         controller.setFrame(frame);
         if (autoScaleRef.current) {
           controller.fitPriceScale(getVisiblePriceRange(controller, currentCandles));
@@ -395,8 +405,21 @@ export function ChartCanvas({
           false,
           nextMode,
         );
-        scene = createChartRenderScene(frame, currentCandles, controller.snapshot.crosshair);
+        scene = createChartRenderScene(
+          frame,
+          currentCandles,
+          controller.snapshot.crosshair,
+          chartTypeRef.current,
+        );
         controller.setFrame(frame);
+        renderer.setScene(scene);
+      },
+      setChartType: (nextChartType: ChartType): void => {
+        if (scene === null) {
+          return;
+        }
+
+        scene = updateChartRenderScene(scene, { chartType: nextChartType });
         renderer.setScene(scene);
       },
       fitContent: (mode: PriceScaleMode): void => {
@@ -413,7 +436,7 @@ export function ChartCanvas({
           mode,
           true,
         );
-        scene = createChartRenderScene(frame, currentCandles);
+        scene = createChartRenderScene(frame, currentCandles, null, chartTypeRef.current);
         controller.setFrame(frame);
         renderer.setScene(scene);
       },
@@ -480,6 +503,12 @@ export function ChartCanvas({
     runtimeRef.current?.invertPriceScale();
   };
 
+  const handleChartTypeChange = (nextChartType: ChartType): void => {
+    chartTypeRef.current = nextChartType;
+    setChartType(nextChartType);
+    runtimeRef.current?.setChartType(nextChartType);
+  };
+
   const handlePriceScaleModeChange = (mode: PriceScaleMode): void => {
     priceScaleModeRef.current = mode;
     setPriceScaleMode(mode);
@@ -502,6 +531,7 @@ export function ChartCanvas({
           '. Arrastrar el gráfico para desplazar el tiempo, arrastrar el eje de precios para desplazar los precios, usar la rueda sobre cada área para acercar y hacer doble clic en el eje de precios para autoajustar.'
         }
         data-candles-count={renderCandles.length}
+        data-chart-type={chartType}
         data-interval={interval}
       />
       <span ref={bindDataUpdate} class="hidden" aria-hidden="true" />
@@ -516,6 +546,22 @@ export function ChartCanvas({
       </div>
       <fieldset class="absolute right-3 top-3 z-10 flex flex-wrap items-center justify-end gap-1 rounded-lg border border-white/10 bg-[#101723]/95 p-1 shadow-lg">
         <legend class="sr-only">Controles del gráfico</legend>
+        <label class="flex items-center gap-1 px-1 text-[10px] text-slate-400">
+          <span class="sr-only">Tipo de gráfico</span>
+          <select
+            value={chartType}
+            aria-label="Tipo de gráfico"
+            data-testid="chart-type-select"
+            onChange={(event) => handleChartTypeChange(event.currentTarget.value as ChartType)}
+            class="max-w-24 rounded bg-transparent px-1 py-1 text-[10px] text-slate-200 outline-none"
+          >
+            <option value="candles">Velas</option>
+            <option value="bars">Barras</option>
+            <option value="line">Línea</option>
+            <option value="area">Área</option>
+          </select>
+        </label>
+        <span class="mx-0.5 h-4 w-px bg-white/10" />
         {(
           [
             ['linear', 'Lin'],

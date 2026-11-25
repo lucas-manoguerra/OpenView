@@ -14,11 +14,14 @@ export type ChartRenderCandle = Candle &
     logicalIndex: number;
   }>;
 
+export type ChartType = 'candles' | 'bars' | 'line' | 'area';
+
 export type ChartRenderScene = Readonly<{
   frame: ChartFrame;
   candles: readonly ChartRenderCandle[];
   timeAxisData: TimeAxisData;
   crosshair: ChartCoordinate | null;
+  chartType: ChartType;
 }>;
 
 export type ChartRenderTheme = Readonly<{
@@ -54,6 +57,7 @@ export const createChartRenderScene = (
   frame: ChartFrame,
   candles: readonly ChartRenderCandle[],
   crosshair: ChartCoordinate | null = null,
+  chartType: ChartType = 'candles',
 ): ChartRenderScene => {
   let previousLogicalIndex = Number.NEGATIVE_INFINITY;
   const normalizedCandles: ChartRenderCandle[] = [];
@@ -86,12 +90,14 @@ export const createChartRenderScene = (
     candles: frozenCandles,
     timeAxisData: createTimeAxisData(frozenCandles),
     crosshair: crosshair === null ? null : Object.freeze({ ...crosshair }),
+    chartType,
   });
 };
 
 export type ChartRenderSceneUpdate = Readonly<{
   frame?: ChartFrame;
   crosshair?: ChartCoordinate | null;
+  chartType?: ChartType;
 }>;
 
 export const updateChartRenderScene = (
@@ -100,6 +106,7 @@ export const updateChartRenderScene = (
 ): ChartRenderScene => {
   const frame = update.frame ?? scene.frame;
   const crosshair = update.crosshair === undefined ? scene.crosshair : update.crosshair;
+  const chartType = update.chartType ?? scene.chartType;
 
   if (crosshair !== null && (!Number.isFinite(crosshair.x) || !Number.isFinite(crosshair.y))) {
     throw new RangeError('Crosshair coordinates must be finite numbers.');
@@ -108,7 +115,8 @@ export const updateChartRenderScene = (
   if (
     frame === scene.frame &&
     crosshair?.x === scene.crosshair?.x &&
-    crosshair?.y === scene.crosshair?.y
+    crosshair?.y === scene.crosshair?.y &&
+    chartType === scene.chartType
   ) {
     return scene;
   }
@@ -118,6 +126,7 @@ export const updateChartRenderScene = (
     candles: scene.candles,
     timeAxisData: scene.timeAxisData,
     crosshair: crosshair === null ? null : Object.freeze({ ...crosshair }),
+    chartType,
   });
 };
 
@@ -342,6 +351,109 @@ const drawCandles = (
   context.restore();
 };
 
+const drawBars = (
+  context: CanvasRenderingContext2D,
+  scene: ChartRenderScene,
+  theme: ChartRenderTheme,
+): void => {
+  const { frame } = scene;
+  const candles = getVisibleCandles(scene);
+  const { plotArea } = frame.layout;
+  const tickWidth = Math.max(1, Math.min(7, frame.timeScale.barSpacing * 0.24));
+
+  context.save();
+  context.beginPath();
+  context.rect(plotArea.x, plotArea.y, plotArea.width, plotArea.height);
+  context.clip();
+
+  for (const candle of candles) {
+    const x = plotArea.x + logicalIndexToCoordinate(candle.logicalIndex, frame.timeScale);
+    const high = plotArea.y + priceToCoordinate(candle.high, frame.priceScale);
+    const low = plotArea.y + priceToCoordinate(candle.low, frame.priceScale);
+    const open = plotArea.y + priceToCoordinate(candle.open, frame.priceScale);
+    const close = plotArea.y + priceToCoordinate(candle.close, frame.priceScale);
+
+    if (x < plotArea.x - tickWidth || x > plotArea.x + plotArea.width + tickWidth) {
+      continue;
+    }
+
+    context.strokeStyle = getCandleColor(candle, theme);
+    context.lineWidth = 1;
+    context.beginPath();
+    context.moveTo(x, high);
+    context.lineTo(x, low);
+    context.moveTo(x - tickWidth, open);
+    context.lineTo(x, open);
+    context.moveTo(x, close);
+    context.lineTo(x + tickWidth, close);
+    context.stroke();
+  }
+
+  context.restore();
+};
+
+const drawCloseSeries = (
+  context: CanvasRenderingContext2D,
+  scene: ChartRenderScene,
+  theme: ChartRenderTheme,
+  fillArea: boolean,
+): void => {
+  const { frame } = scene;
+  const candles = getVisibleCandles(scene);
+  const { plotArea } = frame.layout;
+
+  if (candles.length === 0) {
+    return;
+  }
+
+  const points = candles.map((candle) => ({
+    x: plotArea.x + logicalIndexToCoordinate(candle.logicalIndex, frame.timeScale),
+    y: plotArea.y + priceToCoordinate(candle.close, frame.priceScale),
+  }));
+
+  context.save();
+  context.beginPath();
+  context.rect(plotArea.x, plotArea.y, plotArea.width, plotArea.height);
+  context.clip();
+
+  const firstPoint = points[0];
+  const lastPoint = points[points.length - 1];
+
+  if (firstPoint === undefined || lastPoint === undefined) {
+    context.restore();
+    return;
+  }
+
+  if (fillArea) {
+    context.beginPath();
+    context.moveTo(firstPoint.x, plotArea.y + plotArea.height);
+    context.lineTo(firstPoint.x, firstPoint.y);
+
+    for (const point of points.slice(1)) {
+      context.lineTo(point.x, point.y);
+    }
+
+    context.lineTo(lastPoint.x, plotArea.y + plotArea.height);
+    context.closePath();
+    context.fillStyle = theme.bullish;
+    context.globalAlpha = 0.14;
+    context.fill();
+    context.globalAlpha = 1;
+  }
+
+  context.beginPath();
+  context.moveTo(firstPoint.x, firstPoint.y);
+
+  for (const point of points.slice(1)) {
+    context.lineTo(point.x, point.y);
+  }
+
+  context.strokeStyle = theme.bullish;
+  context.lineWidth = 1.6;
+  context.stroke();
+  context.restore();
+};
+
 const drawVolumeBackground = (
   context: CanvasRenderingContext2D,
   scene: ChartRenderScene,
@@ -467,7 +579,13 @@ export const drawChartScene = (
   drawAxes(context, scene, theme);
   drawVolumeBackground(context, scene, theme);
   drawGrid(context, scene, theme);
-  drawCandles(context, scene, theme);
+  if (scene.chartType === 'candles') {
+    drawCandles(context, scene, theme);
+  } else if (scene.chartType === 'bars') {
+    drawBars(context, scene, theme);
+  } else {
+    drawCloseSeries(context, scene, theme, scene.chartType === 'area');
+  }
   drawVolumeBars(context, scene, theme);
   drawCrosshair(context, scene, theme);
   context.restore();

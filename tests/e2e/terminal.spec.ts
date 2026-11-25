@@ -1029,6 +1029,35 @@ test('renders an interactive canvas chart and responds to pointer and wheel inpu
     .not.toBe(imageBeforeZoom);
 });
 
+test('changes chart rendering style between candles, bars, line and area', async ({ page }) => {
+  await page.goto('/');
+
+  const canvas = page.locator('canvas[data-candles-count]');
+  const chartType = page.getByTestId('chart-type-select');
+
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+  await expect(canvas).toHaveAttribute('data-chart-type', 'candles');
+
+  const initialImage = await canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL());
+
+  await chartType.selectOption('line');
+  await expect(canvas).toHaveAttribute('data-chart-type', 'line');
+  await expect
+    .poll(() => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL()))
+    .not.toBe(initialImage);
+
+  await chartType.selectOption('area');
+  await expect(canvas).toHaveAttribute('data-chart-type', 'area');
+
+  await chartType.selectOption('bars');
+  await expect(canvas).toHaveAttribute('data-chart-type', 'bars');
+
+  await chartType.selectOption('candles');
+  await expect(canvas).toHaveAttribute('data-chart-type', 'candles');
+});
+
 test('updates the canvas backing store when the terminal layout changes', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/');
