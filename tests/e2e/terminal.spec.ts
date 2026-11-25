@@ -1574,6 +1574,57 @@ test('locks all drawings and prevents selection until they are unlocked', async 
   await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-1');
 });
 
+test('hides drawings without deleting them and restores their selection', async ({ page }) => {
+  await page.goto('/');
+
+  const canvas = page.getByRole('img', {
+    name: /Gráfico interactivo de velas y volumen para BTC \/ USDT/,
+  });
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+
+  const bounds = await canvas.boundingBox();
+
+  if (bounds === null) {
+    throw new Error('The chart canvas must have a visible bounding box.');
+  }
+
+  const startX = bounds.x + bounds.width * 0.3;
+  const startY = bounds.y + bounds.height * 0.34;
+  const endX = bounds.x + bounds.width * 0.58;
+  const endY = bounds.y + bounds.height * 0.56;
+  const middleX = (startX + endX) / 2;
+  const middleY = (startY + endY) / 2;
+
+  await page.getByTestId('drawing-tool-trend-line').click();
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await page.mouse.move(endX, endY);
+  await page.mouse.up();
+  await expect(canvas).toHaveAttribute('data-drawing-count', '1');
+
+  const visibilityButton = page.getByTestId('drawings-visibility-toggle');
+  await visibilityButton.click();
+  await expect(visibilityButton).toHaveAttribute('aria-pressed', 'true');
+  await expect(visibilityButton).toHaveAttribute('aria-label', 'Mostrar dibujos');
+  await expect(canvas).toHaveAttribute('data-drawings-visible', 'false');
+  await expect(canvas).toHaveAttribute('data-drawing-count', '1');
+
+  await page.getByTestId('drawing-tool-select').click();
+  await page.mouse.click(middleX, middleY);
+  await expect(canvas).toHaveAttribute('data-selected-drawing-id', '');
+
+  await visibilityButton.click();
+  await expect(visibilityButton).toHaveAttribute('aria-pressed', 'false');
+  await expect(visibilityButton).toHaveAttribute('aria-label', 'Ocultar dibujos');
+  await expect(canvas).toHaveAttribute('data-drawings-visible', 'true');
+  await expect(canvas).toHaveAttribute('data-drawing-count', '1');
+
+  await page.mouse.click(middleX, middleY);
+  await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-1');
+});
+
 test('selects, moves, edits and deletes a drawing individually', async ({ page }) => {
   await page.goto('/');
 
