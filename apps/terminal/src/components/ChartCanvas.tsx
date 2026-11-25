@@ -1791,7 +1791,7 @@ export function ChartCanvas({
                   </label>
                 </div>
               )}
-              </section>
+            </section>
           )}
         {selectedDrawing !== null && drawingPanelLayout.visible.appearance && (
           <div
