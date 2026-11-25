@@ -1420,6 +1420,11 @@ test('persists the TradingView drawing magnet preference', async ({ page }) => {
   await page.getByTestId('drawing-magnet-weak').click();
   await expect(canvas).toHaveAttribute('data-drawing-magnet-mode', 'weak');
 
+  await page.getByTestId('drawing-magnet-toggle').click();
+  await expect(menu).toBeVisible();
+  await page.getByTestId('drawing-magnet-indicators').click();
+  await expect(canvas).toHaveAttribute('data-drawing-snap-to-indicators', 'true');
+
   const savedPreferences = await page.evaluate(() => {
     const serialized = window.localStorage.getItem(
       'openview.chart.drawing-interaction-preferences',
@@ -1428,7 +1433,11 @@ test('persists the TradingView drawing magnet preference', async ({ page }) => {
     return serialized === null ? null : JSON.parse(serialized);
   });
 
-  expect(savedPreferences).toEqual({ version: 1, magnetMode: 'weak' });
+  expect(savedPreferences).toEqual({
+    version: 1,
+    magnetMode: 'weak',
+    snapToIndicators: true,
+  });
 
   await page.reload();
   await expect
@@ -1436,10 +1445,15 @@ test('persists the TradingView drawing magnet preference', async ({ page }) => {
     .toBeGreaterThan(400);
   await page.getByTestId('drawing-tool-trend-line').click();
   await expect(canvas).toHaveAttribute('data-drawing-magnet-mode', 'weak');
+  await expect(canvas).toHaveAttribute('data-drawing-snap-to-indicators', 'true');
 
   await page.getByTestId('drawing-magnet-toggle').click();
   await expect(menu).toBeVisible();
   await expect(page.getByTestId('drawing-magnet-weak')).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByTestId('drawing-magnet-indicators')).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
 });
 
 test('selects, moves, edits and deletes a drawing individually', async ({ page }) => {
