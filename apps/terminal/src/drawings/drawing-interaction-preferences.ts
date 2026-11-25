@@ -9,8 +9,9 @@ type StringStorage = Pick<Storage, 'getItem' | 'setItem'>;
 const STORAGE_KEY = 'openview.chart.drawing-interaction-preferences';
 const STORAGE_VERSION = 1;
 
-export const DEFAULT_DRAWING_INTERACTION_PREFERENCES: DrawingInteractionPreferences =
-  Object.freeze({ magnetMode: 'off' });
+export const DEFAULT_DRAWING_INTERACTION_PREFERENCES: DrawingInteractionPreferences = Object.freeze(
+  { magnetMode: 'off' },
+);
 
 const isChartDrawingMagnetMode = (value: unknown): value is ChartDrawingMagnetMode =>
   value === 'off' || value === 'weak' || value === 'strong';
