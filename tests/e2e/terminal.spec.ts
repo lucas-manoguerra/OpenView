@@ -2060,7 +2060,6 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
 
   const panelBeforeDrag = await propertiesPanel.boundingBox();
   const dragHandle = page.getByTestId('drawing-properties-drag-handle');
-  await dragHandle.hover();
   const dragHandleBounds = await dragHandle.boundingBox();
   expect(panelBeforeDrag).not.toBeNull();
   expect(dragHandleBounds).not.toBeNull();
