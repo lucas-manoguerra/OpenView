@@ -167,6 +167,34 @@ describe('chart public API', () => {
     chart.destroy();
   });
 
+  it('owns drawing hover state and preserves it across host scene updates', () => {
+    const { surface } = createSurface();
+    const chart = createChart({
+      surface,
+      initialScene: createScene(),
+      renderer: { scheduler: { requestFrame: () => 1, cancelFrame: () => {} } },
+    });
+    const drawing = {
+      id: 'drawing-hover',
+      type: 'trend-line' as const,
+      start: { timestamp: 1, price: 2 },
+      end: { timestamp: 2, price: 3 },
+      color: '#ffffff',
+    };
+    const hit = { drawingId: 'drawing-hover', target: 'start' as const };
+
+    chart.execute({ type: 'set-drawings', drawings: [drawing] });
+    chart.execute({ type: 'set-drawing-hover', hit });
+    expect(chart.exportSnapshot().scene.hoveredDrawingHit).toEqual(hit);
+
+    chart.execute({ type: 'set-scene', scene: createScene() });
+    expect(chart.exportSnapshot().scene.hoveredDrawingHit).toEqual(hit);
+
+    chart.execute({ type: 'set-drawing-hover', hit: null });
+    expect(chart.exportSnapshot().scene.hoveredDrawingHit).toBeNull();
+    chart.destroy();
+  });
+
   it('queries visible drawing hits and area selection through chart-owned scene state', () => {
     const { surface } = createSurface();
     const candles = [
