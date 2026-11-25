@@ -1074,10 +1074,12 @@ export function ChartCanvas({
             return;
           }
 
-          drawingPropertiesDragRef.current = null;
-          if (drawingPropertiesDragRef.current === null && event.currentTarget.hasPointerCapture(event.pointerId)) {
-            event.currentTarget.releasePointerCapture(event.pointerId);
+          const panel = drawingPropertiesPanelRef.current;
+
+          if (panel !== null && panel.hasPointerCapture(event.pointerId)) {
+            panel.releasePointerCapture(event.pointerId);
           }
+          drawingPropertiesDragRef.current = null;
         }}
         onPointerCancel={(event) => {
           if (drawingPropertiesDragRef.current?.pointerId === event.pointerId) {
