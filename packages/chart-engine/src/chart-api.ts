@@ -29,6 +29,7 @@ export type ChartCommand =
   | Readonly<{ type: 'set-drawings'; drawings: readonly ChartRenderDrawing[] }>
   | Readonly<{ type: 'set-drawings-visible'; visible: boolean }>
   | Readonly<{ type: 'set-drawing-selection'; drawingIds: readonly string[] }>
+  | Readonly<{ type: 'set-drawing-hover'; hit: ChartDrawingHit | null }>
   | Readonly<{ type: 'move-object'; target: ChartObjectOrderItem; action: ChartObjectOrderAction }>
   | Readonly<{ type: 'resize'; width: number; height: number; devicePixelRatio?: number }>
   | Readonly<{ type: 'render-now' }>;
@@ -122,6 +123,7 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
           drawings: scene.drawings,
           selectedDrawingId: scene.selectedDrawingId,
           selectedDrawingIds: scene.selectedDrawingIds,
+          hoveredDrawingHit: scene.hoveredDrawingHit,
         });
         objectOrder = reconcileChartObjectOrder(objectOrder, getAvailableObjects(scene));
         render();
@@ -165,6 +167,19 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
         scene = updateChartRenderScene(scene, { selectedDrawingId, selectedDrawingIds });
         render();
         emitDrawingState();
+        return;
+      }
+
+      if (command.type === 'set-drawing-hover') {
+        if (
+          scene.hoveredDrawingHit?.drawingId === command.hit?.drawingId &&
+          scene.hoveredDrawingHit?.target === command.hit?.target
+        ) {
+          return;
+        }
+        scene = updateChartRenderScene(scene, { hoveredDrawingHit: command.hit });
+        render();
+        emit(Object.freeze({ type: 'scene-changed', scene }));
         return;
       }
 
