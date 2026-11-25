@@ -1516,6 +1516,80 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
   await expect(canvas).toHaveAttribute('data-drawing-count', '0');
 });
 
+test('selects drawings with Shift and moves and deletes the group together', async ({ page }) => {
+  await page.goto('/');
+
+  const canvas = page.getByRole('img', {
+    name: /Gráfico interactivo de velas y volumen para BTC \/ USDT/,
+  });
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+
+  const bounds = await canvas.boundingBox();
+  expect(bounds).not.toBeNull();
+
+  if (bounds === null) {
+    throw new Error('The chart canvas must have a visible bounding box.');
+  }
+
+  const drawLine = async (startY: number, endY: number) => {
+    const startX = bounds.x + bounds.width * 0.28;
+    const endX = bounds.x + bounds.width * 0.52;
+    await page.getByTestId('drawing-tool-trend-line').click();
+    await page.mouse.move(startX, bounds.y + bounds.height * startY);
+    await page.mouse.down();
+    await page.mouse.move(endX, bounds.y + bounds.height * endY);
+    await page.mouse.up();
+  };
+
+  await drawLine(0.28, 0.4);
+  await drawLine(0.6, 0.72);
+  await expect(canvas).toHaveAttribute('data-drawing-count', '2');
+
+  const firstMidpoint = {
+    x: bounds.x + bounds.width * 0.4,
+    y: bounds.y + bounds.height * 0.34,
+  };
+  const secondMidpoint = {
+    x: bounds.x + bounds.width * 0.4,
+    y: bounds.y + bounds.height * 0.66,
+  };
+
+  await page.getByTestId('drawing-tool-select').click();
+  await page.mouse.click(firstMidpoint.x, firstMidpoint.y);
+  await expect(canvas).toHaveAttribute('data-selected-drawing-count', '1');
+
+  await page.keyboard.down('Shift');
+  await page.mouse.click(secondMidpoint.x, secondMidpoint.y);
+  await page.keyboard.up('Shift');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-count', '2');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-ids', 'drawing-1,drawing-2');
+
+  const beforeGroupMove = await canvas.evaluate((element: HTMLCanvasElement) =>
+    element.toDataURL(),
+  );
+  await page.mouse.move(firstMidpoint.x, firstMidpoint.y);
+  await page.mouse.down();
+  await page.mouse.move(firstMidpoint.x + 35, firstMidpoint.y - 18);
+  await page.mouse.up();
+
+  await expect
+    .poll(() => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL()))
+    .not.toBe(beforeGroupMove);
+  await expect(canvas).toHaveAttribute('data-selected-drawing-count', '2');
+  await expect(canvas).toHaveAttribute('data-drawing-undo-count', '3');
+
+  await page.getByTestId('drawing-delete-selected').click();
+  await expect(canvas).toHaveAttribute('data-drawing-count', '0');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-count', '0');
+
+  await page.getByTestId('drawing-undo').click();
+  await expect(canvas).toHaveAttribute('data-drawing-count', '2');
+  await page.getByTestId('drawing-redo').click();
+  await expect(canvas).toHaveAttribute('data-drawing-count', '0');
+});
+
 test('renders timestamp based time labels instead of logical bar indices', async ({ page }) => {
   await page.addInitScript(() => {
     const labels: string[] = [];

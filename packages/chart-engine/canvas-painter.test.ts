@@ -403,6 +403,59 @@ describe('canvas chart painter', () => {
     ).toBe(4);
   });
 
+  it('renders handles for every drawing in a multi-selection', () => {
+    const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 10);
+    const drawings: readonly ChartRenderDrawing[] = [
+      {
+        id: 'trend-one',
+        type: 'trend-line',
+        start: { timestamp: 1_700_000_000_000, price: 100 },
+        end: { timestamp: 1_700_000_120_000, price: 105 },
+        color: '#60a5fa',
+      },
+      {
+        id: 'trend-two',
+        type: 'trend-line',
+        start: { timestamp: 1_700_000_000_000, price: 110 },
+        end: { timestamp: 1_700_000_120_000, price: 115 },
+        color: '#f4c542',
+      },
+    ];
+    const normalScene = createChartRenderScene(
+      frame,
+      createCandles(),
+      null,
+      'candles',
+      [],
+      drawings,
+    );
+    const selectedScene = createChartRenderScene(
+      frame,
+      createCandles(),
+      null,
+      'candles',
+      [],
+      drawings,
+      'trend-two',
+      ['trend-one', 'trend-two'],
+    );
+    const normalContext = createMockContext();
+    const selectedContext = createMockContext();
+
+    drawChartScene(normalContext.context, normalScene);
+    drawChartScene(selectedContext.context, selectedScene);
+
+    expect(selectedScene.selectedDrawingIds).toEqual(['trend-one', 'trend-two']);
+    expect(
+      selectedContext.calls.filter((call) => call.name === 'arc').length -
+        normalContext.calls.filter((call) => call.name === 'arc').length,
+    ).toBe(8);
+
+    const cleared = updateChartRenderScene(selectedScene, { selectedDrawingIds: [] });
+    expect(cleared.selectedDrawingId).toBeNull();
+    expect(cleared.selectedDrawingIds).toEqual([]);
+  });
+
   it('draws a separate volume panel with bars relative to the visible maximum', () => {
     const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 10, {
       layout: { volumeHeight: 80 },

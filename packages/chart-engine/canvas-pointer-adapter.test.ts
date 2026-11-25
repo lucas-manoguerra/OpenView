@@ -6,7 +6,11 @@ import {
 } from './src/chart-frame';
 import { createChartInteractionController } from './src/chart-interaction';
 import type { ChartRenderCandle, ChartRenderDrawing } from './src/canvas-painter';
-import { attachCanvasPointerEvents, type CanvasDrawingGesture } from './src/canvas-pointer-adapter';
+import {
+  attachCanvasPointerEvents,
+  type CanvasDrawingGesture,
+  type CanvasDrawingGroupEditGesture,
+} from './src/canvas-pointer-adapter';
 
 type Listener = EventListenerOrEventListenerObject;
 
@@ -402,6 +406,130 @@ describe('canvas pointer event adapter', () => {
     dispatch('pointerup', event);
 
     expect(edits).toEqual([]);
+  });
+
+  it('toggles drawing selection with Shift and moves selected drawings as a group', () => {
+    const { canvas, dispatch, capturedPointers } = createCanvasTarget();
+    const frame = createChartFrame(900, 500, { min: 90, max: 120 }, 2);
+    const controller = createChartInteractionController(frame);
+    const candles: readonly ChartRenderCandle[] = [
+      {
+        logicalIndex: 0,
+        timestamp: 1_700_000_000_000,
+        open: 100,
+        high: 110,
+        low: 95,
+        close: 105,
+        volume: 10,
+      },
+      {
+        logicalIndex: 1,
+        timestamp: 1_700_000_060_000,
+        open: 105,
+        high: 112,
+        low: 100,
+        close: 108,
+        volume: 20,
+      },
+      {
+        logicalIndex: 2,
+        timestamp: 1_700_000_120_000,
+        open: 108,
+        high: 120,
+        low: 105,
+        close: 118,
+        volume: 30,
+      },
+    ];
+    const drawings: readonly ChartRenderDrawing[] = [
+      {
+        id: 'trend-1',
+        type: 'trend-line',
+        start: { timestamp: candles[0]!.timestamp, price: 100 },
+        end: { timestamp: candles[2]!.timestamp, price: 108 },
+        color: '#60a5fa',
+      },
+      {
+        id: 'trend-2',
+        type: 'trend-line',
+        start: { timestamp: candles[0]!.timestamp, price: 110 },
+        end: { timestamp: candles[2]!.timestamp, price: 118 },
+        color: '#f4c542',
+      },
+    ];
+    let selectedIds: readonly string[] = [];
+    const selections: string[][] = [];
+    const groupEdits: CanvasDrawingGroupEditGesture[] = [];
+    const deletedGroups: string[][] = [];
+    attachCanvasPointerEvents(canvas, controller, {
+      getDrawingTool: () => 'select',
+      getDrawings: () => drawings,
+      getCandles: () => candles,
+      getSelectedDrawingIds: () => selectedIds,
+      onDrawingSelectionChange: (ids) => {
+        selectedIds = ids;
+        selections.push([...ids]);
+      },
+      onDrawingGroupEdit: (gesture) => groupEdits.push(gesture),
+      onDrawingDeleteMany: (drawingIds) => deletedGroups.push([...drawingIds]),
+    });
+
+    const firstBody = dataPointToChartCoordinate({ logicalIndex: 1, price: 104 }, frame);
+    const secondBody = dataPointToChartCoordinate({ logicalIndex: 1, price: 114 }, frame);
+    const pointerEvent = (
+      point: Readonly<{ x: number; y: number }>,
+      values: Partial<PointerEvent> = {},
+    ) =>
+      createPointerEvent({
+        clientX: 100 + point.x,
+        clientY: 50 + point.y,
+        ...values,
+      });
+
+    dispatch('pointerdown', pointerEvent(firstBody));
+    dispatch('pointerup', pointerEvent(firstBody));
+    expect(selectedIds).toEqual(['trend-1']);
+
+    dispatch('pointerdown', pointerEvent(secondBody, { shiftKey: true }));
+    dispatch('pointerup', pointerEvent(secondBody, { shiftKey: true }));
+    expect(selectedIds).toEqual(['trend-1', 'trend-2']);
+
+    dispatch('pointerdown', pointerEvent(secondBody, { shiftKey: true }));
+    dispatch('pointerup', pointerEvent(secondBody, { shiftKey: true }));
+    expect(selectedIds).toEqual(['trend-1']);
+
+    dispatch('pointerdown', pointerEvent(secondBody, { shiftKey: true }));
+    dispatch('pointerup', pointerEvent(secondBody, { shiftKey: true }));
+    expect(selectedIds).toEqual(['trend-1', 'trend-2']);
+
+    const movedBody = { x: firstBody.x + 35, y: firstBody.y - 18 };
+    dispatch('pointerdown', pointerEvent(firstBody));
+    dispatch('pointerup', pointerEvent(movedBody));
+
+    expect(groupEdits).toHaveLength(1);
+    expect(groupEdits[0]?.drawingIds).toEqual(['trend-1', 'trend-2']);
+    const boundedMovedBody = {
+      x: Math.max(
+        frame.layout.plotArea.x,
+        Math.min(frame.layout.plotArea.x + frame.layout.plotArea.width, movedBody.x),
+      ),
+      y: Math.max(
+        frame.layout.plotArea.y,
+        Math.min(frame.layout.plotArea.y + frame.layout.plotArea.height, movedBody.y),
+      ),
+    };
+    expect(groupEdits[0]?.current).toEqual(chartCoordinateToDataPoint(boundedMovedBody, frame));
+    expect(capturedPointers.has(7)).toBe(false);
+    expect(selections).toEqual([
+      ['trend-1'],
+      ['trend-1', 'trend-2'],
+      ['trend-1'],
+      ['trend-1', 'trend-2'],
+      ['trend-1', 'trend-2'],
+    ]);
+
+    dispatch('keydown', { key: 'Delete', preventDefault: vi.fn() } as unknown as KeyboardEvent);
+    expect(deletedGroups).toEqual([['trend-1', 'trend-2']]);
   });
 
   it('deletes the selected drawing on Delete and deselects on Escape', () => {
