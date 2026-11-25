@@ -71,7 +71,9 @@ export function ToolbarPlayground() {
             </select>
           </label>
         </div>
-        <div class="flex min-h-24 items-start overflow-x-auto rounded-md border border-[#2a2e39] bg-[#0b0e14] p-4">
+        <div
+          class="flex min-h-24 items-start overflow-x-auto rounded-md border border-[#2a2e39] bg-[#0b0e14] p-4"
+        >
           <Toolbar
             groups={toolbarGroups}
             value={activeTool}
@@ -80,7 +82,9 @@ export function ToolbarPlayground() {
             orientation={orientation}
           />
         </div>
-        <div class="flex items-center gap-2 rounded-md border border-[#2a2e39] bg-[#131722] px-3 py-2">
+        <div
+          class="flex items-center gap-2 rounded-md border border-[#2a2e39] bg-[#131722] px-3 py-2"
+        >
           <span class="text-[11px] text-[#787b86]">Herramienta activa</span>
           <span
             class="font-mono text-xs text-[#6b9eff]"
@@ -98,7 +102,9 @@ export function ToolbarPlayground() {
           <li>Las herramientas se agrupan con separadores visuales.</li>
           <li>La selección activa utiliza el estado azul de OpenView.</li>
           <li>Flechas, Inicio y Fin mueven el foco entre herramientas habilitadas.</li>
-          <li>Los atajos se muestran en los tooltips y los controles deshabilitados no reciben foco.</li>
+          <li>
+            Los atajos se muestran en los tooltips y los controles deshabilitados no reciben foco.
+          </li>
         </ul>
       </section>
     </div>
