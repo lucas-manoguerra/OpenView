@@ -1028,18 +1028,17 @@ const drawDrawings = (context: CanvasRenderingContext2D, scene: ChartRenderScene
     for (const handle of handles) {
       const isHovered = hoveredTarget === handle.target;
       context.beginPath();
-      context.arc(handle.point.x, handle.point.y, isHovered ? 7 : 6, 0, Math.PI * 2);
-      context.fillStyle = isHovered ? '#e2e8f0' : '#0b0f17';
+      context.arc(handle.point.x, handle.point.y, isHovered ? 8 : 6, 0, Math.PI * 2);
+      context.fillStyle = '#ffffff';
       context.fill();
       context.strokeStyle = drawing.color;
       context.lineWidth = isHovered ? 2 : 1.5;
       context.stroke();
-      if (!isHovered) {
-        context.beginPath();
-        context.arc(handle.point.x, handle.point.y, 2, 0, Math.PI * 2);
-        context.fillStyle = '#e2e8f0';
-        context.fill();
-      }
+
+      context.beginPath();
+      context.arc(handle.point.x, handle.point.y, 2, 0, Math.PI * 2);
+      context.fillStyle = drawing.color;
+      context.fill();
     }
   }
 
