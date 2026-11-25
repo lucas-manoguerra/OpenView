@@ -61,8 +61,9 @@ export const componentLabRegistry: readonly ComponentLabEntry[] = [
     name: 'Drawings',
     family: 'Drawings',
     route: '/component-lab/drawings',
-    status: 'planned',
-    description: 'Herramientas de dibujo, propiedades, plantillas y árbol de objetos.',
+    status: 'available',
+    description:
+      'Catálogo de herramientas, propiedades visuales y plantillas de estilo personalizadas.',
   },
   {
     id: 'panels',
