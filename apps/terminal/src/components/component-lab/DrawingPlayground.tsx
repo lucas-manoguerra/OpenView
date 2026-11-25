@@ -106,7 +106,8 @@ export function DrawingPlayground() {
             }}
           />
           <div class="min-w-0 flex-1 text-xs leading-5 text-[#787b86]">
-            Selecciona una herramienta para inspeccionar su configuración por defecto, última\n            configuración y plantillas propias.
+            Selecciona una herramienta para inspeccionar su configuración por defecto, última
+            configuración y plantillas propias.
           </div>
           <span data-testid="drawing-active-tool" class="text-[11px] text-[#787b86]">
             {activeTool}
