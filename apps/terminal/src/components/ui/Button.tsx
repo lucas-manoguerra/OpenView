@@ -3,7 +3,7 @@ import type { ComponentChildren, JSX } from 'preact';
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 export type ButtonSize = 'small' | 'medium' | 'large';
 
-export type ButtonProps = Omit<JSX.ButtonHTMLAttributes<HTMLButtonElement>, 'size'> & {
+export type ButtonProps = Omit<JSX.HTMLAttributes<HTMLButtonElement>, 'size'> & {
   variant?: ButtonVariant;
   size?: ButtonSize;
   fullWidth?: boolean;
@@ -13,9 +13,12 @@ export type ButtonProps = Omit<JSX.ButtonHTMLAttributes<HTMLButtonElement>, 'siz
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary: 'border border-[#2962ff] bg-[#2962ff] text-white hover:bg-[#1e53e5] active:bg-[#1948c7]',
-  secondary: 'border border-[#434651] bg-[#2a2e39] text-[#d1d4dc] hover:border-[#5d606b] hover:bg-[#363a45] active:bg-[#20232c]',
-  ghost: 'border border-transparent bg-transparent text-[#b2b5be] hover:bg-[#2a2e39] hover:text-[#d1d4dc] active:bg-[#363a45]',
-  danger: 'border border-[#f23645]/50 bg-[#f23645]/10 text-[#f23645] hover:bg-[#f23645]/20 active:bg-[#f23645]/30',
+  secondary:
+    'border border-[#434651] bg-[#2a2e39] text-[#d1d4dc] hover:border-[#5d606b] hover:bg-[#363a45] active:bg-[#20232c]',
+  ghost:
+    'border border-transparent bg-transparent text-[#b2b5be] hover:bg-[#2a2e39] hover:text-[#d1d4dc] active:bg-[#363a45]',
+  danger:
+    'border border-[#f23645]/50 bg-[#f23645]/10 text-[#f23645] hover:bg-[#f23645]/20 active:bg-[#f23645]/30',
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
@@ -37,7 +40,7 @@ export function Button({
   return (
     <button
       {...props}
-      type={props.type ?? 'button'}
+      type={props['type'] ?? 'button'}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       class={[
@@ -49,9 +52,13 @@ export function Button({
         sizeClasses[size],
         fullWidth ? 'w-full' : '',
         className,
-      ].filter(Boolean).join(' ')}
+      ]
+        .filter(Boolean)
+        .join(' ')}
     >
-      {loading ? <span class="size-3 animate-spin rounded-full border-2 border-current border-r-transparent" /> : null}
+      {loading ? (
+        <span class="size-3 animate-spin rounded-full border-2 border-current border-r-transparent" />
+      ) : null}
       {children}
     </button>
   );
