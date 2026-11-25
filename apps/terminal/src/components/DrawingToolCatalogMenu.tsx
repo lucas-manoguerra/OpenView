@@ -60,7 +60,10 @@ export function DrawingToolCatalogMenu({ activeTool, onSelect }: DrawingToolCata
           aria-label="Catálogo de herramientas de dibujo"
           class="absolute left-full top-0 ml-2 flex max-h-[min(560px,80vh)] w-[min(620px,calc(100vw-64px))] overflow-hidden rounded-lg border border-white/10 bg-[#101723] text-slate-200 shadow-2xl"
         >
-          <nav\n            aria-label="Familias de herramientas"\n            class="w-40 shrink-0 overflow-y-auto border-r border-white/10 p-1.5"\n          >
+          <nav
+            aria-label="Familias de herramientas"
+            class="w-40 shrink-0 overflow-y-auto border-r border-white/10 p-1.5"
+          >
             {DRAWING_TOOL_GROUPS.map((item) => (
               <button
                 type="button"
@@ -83,7 +86,9 @@ export function DrawingToolCatalogMenu({ activeTool, onSelect }: DrawingToolCata
           </nav>
           <div class="flex min-w-0 flex-1 flex-col">
             <div class="border-b border-white/10 p-2">
-              <label class="sr-only" for="drawing-tool-catalog-search">\n                Buscar herramientas\n              </label>
+              <label class="sr-only" for="drawing-tool-catalog-search">
+                Buscar herramientas
+              </label>
               <input
                 id="drawing-tool-catalog-search"
                 data-testid="drawing-tool-catalog-search"
@@ -132,7 +137,8 @@ export function DrawingToolCatalogMenu({ activeTool, onSelect }: DrawingToolCata
               ) : null}
             </div>
             <footer class="border-t border-white/10 px-2 py-1.5 text-[10px] text-slate-500">
-              {DRAWING_TOOL_CATALOG.filter((tool) => tool.availability === 'implemented').length} de{' '}\n              {DRAWING_TOOL_CATALOG.length} herramientas implementadas
+              {DRAWING_TOOL_CATALOG.filter((tool) => tool.availability === 'implemented').length} de{' '}
+              {DRAWING_TOOL_CATALOG.length} herramientas implementadas
             </footer>
           </div>
         </section>
