@@ -29,15 +29,20 @@ export function Select({
   children,
   ...props
 }: SelectProps) {
-  const describedBy = [
-    hint && !error ? `${id ?? 'select'}-hint` : undefined,
-    error ? `${id ?? 'select'}-error` : undefined,
-  ]
-    .filter(Boolean)
-    .join(' ') || undefined;
+  const describedBy =
+    [
+      hint && !error ? `${id ?? 'select'}-hint` : undefined,
+      error ? `${id ?? 'select'}-error` : undefined,
+    ]
+      .filter(Boolean)
+      .join(' ') || undefined;
 
   return (
-    <label class={['flex min-w-0 flex-col gap-1.5', fullWidth ? 'w-full' : '', className].filter(Boolean).join(' ')}>
+    <label
+      class={['flex min-w-0 flex-col gap-1.5', fullWidth ? 'w-full' : '', className]
+        .filter(Boolean)
+        .join(' ')}
+    >
       {label ? <span class="text-xs font-medium text-[#b2b5be]">{label}</span> : null}
       <select
         {...props}
@@ -55,8 +60,16 @@ export function Select({
       >
         {children}
       </select>
-      {error ? <span id={`${id ?? 'select'}-error`} class="text-[11px] text-[#f23645]">{error}</span> : null}
-      {!error && hint ? <span id={`${id ?? 'select'}-hint`} class="text-[11px] text-[#787b86]">{hint}</span> : null}
+      {error ? (
+        <span id={`${id ?? 'select'}-error`} class="text-[11px] text-[#f23645]">
+          {error}
+        </span>
+      ) : null}
+      {!error && hint ? (
+        <span id={`${id ?? 'select'}-hint`} class="text-[11px] text-[#787b86]">
+          {hint}
+        </span>
+      ) : null}
     </label>
   );
 }
