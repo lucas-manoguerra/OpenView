@@ -152,6 +152,7 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
       }
       destroyed = true;
       renderer.destroy();
+      emit(Object.freeze({ type: 'destroyed' }));
       listeners.clear();
     },
   });
