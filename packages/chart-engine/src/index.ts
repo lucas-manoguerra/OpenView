@@ -19,6 +19,7 @@ export {
   type ChartRenderTheme,
   type ChartIndicatorSeries,
   type ChartDrawingPoint,
+  type ChartDrawingLineStyle,
   type ChartRenderDrawing,
 } from './canvas-painter';
 export {
