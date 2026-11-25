@@ -342,9 +342,14 @@ describe('chart public API', () => {
 
   it('clears transient previews and drawing history when importing a snapshot', () => {
     const { surface } = createSurface();
+    const candles = [
+      { timestamp: 1, open: 2, high: 4, low: 1, close: 3, volume: 10, logicalIndex: 0 },
+      { timestamp: 2, open: 3, high: 5, low: 2, close: 4, volume: 12, logicalIndex: 1 },
+    ];
+    const frame = createChartFrame(320, 240, { min: 0, max: 10 }, 1);
     const chart = createChart({
       surface,
-      initialScene: createScene(),
+      initialScene: createChartRenderScene(frame, candles),
       renderer: { scheduler: { requestFrame: () => 1, cancelFrame: () => {} } },
     });
     const drawing = {
