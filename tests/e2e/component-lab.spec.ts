@@ -110,3 +110,39 @@ test('navigates TradingView tabs and dropdown menus with keyboard and pointer', 
   await expect(page.getByTestId('navigation-menu-action')).toHaveText('save-layout');
   await expect(menu).toBeHidden();
 });
+
+test('opens modal dialogs with focus containment, Escape and focus restoration', async ({
+  page,
+}) => {
+  await page.goto('/component-lab');
+
+  await page.getByRole('link', { name: 'Dialogs · Modals' }).click();
+  await expect(page).toHaveURL(/dialogs$/);
+  await expect(page.getByRole('heading', { name: 'Dialogs & Modals' })).toBeVisible();
+  await page.waitForLoadState('networkidle');
+
+  const trigger = page.getByRole('button', { name: 'Abrir diálogo de configuración' });
+  await trigger.click();
+
+  const dialog = page.getByRole('dialog', { name: 'Configuración del gráfico' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toHaveAttribute('aria-modal', 'true');
+
+  const layoutName = page.getByLabel('Nombre del diseño');
+  await expect(layoutName).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('button', { name: 'Cerrar diálogo' })).toBeFocused();
+
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(trigger).toBeFocused();
+
+  await trigger.click();
+  await page.getByRole('button', { name: 'Cerrar diálogo' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(trigger).toBeFocused();
+
+  await trigger.click();
+  await page.mouse.click(12, 12);
+  await expect(dialog).toBeHidden();
+});
