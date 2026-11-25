@@ -462,7 +462,9 @@ export function ChartCanvas({
           },
           onDrawingDeleteMany: (drawingIds: readonly string[]): void => {
             const deletedIds = new Set(drawingIds);
-            const nextDrawings = drawingsRef.current.filter((drawing) => !deletedIds.has(drawing.id));
+            const nextDrawings = drawingsRef.current.filter(
+              (drawing) => !deletedIds.has(drawing.id),
+            );
 
             if (nextDrawings.length === drawingsRef.current.length) {
               return;
