@@ -1716,9 +1716,15 @@ test('selects multiple drawings with Ctrl click and marquee, then moves them tog
 
   await canvas.focus();
   await page.keyboard.down('Control');
-  await page.mouse.move(marqueeBounds.x + marqueeBounds.width * 0.22, marqueeBounds.y + marqueeBounds.height * 0.2);
+  await page.mouse.move(
+    marqueeBounds.x + marqueeBounds.width * 0.22,
+    marqueeBounds.y + marqueeBounds.height * 0.2,
+  );
   await page.mouse.down();
-  await page.mouse.move(marqueeBounds.x + marqueeBounds.width * 0.64, marqueeBounds.y + marqueeBounds.height * 0.74);
+  await page.mouse.move(
+    marqueeBounds.x + marqueeBounds.width * 0.64,
+    marqueeBounds.y + marqueeBounds.height * 0.74,
+  );
   await expect(page.getByTestId('drawing-selection-marquee')).toBeVisible();
   await page.mouse.up();
   await page.keyboard.up('Control');
