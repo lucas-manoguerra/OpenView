@@ -51,6 +51,11 @@ export type ChartRenderDrawing = Readonly<{
   visible?: boolean;
 }>;
 
+export type ChartRenderDrawingHit = Readonly<{
+  drawingId: string;
+  target: 'body' | 'start' | 'end';
+}>;
+
 export type ChartRenderScene = Readonly<{
   frame: ChartFrame;
   candles: readonly ChartRenderCandle[];
@@ -61,6 +66,7 @@ export type ChartRenderScene = Readonly<{
   drawings: readonly ChartRenderDrawing[];
   selectedDrawingId: string | null;
   selectedDrawingIds: readonly string[];
+  hoveredDrawingHit: ChartRenderDrawingHit | null;
 }>;
 
 export type ChartRenderTheme = Readonly<{
@@ -242,6 +248,7 @@ export const createChartRenderScene = (
   drawings: readonly ChartRenderDrawing[] = [],
   selectedDrawingId: string | null = null,
   selectedDrawingIds: readonly string[] = selectedDrawingId === null ? [] : [selectedDrawingId],
+  hoveredDrawingHit: ChartRenderDrawingHit | null = null,
 ): ChartRenderScene => {
   let previousLogicalIndex = Number.NEGATIVE_INFINITY;
   const normalizedCandles: ChartRenderCandle[] = [];
@@ -282,6 +289,10 @@ export const createChartRenderScene = (
     drawings: frozenDrawings,
     selectedDrawingId: frozenSelectedDrawingIds[frozenSelectedDrawingIds.length - 1] ?? null,
     selectedDrawingIds: frozenSelectedDrawingIds,
+    hoveredDrawingHit:
+      hoveredDrawingHit !== null && frozenDrawings.some((drawing) => drawing.id === hoveredDrawingHit.drawingId)
+        ? Object.freeze({ ...hoveredDrawingHit })
+        : null,
   });
 };
 
@@ -293,6 +304,7 @@ export type ChartRenderSceneUpdate = Readonly<{
   drawings?: readonly ChartRenderDrawing[];
   selectedDrawingId?: string | null;
   selectedDrawingIds?: readonly string[];
+  hoveredDrawingHit?: ChartRenderDrawingHit | null;
 }>;
 
 export const updateChartRenderScene = (
@@ -324,6 +336,12 @@ export const updateChartRenderScene = (
       ? scene.selectedDrawingIds
       : normalizeSelectedDrawingIds(requestedSelectedDrawingIds, drawings);
   const selectedDrawingId = selectedDrawingIds[selectedDrawingIds.length - 1] ?? null;
+  const hoveredDrawingHit =
+    update.hoveredDrawingHit === undefined
+      ? scene.hoveredDrawingHit
+      : update.hoveredDrawingHit !== null && drawings.some((drawing) => drawing.id === update.hoveredDrawingHit?.drawingId)
+        ? Object.freeze({ ...update.hoveredDrawingHit })
+        : null;
 
   if (crosshair !== null && (!Number.isFinite(crosshair.x) || !Number.isFinite(crosshair.y))) {
     throw new RangeError('Crosshair coordinates must be finite numbers.');
@@ -337,7 +355,9 @@ export const updateChartRenderScene = (
     indicators === scene.indicators &&
     drawings === scene.drawings &&
     selectedDrawingId === scene.selectedDrawingId &&
-    selectedDrawingIds === scene.selectedDrawingIds
+    selectedDrawingIds === scene.selectedDrawingIds &&
+    hoveredDrawingHit?.drawingId === scene.hoveredDrawingHit?.drawingId &&
+    hoveredDrawingHit?.target === scene.hoveredDrawingHit?.target
   ) {
     return scene;
   }
@@ -352,6 +372,7 @@ export const updateChartRenderScene = (
     drawings,
     selectedDrawingId,
     selectedDrawingIds,
+    hoveredDrawingHit,
   });
 };
 
@@ -992,23 +1013,28 @@ const drawDrawings = (context: CanvasRenderingContext2D, scene: ChartRenderScene
       );
     }
 
-    if (isSelected) {
-      const handles: ChartCoordinate[] = [startHandle];
+    const hoveredTarget =
+      scene.hoveredDrawingHit?.drawingId === drawing.id ? scene.hoveredDrawingHit.target : null;
+    const handles: Readonly<{ point: ChartCoordinate; target: 'start' | 'end' }>[] = [];
+    if (isSelected || hoveredTarget === 'start') {
+      handles.push({ point: startHandle, target: 'start' });
+    }
+    if (endHandle !== null && (isSelected || hoveredTarget === 'end')) {
+      handles.push({ point: endHandle, target: 'end' });
+    }
 
-      if (endHandle !== null) {
-        handles.push(endHandle);
-      }
-
-      for (const handle of handles) {
+    for (const handle of handles) {
+      const isHovered = hoveredTarget === handle.target;
+      context.beginPath();
+      context.arc(handle.point.x, handle.point.y, isHovered ? 7 : 6, 0, Math.PI * 2);
+      context.fillStyle = isHovered ? '#e2e8f0' : '#0b0f17';
+      context.fill();
+      context.strokeStyle = drawing.color;
+      context.lineWidth = isHovered ? 2 : 1.5;
+      context.stroke();
+      if (!isHovered) {
         context.beginPath();
-        context.arc(handle.x, handle.y, 6, 0, Math.PI * 2);
-        context.fillStyle = '#0b0f17';
-        context.fill();
-        context.strokeStyle = drawing.color;
-        context.lineWidth = 1.5;
-        context.stroke();
-        context.beginPath();
-        context.arc(handle.x, handle.y, 2, 0, Math.PI * 2);
+        context.arc(handle.point.x, handle.point.y, 2, 0, Math.PI * 2);
         context.fillStyle = '#e2e8f0';
         context.fill();
       }
