@@ -62,7 +62,8 @@ export const componentLabRegistry: readonly ComponentLabEntry[] = [
     family: 'Drawings',
     route: '/component-lab/drawings',
     status: 'available',
-    description: 'Catálogo de herramientas, propiedades visuales y plantillas de estilo personalizadas.',
+    description:
+      'Catálogo de herramientas, propiedades visuales y plantillas de estilo personalizadas.',
   },
   {
     id: 'panels',
