@@ -1877,10 +1877,33 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
 
   const movedStartX = startX + 35;
   const movedStartY = startY - 18;
+  const startAnchorBefore = {
+    price: Number(await canvas.getAttribute('data-selected-drawing-start-price')),
+    timestamp: Number(await canvas.getAttribute('data-selected-drawing-start-timestamp')),
+  };
+  const endAnchorBefore = {
+    price: Number(await canvas.getAttribute('data-selected-drawing-end-price')),
+    timestamp: Number(await canvas.getAttribute('data-selected-drawing-end-timestamp')),
+  };
   await page.mouse.move(movedStartX, movedStartY);
   await page.mouse.down();
   await page.mouse.move(movedStartX + 18, movedStartY + 14);
   await page.mouse.up();
+
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-selected-drawing-start-price')))
+    .not.toBe(startAnchorBefore.price);
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-selected-drawing-start-timestamp')))
+    .not.toBe(startAnchorBefore.timestamp);
+  await expect(canvas).toHaveAttribute(
+    'data-selected-drawing-end-price',
+    String(endAnchorBefore.price),
+  );
+  await expect(canvas).toHaveAttribute(
+    'data-selected-drawing-end-timestamp',
+    String(endAnchorBefore.timestamp),
+  );
 
   await page.getByTestId('drawing-editor-close').click();
   await expect(propertiesPanel).toBeHidden();
