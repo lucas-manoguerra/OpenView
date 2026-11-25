@@ -2,7 +2,7 @@ import type { ComponentChildren, JSX } from 'preact';
 
 export type SelectSize = 'small' | 'medium' | 'large';
 
-export type SelectProps = Omit<JSX.IntrinsicElements['select'], 'size'> & {
+export type SelectProps = Omit<JSX.IntrinsicElements['select'], 'size' | 'role'> & {
   label?: string;
   hint?: string;
   error?: string;
