@@ -1520,8 +1520,14 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
   expect(coordinateAfterDrag.x).toBeGreaterThan(coordinateBeforeDrag.x + 20);
   expect(coordinateAfterDrag.y).toBeGreaterThan(coordinateBeforeDrag.y + 10);
 
-  const savedAppearanceBounds = panelAfterDrag;
-  const savedCoordinateBounds = coordinateAfterDrag;
+  const savedAppearancePosition = await propertiesPanel.evaluate((element: HTMLElement) => ({
+    left: element.style.left,
+    top: element.style.top,
+  }));
+  const savedCoordinatePosition = await coordinatePanel.evaluate((element: HTMLElement) => ({
+    left: element.style.left,
+    top: element.style.top,
+  }));
 
   await page.getByTestId('drawing-editor-close').click();
   await expect(propertiesPanel).toBeHidden();
@@ -1600,27 +1606,25 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
 
   const restoredCoordinatePanel = page.getByTestId('drawing-coordinate-panel');
   await expect(restoredCoordinatePanel).toBeVisible();
-  const restoredCoordinateBounds = await restoredCoordinatePanel.boundingBox();
-  expect(restoredCoordinateBounds).not.toBeNull();
+  const restoredCoordinatePosition = await restoredCoordinatePanel.evaluate(
+    (element: HTMLElement) => ({
+      left: element.style.left,
+      top: element.style.top,
+    }),
+  );
 
-  if (restoredCoordinateBounds === null) {
-    throw new Error('The coordinate panel position must be restored after reloading.');
-  }
-
-  expect(restoredCoordinateBounds.x).toBeCloseTo(savedCoordinateBounds.x, 0);
-  expect(restoredCoordinateBounds.y).toBeCloseTo(savedCoordinateBounds.y, 0);
+  expect(restoredCoordinatePosition).toEqual(savedCoordinatePosition);
 
   await page.getByTestId('drawing-panel-toggle-appearance').click();
   await expect(propertiesPanel).toBeVisible();
-  const restoredAppearanceBounds = await propertiesPanel.boundingBox();
-  expect(restoredAppearanceBounds).not.toBeNull();
+  const restoredAppearancePosition = await propertiesPanel.evaluate(
+    (element: HTMLElement) => ({
+      left: element.style.left,
+      top: element.style.top,
+    }),
+  );
 
-  if (restoredAppearanceBounds === null) {
-    throw new Error('The appearance panel position must be restored after reloading.');
-  }
-
-  expect(restoredAppearanceBounds.x).toBeCloseTo(savedAppearanceBounds.x, 0);
-  expect(restoredAppearanceBounds.y).toBeCloseTo(savedAppearanceBounds.y, 0);
+  expect(restoredAppearancePosition).toEqual(savedAppearancePosition);
 });
 
 test('selects drawings with Shift and moves and deletes the group together', async ({ page }) => {
