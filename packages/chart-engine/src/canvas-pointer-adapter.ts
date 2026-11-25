@@ -5,7 +5,7 @@ import {
   snapChartDrawingPointToOhlc,
   type ChartDrawingMagnetMode,
 } from './drawing-magnet';
-import type { ChartRenderCandle, ChartRenderDrawing } from './canvas-painter';
+import type { ChartIndicatorSeries, ChartRenderCandle, ChartRenderDrawing } from './canvas-painter';
 import type { ChartInteractionController } from './chart-interaction';
 import type { NumericRange } from './viewport';
 
@@ -41,6 +41,8 @@ export type CanvasPointerAdapterOptions = Readonly<{
   getAutoScalePriceRange?: () => NumericRange | null;
   getDrawingTool?: () => CanvasDrawingTool;
   getDrawingMagnetMode?: () => ChartDrawingMagnetMode;
+  getSnapToIndicators?: () => boolean;
+  getIndicators?: () => readonly ChartIndicatorSeries[];
   getDrawings?: () => readonly ChartRenderDrawing[];
   getCandles?: () => readonly ChartRenderCandle[];
   getSelectedDrawingId?: () => string | null;
@@ -91,6 +93,9 @@ export const attachCanvasPointerEvents = (
       options.getCandles?.() ?? [],
       controller.snapshot.frame,
       mode,
+      undefined,
+      options.getIndicators?.() ?? [],
+      options.getSnapToIndicators?.() ?? false,
     );
   };
 
