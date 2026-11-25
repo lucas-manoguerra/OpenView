@@ -149,12 +149,14 @@ describe('watchlist preferences', () => {
         symbol: 'PEPE/USDC',
         baseAsset: 'PEPE',
         quoteAsset: 'USDC',
+        priceIncrement: 0.001,
       }),
     ).toEqual({
       id: 'PEPE-USDC',
       symbol: 'PEPE / USDC',
       name: 'PEPE',
       chartSymbol: 'PEPE / USDC',
+      priceIncrement: 0.001,
     });
   });
 
