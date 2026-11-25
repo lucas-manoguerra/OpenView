@@ -263,8 +263,9 @@ export function ChartCanvas({
   const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null);
   const [drawingUndoCount, setDrawingUndoCount] = useState(0);
   const [drawingRedoCount, setDrawingRedoCount] = useState(0);
-  const [drawingPanelPosition, setDrawingPanelPosition] =
-    useState<DrawingPanelPosition | null>(null);
+  const [drawingPanelPosition, setDrawingPanelPosition] = useState<DrawingPanelPosition | null>(
+    null,
+  );
   const [autoScale, setAutoScale] = useState(true);
   const [priceScaleLocked, setPriceScaleLocked] = useState(false);
   const [priceScaleInverted, setPriceScaleInverted] = useState(false);
@@ -834,8 +835,7 @@ export function ChartCanvas({
     runtimeRef.current?.setPriceScaleMode(mode);
   };
 
-  const selectedDrawing =
-    drawings.find((drawing) => drawing.id === selectedDrawingId) ?? null;
+  const selectedDrawing = drawings.find((drawing) => drawing.id === selectedDrawingId) ?? null;
 
   return (
     <div class="grid h-[390px] min-h-[340px] w-full grid-cols-[38px_minmax(0,1fr)] bg-[#0b0f17]">
@@ -1270,7 +1270,7 @@ export function ChartCanvas({
                 onPointerMove={(event) => {
                   const drag = drawingPropertiesDragRef.current;
                   const panel = drawingPropertiesPanelRef.current;
-                  const parent = panel?.parentElement;
+                  const parent = panel === null ? null : panel.parentElement;
 
                   if (
                     drag === null ||
@@ -1309,7 +1309,9 @@ export function ChartCanvas({
                   }
                 }}
               >
-                <span aria-hidden="true" class="text-slate-500">⠿</span>
+                <span aria-hidden="true" class="text-slate-500">
+                  ⠿
+                </span>
                 <span class="truncate">Editar {selectedDrawing.type}</span>
               </div>
               <button
