@@ -23,18 +23,19 @@ describe('drawing interaction preferences', () => {
     expect(DEFAULT_DRAWING_INTERACTION_PREFERENCES).toEqual({
       magnetMode: 'off',
       snapToIndicators: false,
+      keepDrawing: false,
     });
   });
 
   it('restores supported magnet modes and optional indicator snapping', () => {
     expect(
       restoreDrawingInteractionPreferences(JSON.stringify({ version: 1, magnetMode: 'weak' })),
-    ).toEqual({ magnetMode: 'weak', snapToIndicators: false });
+    ).toEqual({ magnetMode: 'weak', snapToIndicators: false, keepDrawing: false });
     expect(
       restoreDrawingInteractionPreferences(
-        JSON.stringify({ version: 1, magnetMode: 'strong', snapToIndicators: true }),
+        JSON.stringify({ version: 1, magnetMode: 'strong', snapToIndicators: true, keepDrawing: true }),
       ),
-    ).toEqual({ magnetMode: 'strong', snapToIndicators: true });
+    ).toEqual({ magnetMode: 'strong', snapToIndicators: true, keepDrawing: true });
   });
 
   it('falls back for malformed or unsupported preferences', () => {
@@ -53,11 +54,13 @@ describe('drawing interaction preferences', () => {
     saveDrawingInteractionPreferences(storage, {
       magnetMode: 'strong',
       snapToIndicators: true,
+      keepDrawing: true,
     });
 
     expect(loadDrawingInteractionPreferences(storage)).toEqual({
       magnetMode: 'strong',
       snapToIndicators: true,
+      keepDrawing: true,
     });
   });
 
@@ -79,6 +82,7 @@ describe('drawing interaction preferences', () => {
       saveDrawingInteractionPreferences(blockedStorage, {
         magnetMode: 'weak',
         snapToIndicators: false,
+        keepDrawing: false,
       }),
     ).not.toThrow();
   });
