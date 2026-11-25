@@ -1626,6 +1626,86 @@ test('hides drawings without deleting them and restores their selection', async 
   await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-1');
 });
 
+test('selects multiple drawings with Ctrl click and marquee, then moves them together', async ({
+  page,
+}) => {
+  await page.goto('/');
+
+  const canvas = page.getByRole('img', {
+    name: /Gráfico interactivo de velas y volumen para BTC \/ USDT/,
+  });
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+
+  const bounds = await canvas.boundingBox();
+
+  if (bounds === null) {
+    throw new Error('The chart canvas must have a visible bounding box.');
+  }
+
+  const firstStart = { x: bounds.x + bounds.width * 0.3, y: bounds.y + bounds.height * 0.29 };
+  const firstEnd = { x: bounds.x + bounds.width * 0.54, y: bounds.y + bounds.height * 0.44 };
+  const secondStart = { x: bounds.x + bounds.width * 0.3, y: bounds.y + bounds.height * 0.53 };
+  const secondEnd = { x: bounds.x + bounds.width * 0.54, y: bounds.y + bounds.height * 0.68 };
+  const midpoint = (start: { x: number; y: number }, end: { x: number; y: number }) => ({
+    x: (start.x + end.x) / 2,
+    y: (start.y + end.y) / 2,
+  });
+  const firstBody = midpoint(firstStart, firstEnd);
+  const secondBody = midpoint(secondStart, secondEnd);
+  const drawLine = async (
+    start: { x: number; y: number },
+    end: { x: number; y: number },
+  ): Promise<void> => {
+    await page.getByTestId('drawing-tool-trend-line').click();
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    await page.mouse.move(end.x, end.y);
+    await page.mouse.up();
+  };
+
+  await drawLine(firstStart, firstEnd);
+  await drawLine(secondStart, secondEnd);
+  await expect(canvas).toHaveAttribute('data-drawing-count', '2');
+
+  const selectTool = page.getByTestId('drawing-tool-select');
+  await selectTool.click();
+  await page.keyboard.down('Control');
+  await page.mouse.click(firstBody.x, firstBody.y);
+  await page.mouse.click(secondBody.x, secondBody.y);
+  await page.keyboard.up('Control');
+
+  await expect(canvas).toHaveAttribute('data-selected-drawing-count', '2');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-ids', 'drawing-1,drawing-2');
+  const selectedStartPrice = Number(await canvas.getAttribute('data-selected-drawing-start-price'));
+
+  await page.mouse.move(firstBody.x, firstBody.y);
+  await page.mouse.down();
+  await page.mouse.move(firstBody.x + 24, firstBody.y + 16);
+  await page.mouse.up();
+  await expect(canvas).toHaveAttribute('data-selected-drawing-count', '2');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-ids', 'drawing-1,drawing-2');
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-selected-drawing-start-price')))
+    .not.toBe(selectedStartPrice);
+
+  await page.mouse.click(bounds.x + bounds.width * 0.84, bounds.y + bounds.height * 0.48);
+  await expect(canvas).toHaveAttribute('data-selected-drawing-count', '0');
+
+  await page.keyboard.down('Control');
+  await page.mouse.move(bounds.x + bounds.width * 0.22, bounds.y + bounds.height * 0.2);
+  await page.mouse.down();
+  await page.mouse.move(bounds.x + bounds.width * 0.64, bounds.y + bounds.height * 0.74);
+  await expect(page.getByTestId('drawing-selection-marquee')).toBeVisible();
+  await page.mouse.up();
+  await page.keyboard.up('Control');
+
+  await expect(page.getByTestId('drawing-selection-marquee')).toHaveCount(0);
+  await expect(canvas).toHaveAttribute('data-selected-drawing-count', '2');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-ids', 'drawing-1,drawing-2');
+});
+
 test('selects, moves, edits and deletes a drawing individually', async ({ page }) => {
   await page.goto('/');
 
