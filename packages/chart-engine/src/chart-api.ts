@@ -109,7 +109,11 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
       assertActive();
 
       if (command.type === 'set-scene') {
-        scene = command.scene;
+        scene = updateChartRenderScene(command.scene, {
+          drawings: scene.drawings,
+          selectedDrawingId: scene.selectedDrawingId,
+          selectedDrawingIds: scene.selectedDrawingIds,
+        });
         objectOrder = reconcileChartObjectOrder(objectOrder, getAvailableObjects(scene));
         render();
         emit(Object.freeze({ type: 'scene-changed', scene }));
