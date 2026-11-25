@@ -373,6 +373,27 @@ export function ChartCanvas({
       visible: Object.freeze({ ...currentLayout.visible, [panelId]: visible }),
     });
   };
+  const attachDrawingPanelElement = (
+    panelId: DrawingPanelId,
+    element: HTMLElement | null,
+  ): void => {
+    const panelRef =
+      panelId === 'appearance' ? drawingPropertiesPanelRef : drawingCoordinatesPanelRef;
+    panelRef.current = element;
+
+    if (element === null) {
+      return;
+    }
+
+    const position = drawingPanelLayoutRef.current.positions[panelId];
+
+    if (position !== null) {
+      element.style.left = String(position.left) + 'px';
+      element.style.top = String(position.top) + 'px';
+      element.style.right = 'auto';
+      element.style.bottom = 'auto';
+    }
+  };
   const handleDrawingPanelPointerDown = (panelId: DrawingPanelId, event: PointerEvent): void => {
     ensureDrawingPanelLayoutLoaded();
     const panel =
@@ -1644,8 +1665,10 @@ export function ChartCanvas({
           selectedDrawing !== null &&
           drawingPanelLayout.visible.coordinates && (
             <section
-              ref={drawingCoordinatesPanelRef}
+              ref={(element) => attachDrawingPanelElement('coordinates', element)}
               data-testid="drawing-coordinate-panel"
+              data-panel-left={drawingPanelLayout.positions.coordinates?.left ?? 'default'}
+              data-panel-top={drawingPanelLayout.positions.coordinates?.top ?? 'default'}
               aria-label="Coordenadas del dibujo"
               class="absolute left-3 top-24 z-20 w-56 rounded-xl border border-white/10 bg-[#101723]/95 p-3 shadow-xl backdrop-blur"
               style={
@@ -1795,8 +1818,10 @@ export function ChartCanvas({
           )}
         {selectedDrawing !== null && drawingPanelLayout.visible.appearance && (
           <div
-            ref={drawingPropertiesPanelRef}
+            ref={(element) => attachDrawingPanelElement('appearance', element)}
             data-testid="drawing-properties-panel"
+            data-panel-left={drawingPanelLayout.positions.appearance?.left ?? 'default'}
+            data-panel-top={drawingPanelLayout.positions.appearance?.top ?? 'default'}
             class="absolute bottom-10 left-3 z-20 w-64 rounded-xl border border-white/10 bg-[#101723]/95 p-3 shadow-2xl backdrop-blur"
             style={
               drawingPanelLayout.positions.appearance === null
