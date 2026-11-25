@@ -82,7 +82,7 @@ export function Dialog({
         <div class="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <button
             type="button"
-            aria-label={closeLabel}
+            aria-label="Cerrar diálogo al hacer clic fuera"
             tabIndex={-1}
             onClick={closeDialog}
             class="absolute inset-0 cursor-default bg-black/60"
