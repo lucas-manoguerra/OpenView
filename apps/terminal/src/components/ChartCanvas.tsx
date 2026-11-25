@@ -2,6 +2,11 @@ import { useCallback, useMemo, useRef, useState } from 'preact/hooks';
 import type { Candle } from '@openview/market-domain';
 import type { CandleInterval } from '@openview/market-data';
 import {
+  DEFAULT_DRAWING_INTERACTION_PREFERENCES,
+  loadBrowserDrawingInteractionPreferences,
+  saveBrowserDrawingInteractionPreferences,
+} from '../drawings/drawing-interaction-preferences';
+import {
   BUILT_IN_DRAWING_STYLE_TEMPLATES,
   MAX_CUSTOM_DRAWING_TEMPLATES,
   createDrawingStyleTemplate,
@@ -53,6 +58,7 @@ import {
   type ChartType,
   type ChartIndicatorSeries,
   type ChartRenderDrawing,
+  type ChartDrawingMagnetMode,
   type NumericRange,
   type PriceScaleMode,
 } from '@openview/chart-engine';
@@ -296,6 +302,12 @@ export function ChartCanvas({
     DEFAULT_DRAWING_TOOL_PREFERENCES,
   );
   const [drawingToolPreferencesLoaded, setDrawingToolPreferencesLoaded] = useState(false);
+  const [drawingMagnetMode, setDrawingMagnetMode] = useState<ChartDrawingMagnetMode>(
+    DEFAULT_DRAWING_INTERACTION_PREFERENCES.magnetMode,
+  );
+  const [drawingInteractionPreferencesLoaded, setDrawingInteractionPreferencesLoaded] =
+    useState(false);
+  const [drawingMagnetMenuOpen, setDrawingMagnetMenuOpen] = useState(false);
   const [quickDrawingTemplatesOpen, setQuickDrawingTemplatesOpen] = useState(false);
   const [autoScale, setAutoScale] = useState(true);
   const [priceScaleLocked, setPriceScaleLocked] = useState(false);
@@ -305,6 +317,7 @@ export function ChartCanvas({
   const indicatorsRef = useRef<readonly ChartIndicatorSeries[]>([]);
   const drawingToolRef = useRef<CanvasDrawingTool>(drawingTool);
   const drawingToolPreferencesRef = useRef<DrawingToolPreferences>(drawingToolPreferences);
+  const drawingMagnetModeRef = useRef<ChartDrawingMagnetMode>(drawingMagnetMode);
   const drawingsRef = useRef<readonly ChartRenderDrawing[]>(drawings);
   const selectedDrawingIdRef = useRef<string | null>(selectedDrawingId);
   const selectedDrawingIdsRef = useRef<readonly string[]>(selectedDrawingIds);
@@ -324,6 +337,7 @@ export function ChartCanvas({
   chartTypeRef.current = chartType;
   drawingToolRef.current = drawingTool;
   drawingToolPreferencesRef.current = drawingToolPreferences;
+  drawingMagnetModeRef.current = drawingMagnetMode;
   drawingsRef.current = drawings;
   selectedDrawingIdRef.current = selectedDrawingId;
   selectedDrawingIdsRef.current = selectedDrawingIds;
@@ -562,6 +576,7 @@ export function ChartCanvas({
         pointerAdapter = attachCanvasPointerEvents(canvas, interactionController, {
           getAutoScalePriceRange: () => getVisiblePriceRange(interactionController, currentCandles),
           getDrawingTool: () => drawingToolRef.current,
+          getDrawingMagnetMode: () => drawingMagnetModeRef.current,
           getDrawings: () => drawingsRef.current,
           getCandles: () => currentCandles,
           getSelectedDrawingId: () => selectedDrawingIdRef.current,
@@ -907,6 +922,30 @@ export function ChartCanvas({
     setDrawingToolPreferencesLoaded(true);
   };
 
+  const ensureDrawingInteractionPreferencesLoaded = (): void => {
+    if (drawingInteractionPreferencesLoaded) {
+      return;
+    }
+
+    const preferences = loadBrowserDrawingInteractionPreferences();
+    drawingMagnetModeRef.current = preferences.magnetMode;
+    setDrawingMagnetMode(preferences.magnetMode);
+    setDrawingInteractionPreferencesLoaded(true);
+  };
+
+  const handleDrawingMagnetModeChange = (mode: ChartDrawingMagnetMode): void => {
+    drawingMagnetModeRef.current = mode;
+    setDrawingMagnetMode(mode);
+    setDrawingInteractionPreferencesLoaded(true);
+    saveBrowserDrawingInteractionPreferences({ magnetMode: mode });
+    setDrawingMagnetMenuOpen(false);
+  };
+
+  const handleDrawingMagnetMenuToggle = (): void => {
+    ensureDrawingInteractionPreferencesLoaded();
+    setDrawingMagnetMenuOpen((open) => !open);
+  };
+
   const ensureDrawingTemplatesLoaded = (): void => {
     if (drawingTemplatesLoaded) {
       return;
@@ -917,6 +956,10 @@ export function ChartCanvas({
   };
 
   const handleDrawingToolChange = (nextTool: CanvasDrawingTool): void => {
+    if (nextTool !== 'cursor') {
+      ensureDrawingInteractionPreferencesLoaded();
+    }
+
     if (nextTool !== 'cursor' && nextTool !== 'select') {
       ensureDrawingToolPreferencesLoaded();
     }
@@ -1375,6 +1418,91 @@ export function ChartCanvas({
           ▱
         </button>
 
+        <div class="relative">
+          <button
+            type="button"
+            aria-label="Modo Imán"
+            aria-haspopup="menu"
+            aria-expanded={drawingMagnetMenuOpen}
+            aria-pressed={drawingMagnetMode !== 'off'}
+            data-testid="drawing-magnet-toggle"
+            title={
+              'Modo Imán: ' +
+              (drawingMagnetMode === 'strong'
+                ? 'Imán fuerte'
+                : drawingMagnetMode === 'weak'
+                  ? 'Imán débil'
+                  : 'Desactivado')
+            }
+            onClick={handleDrawingMagnetMenuToggle}
+            class={
+              'grid size-8 place-items-center rounded text-sm transition-colors ' +
+              (drawingMagnetMode !== 'off' || drawingMagnetMenuOpen
+                ? 'bg-blue-500/20 text-blue-200'
+                : 'text-slate-400 hover:bg-white/5 hover:text-slate-100')
+            }
+          >
+            🧲
+          </button>
+          {drawingMagnetMenuOpen && (
+            <div
+              role="menu"
+              aria-label="Modo Imán"
+              data-testid="drawing-magnet-menu"
+              class="absolute left-full top-0 z-40 ml-2 w-40 rounded-lg border border-white/10 bg-[#101723] p-1.5 shadow-xl"
+            >
+              <button
+                type="button"
+                role="menuitemradio"
+                aria-checked={drawingMagnetMode === 'off'}
+                data-testid="drawing-magnet-off"
+                onClick={() => handleDrawingMagnetModeChange('off')}
+                class={
+                  'flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-[11px] ' +
+                  (drawingMagnetMode === 'off'
+                    ? 'bg-blue-500/20 text-blue-200'
+                    : 'text-slate-300 hover:bg-white/5')
+                }
+              >
+                Desactivado
+                {drawingMagnetMode === 'off' && <span aria-hidden="true">✓</span>}
+              </button>
+              <button
+                type="button"
+                role="menuitemradio"
+                aria-checked={drawingMagnetMode === 'weak'}
+                data-testid="drawing-magnet-weak"
+                onClick={() => handleDrawingMagnetModeChange('weak')}
+                class={
+                  'flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-[11px] ' +
+                  (drawingMagnetMode === 'weak'
+                    ? 'bg-blue-500/20 text-blue-200'
+                    : 'text-slate-300 hover:bg-white/5')
+                }
+              >
+                Imán débil
+                {drawingMagnetMode === 'weak' && <span aria-hidden="true">✓</span>}
+              </button>
+              <button
+                type="button"
+                role="menuitemradio"
+                aria-checked={drawingMagnetMode === 'strong'}
+                data-testid="drawing-magnet-strong"
+                onClick={() => handleDrawingMagnetModeChange('strong')}
+                class={
+                  'flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-[11px] ' +
+                  (drawingMagnetMode === 'strong'
+                    ? 'bg-blue-500/20 text-blue-200'
+                    : 'text-slate-300 hover:bg-white/5')
+                }
+              >
+                Imán fuerte
+                {drawingMagnetMode === 'strong' && <span aria-hidden="true">✓</span>}
+              </button>
+            </div>
+          )}
+        </div>
+
         <span class="my-1 h-px w-6 bg-white/10" />
         <button
           type="button"
@@ -1440,6 +1568,7 @@ export function ChartCanvas({
           data-chart-type={chartType}
           data-indicator-count={renderIndicators.length}
           data-drawing-count={drawings.length}
+          data-drawing-magnet-mode={drawingMagnetMode}
           data-selected-drawing-id={selectedDrawingId ?? ''}
           data-selected-drawing-type={selectedDrawing?.type ?? ''}
           data-selected-drawing-start-price={
