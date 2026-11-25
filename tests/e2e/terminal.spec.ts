@@ -1593,10 +1593,7 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
   await page.mouse.up();
   await expect(canvas).toHaveAttribute('data-drawing-count', '1');
   await page.getByTestId('drawing-tool-select').click();
-  await page.mouse.click(
-    (reloadedStartX + reloadedEndX) / 2,
-    (reloadedStartY + reloadedEndY) / 2,
-  );
+  await page.mouse.click((reloadedStartX + reloadedEndX) / 2, (reloadedStartY + reloadedEndY) / 2);
 
   await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-1');
   await expect(propertiesPanel).toBeHidden();
