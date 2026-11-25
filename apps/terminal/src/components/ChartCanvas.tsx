@@ -1825,7 +1825,7 @@ export function ChartCanvas({
           aria-label={
             'Gráfico interactivo de velas y volumen para ' +
             symbol +
-            '. Arrastrar el gráfico para desplazar el tiempo, arrastrar el eje de precios para desplazar los precios, usar la rueda sobre cada área para acercar y hacer doble clic en el eje de precios para autoajustar.'
+            '. Arrastrar el gráfico para desplazar el tiempo, arrastrar el eje de precios para desplazar los precios, usar la rueda sobre cada área para acercar, hacer doble clic en el eje de precios para autoajustar y mantener Ctrl o Command para seleccionar varios dibujos o marcar un área.'
           }
           data-candles-count={renderCandles.length}
           data-chart-type={chartType}
