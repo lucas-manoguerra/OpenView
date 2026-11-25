@@ -1,0 +1,23 @@
+---
+import TerminalLayout from '../../../layouts/TerminalLayout.astro';
+import { DrawingPropertiesPanelPlayground } from '../../../components/component-lab/DrawingPropertiesPanelPlayground';
+---
+
+<TerminalLayout title="Drawing Properties — Component Lab">
+  <main class="min-h-screen bg-[#0b0e14] text-[#d1d4dc]">
+    <header class="flex h-12 items-center justify-between border-b border-[#2a2e39] bg-[#131722] px-4">
+      <a href="/component-lab/drawings" class="text-sm font-semibold text-white no-underline">← Drawings</a>
+      <span class="text-xs text-[#787b86]">Drawings / Properties</span>
+    </header>
+    <div class="mx-auto max-w-5xl space-y-6 px-5 py-8">
+      <div>
+        <p class="text-[10px] font-semibold uppercase tracking-widest text-[#2962ff]">Drawing components</p>
+        <h1 class="mt-2 text-2xl font-semibold tracking-tight text-white">Drawing Properties Panel</h1>
+        <p class="mt-2 max-w-2xl text-sm leading-6 text-[#787b86]">
+          Prueba aislada del editor de propiedades, selección de estilos y gestión de plantillas personalizadas por herramienta.
+        </p>
+      </div>
+      <DrawingPropertiesPanelPlayground client:load />
+    </div>
+  </main>
+</TerminalLayout>
