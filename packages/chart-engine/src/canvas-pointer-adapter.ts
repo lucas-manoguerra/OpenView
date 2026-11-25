@@ -1,6 +1,11 @@
 import { chartCoordinateToDataPoint, type ChartDataPoint } from './chart-frame';
 import { hitTestChartDrawing, type ChartDrawingHit } from './drawing-geometry';
-import type { ChartRenderCandle, ChartRenderDrawing } from './canvas-painter';
+import {
+  resolveChartDrawingMagnetMode,
+  snapChartDrawingPointToOhlc,
+  type ChartDrawingMagnetMode,
+} from './drawing-magnet';
+import type { ChartIndicatorSeries, ChartRenderCandle, ChartRenderDrawing } from './canvas-painter';
 import type { ChartInteractionController } from './chart-interaction';
 import type { NumericRange } from './viewport';
 
@@ -35,6 +40,9 @@ export type CanvasDrawingGroupEditGesture = Readonly<{
 export type CanvasPointerAdapterOptions = Readonly<{
   getAutoScalePriceRange?: () => NumericRange | null;
   getDrawingTool?: () => CanvasDrawingTool;
+  getDrawingMagnetMode?: () => ChartDrawingMagnetMode;
+  getSnapToIndicators?: () => boolean;
+  getIndicators?: () => readonly ChartIndicatorSeries[];
   getDrawings?: () => readonly ChartRenderDrawing[];
   getCandles?: () => readonly ChartRenderCandle[];
   getSelectedDrawingId?: () => string | null;
@@ -75,6 +83,21 @@ export const attachCanvasPointerEvents = (
   let drawingStart: ChartDataPoint | null = null;
   let activeDrawingEdit: CanvasDrawingEditGesture | null = null;
   let activeDrawingGroupEdit: CanvasDrawingGroupEditGesture | null = null;
+
+  const snapDrawingPoint = (point: ChartDataPoint, event: PointerEvent): ChartDataPoint => {
+    const configuredMode = options.getDrawingMagnetMode?.() ?? 'off';
+    const mode = resolveChartDrawingMagnetMode(configuredMode, event.ctrlKey || event.metaKey);
+
+    return snapChartDrawingPointToOhlc(
+      point,
+      options.getCandles?.() ?? [],
+      controller.snapshot.frame,
+      mode,
+      undefined,
+      options.getIndicators?.() ?? [],
+      options.getSnapToIndicators?.() ?? false,
+    );
+  };
 
   const getSelectedDrawingIds = (): readonly string[] => {
     const selectedIds = options.getSelectedDrawingIds?.();
@@ -143,7 +166,8 @@ export const attachCanvasPointerEvents = (
         const nextSelection = selectedIds.includes(hit.drawingId) ? selectedIds : [hit.drawingId];
         emitDrawingSelection(nextSelection);
 
-        const origin = chartCoordinateToDataPoint(position, controller.snapshot.frame);
+        const rawOrigin = chartCoordinateToDataPoint(position, controller.snapshot.frame);
+        const origin = hit.target === 'body' ? rawOrigin : snapDrawingPoint(rawOrigin, event);
 
         if (hit.target === 'body' && nextSelection.length > 1) {
           activeDrawingGroupEdit = {
@@ -179,7 +203,10 @@ export const attachCanvasPointerEvents = (
         return;
       }
 
-      drawingStart = chartCoordinateToDataPoint(position, controller.snapshot.frame);
+      drawingStart = snapDrawingPoint(
+        chartCoordinateToDataPoint(position, controller.snapshot.frame),
+        event,
+      );
       activeDrawingTool = drawingTool;
       activePointerId = event.pointerId;
       event.preventDefault();
@@ -222,7 +249,11 @@ export const attachCanvasPointerEvents = (
         x: Math.max(plotArea.x, Math.min(plotArea.x + plotArea.width, position.x)),
         y: Math.max(plotArea.y, Math.min(plotArea.y + plotArea.height, position.y)),
       });
-      const current = chartCoordinateToDataPoint(boundedPosition, controller.snapshot.frame);
+      const rawCurrent = chartCoordinateToDataPoint(boundedPosition, controller.snapshot.frame);
+      const current =
+        activeDrawingEdit?.target === 'start' || activeDrawingEdit?.target === 'end'
+          ? snapDrawingPoint(rawCurrent, event)
+          : rawCurrent;
       const origin = activeDrawingEdit?.origin ?? activeDrawingGroupEdit?.origin;
 
       if (
@@ -254,7 +285,10 @@ export const attachCanvasPointerEvents = (
         x: Math.max(plotArea.x, Math.min(plotArea.x + plotArea.width, position.x)),
         y: Math.max(plotArea.y, Math.min(plotArea.y + plotArea.height, position.y)),
       });
-      const end = chartCoordinateToDataPoint(boundedPosition, controller.snapshot.frame);
+      const end = snapDrawingPoint(
+        chartCoordinateToDataPoint(boundedPosition, controller.snapshot.frame),
+        event,
+      );
 
       const clickTool =
         activeDrawingTool === 'horizontal-line' || activeDrawingTool === 'vertical-line';

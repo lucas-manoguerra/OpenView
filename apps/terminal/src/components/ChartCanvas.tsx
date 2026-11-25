@@ -2,6 +2,11 @@ import { useCallback, useMemo, useRef, useState } from 'preact/hooks';
 import type { Candle } from '@openview/market-domain';
 import type { CandleInterval } from '@openview/market-data';
 import {
+  DEFAULT_DRAWING_INTERACTION_PREFERENCES,
+  loadBrowserDrawingInteractionPreferences,
+  saveBrowserDrawingInteractionPreferences,
+} from '../drawings/drawing-interaction-preferences';
+import {
   BUILT_IN_DRAWING_STYLE_TEMPLATES,
   MAX_CUSTOM_DRAWING_TEMPLATES,
   createDrawingStyleTemplate,
@@ -53,6 +58,7 @@ import {
   type ChartType,
   type ChartIndicatorSeries,
   type ChartRenderDrawing,
+  type ChartDrawingMagnetMode,
   type NumericRange,
   type PriceScaleMode,
 } from '@openview/chart-engine';
@@ -296,6 +302,15 @@ export function ChartCanvas({
     DEFAULT_DRAWING_TOOL_PREFERENCES,
   );
   const [drawingToolPreferencesLoaded, setDrawingToolPreferencesLoaded] = useState(false);
+  const [drawingMagnetMode, setDrawingMagnetMode] = useState<ChartDrawingMagnetMode>(
+    DEFAULT_DRAWING_INTERACTION_PREFERENCES.magnetMode,
+  );
+  const [snapToIndicators, setSnapToIndicators] = useState(
+    DEFAULT_DRAWING_INTERACTION_PREFERENCES.snapToIndicators,
+  );
+  const [drawingInteractionPreferencesLoaded, setDrawingInteractionPreferencesLoaded] =
+    useState(false);
+  const [drawingMagnetMenuOpen, setDrawingMagnetMenuOpen] = useState(false);
   const [quickDrawingTemplatesOpen, setQuickDrawingTemplatesOpen] = useState(false);
   const [autoScale, setAutoScale] = useState(true);
   const [priceScaleLocked, setPriceScaleLocked] = useState(false);
@@ -305,6 +320,8 @@ export function ChartCanvas({
   const indicatorsRef = useRef<readonly ChartIndicatorSeries[]>([]);
   const drawingToolRef = useRef<CanvasDrawingTool>(drawingTool);
   const drawingToolPreferencesRef = useRef<DrawingToolPreferences>(drawingToolPreferences);
+  const drawingMagnetModeRef = useRef<ChartDrawingMagnetMode>(drawingMagnetMode);
+  const snapToIndicatorsRef = useRef(snapToIndicators);
   const drawingsRef = useRef<readonly ChartRenderDrawing[]>(drawings);
   const selectedDrawingIdRef = useRef<string | null>(selectedDrawingId);
   const selectedDrawingIdsRef = useRef<readonly string[]>(selectedDrawingIds);
@@ -324,6 +341,8 @@ export function ChartCanvas({
   chartTypeRef.current = chartType;
   drawingToolRef.current = drawingTool;
   drawingToolPreferencesRef.current = drawingToolPreferences;
+  drawingMagnetModeRef.current = drawingMagnetMode;
+  snapToIndicatorsRef.current = snapToIndicators;
   drawingsRef.current = drawings;
   selectedDrawingIdRef.current = selectedDrawingId;
   selectedDrawingIdsRef.current = selectedDrawingIds;
@@ -562,6 +581,9 @@ export function ChartCanvas({
         pointerAdapter = attachCanvasPointerEvents(canvas, interactionController, {
           getAutoScalePriceRange: () => getVisiblePriceRange(interactionController, currentCandles),
           getDrawingTool: () => drawingToolRef.current,
+          getDrawingMagnetMode: () => drawingMagnetModeRef.current,
+          getSnapToIndicators: () => snapToIndicatorsRef.current,
+          getIndicators: () => indicatorsRef.current,
           getDrawings: () => drawingsRef.current,
           getCandles: () => currentCandles,
           getSelectedDrawingId: () => selectedDrawingIdRef.current,
@@ -907,6 +929,50 @@ export function ChartCanvas({
     setDrawingToolPreferencesLoaded(true);
   };
 
+  const ensureDrawingInteractionPreferencesLoaded = (): void => {
+    if (drawingInteractionPreferencesLoaded) {
+      return;
+    }
+
+    const preferences = loadBrowserDrawingInteractionPreferences();
+    drawingMagnetModeRef.current = preferences.magnetMode;
+    snapToIndicatorsRef.current = preferences.snapToIndicators;
+    setDrawingMagnetMode(preferences.magnetMode);
+    setSnapToIndicators(preferences.snapToIndicators);
+    setDrawingInteractionPreferencesLoaded(true);
+  };
+
+  const persistDrawingInteractionPreferences = (
+    magnetMode = drawingMagnetModeRef.current,
+    snapIndicators = snapToIndicatorsRef.current,
+  ): void => {
+    saveBrowserDrawingInteractionPreferences({
+      magnetMode,
+      snapToIndicators: snapIndicators,
+    });
+  };
+
+  const handleDrawingMagnetModeChange = (mode: ChartDrawingMagnetMode): void => {
+    drawingMagnetModeRef.current = mode;
+    setDrawingMagnetMode(mode);
+    setDrawingInteractionPreferencesLoaded(true);
+    persistDrawingInteractionPreferences(mode);
+    setDrawingMagnetMenuOpen(false);
+  };
+
+  const handleSnapToIndicatorsChange = (): void => {
+    const nextValue = !snapToIndicatorsRef.current;
+    snapToIndicatorsRef.current = nextValue;
+    setSnapToIndicators(nextValue);
+    setDrawingInteractionPreferencesLoaded(true);
+    persistDrawingInteractionPreferences(drawingMagnetModeRef.current, nextValue);
+  };
+
+  const handleDrawingMagnetMenuToggle = (): void => {
+    ensureDrawingInteractionPreferencesLoaded();
+    setDrawingMagnetMenuOpen((open) => !open);
+  };
+
   const ensureDrawingTemplatesLoaded = (): void => {
     if (drawingTemplatesLoaded) {
       return;
@@ -917,6 +983,10 @@ export function ChartCanvas({
   };
 
   const handleDrawingToolChange = (nextTool: CanvasDrawingTool): void => {
+    if (nextTool !== 'cursor') {
+      ensureDrawingInteractionPreferencesLoaded();
+    }
+
     if (nextTool !== 'cursor' && nextTool !== 'select') {
       ensureDrawingToolPreferencesLoaded();
     }
@@ -1375,6 +1445,134 @@ export function ChartCanvas({
           ▱
         </button>
 
+        <div class="relative">
+          <button
+            type="button"
+            aria-label="Modo Imán"
+            aria-haspopup="menu"
+            aria-expanded={drawingMagnetMenuOpen}
+            aria-pressed={drawingMagnetMode !== 'off'}
+            data-testid="drawing-magnet-toggle"
+            title={
+              'Modo Imán: ' +
+              (drawingMagnetMode === 'strong'
+                ? 'Imán fuerte'
+                : drawingMagnetMode === 'weak'
+                  ? 'Imán débil'
+                  : 'Desactivado')
+            }
+            onClick={handleDrawingMagnetMenuToggle}
+            class={
+              'grid size-8 place-items-center rounded text-sm transition-colors ' +
+              (drawingMagnetMode !== 'off' || drawingMagnetMenuOpen
+                ? 'bg-blue-500/20 text-blue-200'
+                : 'text-slate-400 hover:bg-white/5 hover:text-slate-100')
+            }
+          >
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              class="size-[18px]"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M6 20V10.5a6 6 0 0 1 12 0V20" />
+              <path d="M10 20v-9.5a2 2 0 0 1 4 0V20" />
+              <path d="M6 16h4M14 16h4" />
+            </svg>
+          </button>
+          {drawingMagnetMenuOpen && (
+            <div
+              role="menu"
+              aria-label="Modo Imán"
+              data-testid="drawing-magnet-menu"
+              class="absolute left-full top-0 z-40 ml-2 w-48 rounded-lg border border-white/10 bg-[#101723] p-1.5 shadow-xl"
+            >
+              <button
+                type="button"
+                role="menuitemradio"
+                aria-checked={drawingMagnetMode === 'off'}
+                data-testid="drawing-magnet-off"
+                onClick={() => handleDrawingMagnetModeChange('off')}
+                class={
+                  'flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-[11px] ' +
+                  (drawingMagnetMode === 'off'
+                    ? 'bg-blue-500/20 text-blue-200'
+                    : 'text-slate-300 hover:bg-white/5')
+                }
+              >
+                Desactivado
+                {drawingMagnetMode === 'off' && <span aria-hidden="true">✓</span>}
+              </button>
+              <button
+                type="button"
+                role="menuitemradio"
+                aria-checked={drawingMagnetMode === 'weak'}
+                data-testid="drawing-magnet-weak"
+                onClick={() => handleDrawingMagnetModeChange('weak')}
+                class={
+                  'flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-[11px] ' +
+                  (drawingMagnetMode === 'weak'
+                    ? 'bg-blue-500/20 text-blue-200'
+                    : 'text-slate-300 hover:bg-white/5')
+                }
+              >
+                Imán débil
+                {drawingMagnetMode === 'weak' && <span aria-hidden="true">✓</span>}
+              </button>
+              <button
+                type="button"
+                role="menuitemradio"
+                aria-checked={drawingMagnetMode === 'strong'}
+                data-testid="drawing-magnet-strong"
+                onClick={() => handleDrawingMagnetModeChange('strong')}
+                class={
+                  'flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-[11px] ' +
+                  (drawingMagnetMode === 'strong'
+                    ? 'bg-blue-500/20 text-blue-200'
+                    : 'text-slate-300 hover:bg-white/5')
+                }
+              >
+                Imán fuerte
+                {drawingMagnetMode === 'strong' && <span aria-hidden="true">✓</span>}
+              </button>
+              <span class="my-1 block h-px bg-white/10" />
+              <button
+                type="button"
+                role="menuitemcheckbox"
+                aria-checked={snapToIndicators}
+                data-testid="drawing-magnet-indicators"
+                onClick={handleSnapToIndicatorsChange}
+                class={
+                  'flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-[11px] ' +
+                  (snapToIndicators
+                    ? 'bg-blue-500/20 text-blue-200'
+                    : 'text-slate-300 hover:bg-white/5')
+                }
+              >
+                Ajustar a indicadores
+                <span
+                  aria-hidden="true"
+                  class={
+                    'relative h-4 w-7 rounded-full transition-colors ' +
+                    (snapToIndicators ? 'bg-blue-500' : 'bg-white/20')
+                  }
+                >
+                  <span
+                    class={
+                      'absolute top-0.5 size-3 rounded-full bg-white transition-transform ' +
+                      (snapToIndicators ? 'translate-x-3.5' : 'translate-x-0.5')
+                    }
+                  />
+                </span>
+              </button>
+            </div>
+          )}
+        </div>
+
         <span class="my-1 h-px w-6 bg-white/10" />
         <button
           type="button"
@@ -1440,6 +1638,8 @@ export function ChartCanvas({
           data-chart-type={chartType}
           data-indicator-count={renderIndicators.length}
           data-drawing-count={drawings.length}
+          data-drawing-magnet-mode={drawingMagnetMode}
+          data-drawing-snap-to-indicators={String(snapToIndicators)}
           data-selected-drawing-id={selectedDrawingId ?? ''}
           data-selected-drawing-type={selectedDrawing?.type ?? ''}
           data-selected-drawing-start-price={

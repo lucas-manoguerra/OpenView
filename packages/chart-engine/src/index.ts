@@ -119,3 +119,8 @@ export {
   updateChartDrawing,
   type ChartDrawingHit,
 } from './drawing-geometry';
+export {
+  resolveChartDrawingMagnetMode,
+  snapChartDrawingPointToOhlc,
+  type ChartDrawingMagnetMode,
+} from './drawing-magnet';
