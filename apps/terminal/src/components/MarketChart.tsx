@@ -731,6 +731,10 @@ export function MarketChart() {
   const selectedInstrument =
     watchlist.find((instrument) => instrument.id === selectedInstrumentId) ??
     DEFAULT_WATCHLIST_INSTRUMENT;
+  const selectedMarketInstrument =
+    catalogStatus === 'ready'
+      ? availableInstruments.find((instrument) => instrument.id === selectedInstrumentId)
+      : undefined;
   const quoteStatusLabel = !selectedSource.streamingQuotes
     ? 'No disponible'
     : quoteStatus === 'connected'
@@ -1166,6 +1170,7 @@ export function MarketChart() {
           </section>
           <ChartCanvas
             candles={candles}
+            priceIncrement={selectedMarketInstrument?.priceIncrement ?? null}
             symbol={selectedInstrument.chartSymbol}
             interval={interval}
             loading={loading}
