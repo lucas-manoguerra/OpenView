@@ -19,16 +19,18 @@ export function Dialog({
   const [open, setOpen] = useState(false);
   const dialogId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   const openDialog = () => {
     setOpen(true);
     requestAnimationFrame(() => {
-      dialogRef.current
-        ?.querySelector<HTMLElement>(
-          '[data-dialog-autofocus], button:not(:disabled), input:not(:disabled)',
-        )
-        ?.focus();
+      requestAnimationFrame(() => {
+        const focusTarget =
+          dialogRef.current?.querySelector<HTMLElement>(
+            '[data-dialog-autofocus], button:not(:disabled), input:not(:disabled)',
+          ) ?? dialogRef.current;
+        focusTarget?.focus();
+      });
     });
   };
 
@@ -89,10 +91,11 @@ export function Dialog({
             onClick={closeDialog}
             class="absolute inset-0 cursor-default bg-black/60"
           />
-          <dialog
+          <div
             ref={dialogRef}
-            open
+            role="dialog"
             aria-modal="true"
+            tabIndex={-1}
             aria-labelledby={`${dialogId}-title`}
             aria-describedby={description ? `${dialogId}-description` : undefined}
             onKeyDown={handleKeyDown}
@@ -119,7 +122,7 @@ export function Dialog({
               </button>
             </header>
             <div class="px-4 py-4 text-sm text-[#b2b5be]">{children}</div>
-          </dialog>
+          </div>
         </div>
       ) : null}
     </>
