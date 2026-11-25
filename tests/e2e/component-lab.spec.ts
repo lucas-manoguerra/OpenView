@@ -47,6 +47,21 @@ test('opens the component lab and explores drawing tools and style templates', a
   await expect(page.getByTestId('drawing-style-width')).toHaveValue('1');
   await expect(page.getByTestId('drawing-style-line')).toHaveValue('solid');
   await expect(page.getByTestId('drawing-template-delete')).toBeDisabled();
+
+  await page.goto('/component-lab/drawings/properties');
+  await expect(page.getByRole('heading', { name: 'Drawing Properties Panel' })).toBeVisible();
+  await expect(page.getByTestId('drawing-properties-playground')).toBeVisible();
+  await expect(page.getByTestId('drawing-style-color')).toHaveValue('#60a5fa');
+  await page.getByTestId('drawing-style-color').evaluate((element: HTMLInputElement) => {
+    element.value = '#ef5350';
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await expect(page.getByTestId('drawing-style-color')).toHaveValue('#ef5350');
+  await page.getByTestId('drawing-template-name').fill('Resistance');
+  await page.getByTestId('drawing-template-save').click();
+  await expect(page.getByTestId('drawing-template-select')).toHaveValue(
+    /component-lab-/,
+  );
 });
 
 test('exposes button variants and sizes in the playground', async ({ page }) => {
