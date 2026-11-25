@@ -36,6 +36,7 @@ import {
 import {
   attachCanvasPointerEvents,
   type CanvasDrawingEditGesture,
+  type ChartDrawingHit,
   type CanvasDrawingGroupEditGesture,
   type CanvasDrawingAreaSelection,
   type CanvasDrawingGesture,
@@ -644,6 +645,9 @@ export function ChartCanvas({
           },
           onDrawingSelectionChange: (drawingIds: readonly string[]): void => {
             updateDrawingSelection(drawingIds);
+          },
+          onDrawingHover: (hit: ChartDrawingHit | null): void => {
+            canvas.style.cursor = hit === null ? '' : hit.target === 'body' ? 'move' : 'crosshair';
           },
           onDrawingAreaSelectionChange: (selection: CanvasDrawingAreaSelection | null): void => {
             setDrawingSelectionArea(selection);

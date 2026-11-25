@@ -1166,4 +1166,57 @@ describe('canvas pointer event adapter', () => {
 
     expect(capturedPointers.has(12)).toBe(false);
   });
+
+  it('reports drawing anchor hover targets and clears them on pointer leave', () => {
+    const { canvas, dispatch } = createCanvasTarget();
+    const frame = createChartFrame(900, 500, { min: 90, max: 120 }, 2);
+    const controller = createChartInteractionController(frame);
+    const candles: readonly ChartRenderCandle[] = [
+      {
+        logicalIndex: 0,
+        timestamp: 1_700_000_000_000,
+        open: 100,
+        high: 110,
+        low: 95,
+        close: 105,
+        volume: 10,
+      },
+      {
+        logicalIndex: 1,
+        timestamp: 1_700_000_060_000,
+        open: 105,
+        high: 112,
+        low: 100,
+        close: 108,
+        volume: 20,
+      },
+    ];
+    const drawing: ChartRenderDrawing = {
+      id: 'trend-1',
+      type: 'trend-line',
+      start: { timestamp: candles[0]?.timestamp ?? 0, price: 100 },
+      end: { timestamp: candles[1]?.timestamp ?? 0, price: 108 },
+      color: '#60a5fa',
+    };
+    const hoverHits: unknown[] = [];
+    attachCanvasPointerEvents(canvas, controller, {
+      getDrawingTool: () => 'select',
+      getDrawings: () => [drawing],
+      getCandles: () => candles,
+      getSelectedDrawingIds: () => ['trend-1'],
+      onDrawingHover: (hit) => hoverHits.push(hit),
+    });
+    const anchor = dataPointToChartCoordinate({ logicalIndex: 0, price: 100 }, frame);
+
+    dispatch(
+      'pointermove',
+      createPointerEvent({ clientX: 100 + anchor.x, clientY: 50 + anchor.y }),
+    );
+
+    expect(hoverHits[0]).toMatchObject({ drawingId: 'trend-1', target: 'start' });
+
+    dispatch('pointerleave', createPointerEvent());
+
+    expect(hoverHits.at(-1)).toBeNull();
+  });
 });
