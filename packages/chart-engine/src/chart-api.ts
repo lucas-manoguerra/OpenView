@@ -86,9 +86,7 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
   };
 
   const render = (): void => {
-    const renderScene = drawingsVisible
-      ? scene
-      : updateChartRenderScene(scene, { drawings: [] });
+    const renderScene = drawingsVisible ? scene : updateChartRenderScene(scene, { drawings: [] });
     renderer.setScene(updateChartRenderScene(renderScene, { objectOrder }));
   };
 
