@@ -96,6 +96,8 @@ type ChartRuntime = Readonly<{
   invertPriceScale(): void;
   setIndicators(indicators: readonly ChartIndicatorSeries[]): void;
   setDrawings(drawings: readonly ChartRenderDrawing[]): void;
+  addDrawing(drawing: ChartRenderDrawing): void;
+  deleteDrawings(drawingIds: readonly string[]): void;
   setDrawingsVisible(visible: boolean): void;
   undoDrawings(): void;
   redoDrawings(): void;
@@ -700,17 +702,7 @@ export function ChartCanvas({
             });
           },
           onDrawingDeleteMany: (drawingIds: readonly string[]): void => {
-            const deletedIds = new Set(drawingIds);
-            const nextDrawings = drawingsRef.current.filter(
-              (drawing) => !deletedIds.has(drawing.id),
-            );
-
-            if (nextDrawings.length === drawingsRef.current.length) {
-              return;
-            }
-
-            commitDrawingsRef.current(nextDrawings);
-            updateDrawingSelection([]);
+            runtimeRef.current?.deleteDrawings(drawingIds);
           },
           onDrawingEditPreview: (gesture: CanvasDrawingEditGesture | null): void => {
             chartApi?.execute({
@@ -731,14 +723,7 @@ export function ChartCanvas({
             });
           },
           onDrawingDelete: (drawingId: string): void => {
-            const nextDrawings = drawingsRef.current.filter((drawing) => drawing.id !== drawingId);
-
-            if (nextDrawings.length === drawingsRef.current.length) {
-              return;
-            }
-
-            commitDrawingsRef.current(nextDrawings);
-            updateDrawingSelection([]);
+            runtimeRef.current?.deleteDrawings([drawingId]);
           },
           onDrawingComplete: (gesture: CanvasDrawingGesture): void => {
             const startTimestamp = getTimestampAtLogicalIndex(
@@ -771,7 +756,7 @@ export function ChartCanvas({
                     }),
               ...drawingToolPreferencesRef.current[gesture.type],
             });
-            commitDrawingsRef.current([...drawingsRef.current, drawing]);
+            runtimeRef.current?.addDrawing(drawing);
           },
           onDrawingToolExit: (): void => {
             drawingToolRef.current = 'cursor';
@@ -883,6 +868,12 @@ export function ChartCanvas({
 
         scene = updateChartRenderScene(scene, { drawings: nextDrawings });
         chartApi?.execute({ type: 'set-drawings', drawings: nextDrawings });
+      },
+      addDrawing: (drawing: ChartRenderDrawing): void => {
+        chartApi?.execute({ type: 'add-drawing', drawing });
+      },
+      deleteDrawings: (drawingIds: readonly string[]): void => {
+        chartApi?.execute({ type: 'delete-drawings', drawingIds });
       },
       setDrawingsVisible: (visible: boolean): void => {
         chartApi?.execute({ type: 'set-drawings-visible', visible });
