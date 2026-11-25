@@ -32,6 +32,8 @@ type MarketWatchlistProps = Readonly<{
   searchCatalogStatus: SearchCatalogStatus;
   searchCatalogFailures: readonly SearchCatalogFailure[];
   onOpenSearch: () => void;
+  isSearchOpen: boolean;
+  onSearchOpenChange: (isOpen: boolean) => void;
   onSelect: (instrumentId: string) => void;
   onAdd: (instrument: WatchlistInstrument, providerId: string) => void;
   onRemove: (instrumentId: string) => void;
@@ -426,14 +428,17 @@ export function MarketWatchlist({
   searchCatalogStatus,
   searchCatalogFailures,
   onOpenSearch,
+  isSearchOpen,
+  onSearchOpenChange,
   onSelect,
   onAdd,
   onRemove,
 }: MarketWatchlistProps) {
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const shortcutDocumentRef = useRef<Document | null>(null);
   const onOpenSearchRef = useRef(onOpenSearch);
   onOpenSearchRef.current = onOpenSearch;
+  const onSearchOpenChangeRef = useRef(onSearchOpenChange);
+  onSearchOpenChangeRef.current = onSearchOpenChange;
   const handleDocumentShortcut = useCallback((event: KeyboardEvent): void => {
     const target = event.target;
 
@@ -452,7 +457,7 @@ export function MarketWatchlist({
     }
 
     event.preventDefault();
-    setIsSearchOpen(true);
+    onSearchOpenChangeRef.current(true);
     onOpenSearchRef.current();
   }, []);
   const bindShortcutRoot = useCallback(
@@ -471,7 +476,7 @@ export function MarketWatchlist({
   const availableIds = new Set(availableInstrumentIds);
 
   const openSearch = (): void => {
-    setIsSearchOpen(true);
+    onSearchOpenChange(true);
     onOpenSearch();
   };
 
@@ -631,7 +636,7 @@ export function MarketWatchlist({
           results={searchResults}
           status={searchCatalogStatus}
           failures={searchCatalogFailures}
-          onClose={() => setIsSearchOpen(false)}
+          onClose={() => onSearchOpenChange(false)}
           onAdd={onAdd}
         />
       )}

@@ -31,6 +31,17 @@ import { ChartCanvas } from './ChartCanvas';
 
 const DEFAULT_PROVIDER_ID = 'binance-spot';
 const DEFAULT_INTERVAL: CandleInterval = '1m';
+const QUICK_INTERVALS: readonly CandleInterval[] = Object.freeze([
+  '1m',
+  '3m',
+  '5m',
+  '15m',
+  '30m',
+  '1h',
+  '2h',
+  '4h',
+  '1d',
+]);
 const FALLBACK_WATCHLIST_INSTRUMENT: WatchlistInstrument = Object.freeze({
   id: 'BTC-USDT',
   symbol: 'BTC / USDT',
@@ -120,6 +131,7 @@ const getHistoryStartTime = (endTime: number, interval: CandleInterval): number 
 
 export function MarketChart() {
   const [providerId, setProviderId] = useState(DEFAULT_PROVIDER_ID);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [interval, setInterval] = useState<CandleInterval>(DEFAULT_INTERVAL);
   const [watchlist, setWatchlist] = useState<readonly WatchlistInstrument[]>(DEFAULT_WATCHLIST);
   const [availableInstruments, setAvailableInstruments] = useState<readonly WatchlistInstrument[]>(
@@ -842,6 +854,11 @@ export function MarketChart() {
     void loadCandles(nextProviderId, nextInterval, nextSelectedInstrumentId);
   };
 
+  const openSymbolSearch = (): void => {
+    setIsSearchOpen(true);
+    void loadSearchCatalog();
+  };
+
   const handleIntervalChange = (value: string): void => {
     const nextInterval = selectedSource.supportedIntervals.find((item) => item === value);
 
@@ -942,73 +959,121 @@ export function MarketChart() {
   return (
     <div class="space-y-3" data-testid="market-chart">
       <span ref={bindInitializer} class="hidden" aria-hidden="true" />
-      <div class="flex flex-wrap items-end justify-between gap-3 px-1">
-        <div class="flex flex-wrap items-end gap-3">
-          <label class="grid gap-1.5 text-[10px] font-medium uppercase tracking-wider text-slate-500">
-            Fuente de datos
+      <div class="rounded-xl border border-white/10 bg-[#11151d] p-2">
+        <div class="flex min-w-0 flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={openSymbolSearch}
+            aria-label={`Buscar instrumentos; instrumento actual: ${selectedInstrument.chartSymbol}`}
+            data-testid="toolbar-symbol-search"
+            class="flex h-9 min-w-0 items-center gap-2 rounded-lg border border-white/10 bg-[#0b0f17] px-3 text-left transition-colors hover:border-blue-400/40 hover:bg-[#131e2d]"
+          >
+            <span class="text-[9px] font-medium uppercase tracking-wider text-slate-500">
+              Símbolo
+            </span>
+            <span class="truncate text-xs font-semibold text-slate-100">
+              {selectedInstrument.chartSymbol}
+            </span>
+            <kbd class="ml-2 rounded border border-white/10 px-1.5 py-0.5 text-[9px] text-slate-500">
+              /
+            </kbd>
+          </button>
+          <label class="flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-[#0b0f17] px-2.5 text-[10px] text-slate-500">
+            <span class="sr-only">Fuente de datos</span>
             <select
               value={providerId}
               onChange={(event) => void handleProviderChange(event.currentTarget.value)}
               data-testid="provider-select"
-              class="min-w-40 rounded-lg border border-white/10 bg-[#101723] px-3 py-2 text-xs normal-case tracking-normal text-slate-200 outline-none transition-colors focus:border-blue-400/50"
+              aria-label="Fuente de datos"
+              class="max-w-36 bg-transparent text-xs text-slate-200 outline-none"
             >
               {dataSources.map((source) => (
                 <option value={source.id}>{source.displayName}</option>
               ))}
             </select>
           </label>
-          <label class="grid gap-1.5 text-[10px] font-medium uppercase tracking-wider text-slate-500">
-            Temporalidad
+          <span class="hidden h-6 w-px bg-white/10 sm:block" />
+          <fieldset
+            aria-label="Temporalidades rápidas"
+            data-testid="chart-timeframe-toolbar"
+            class="flex min-w-0 flex-wrap items-center gap-0.5"
+          >
+            <legend class="sr-only">Temporalidades rápidas</legend>
+            {QUICK_INTERVALS.filter((quickInterval) =>
+              selectedSource.supportedIntervals.includes(quickInterval),
+            ).map((quickInterval) => (
+              <button
+                type="button"
+                key={quickInterval}
+                aria-pressed={interval === quickInterval}
+                aria-label={quickInterval}
+                data-testid={'chart-timeframe-' + quickInterval}
+                onClick={() => handleIntervalChange(quickInterval)}
+                class={
+                  'rounded-md px-2 py-2 text-[11px] tabular-nums transition-colors ' +
+                  (interval === quickInterval
+                    ? 'bg-blue-500/20 font-semibold text-blue-200'
+                    : 'text-slate-400 hover:bg-white/[0.06] hover:text-slate-100')
+                }
+              >
+                {quickInterval}
+              </button>
+            ))}
+          </fieldset>
+          <label class="flex h-9 items-center gap-1 rounded-lg border border-white/10 bg-[#0b0f17] px-2 text-[10px] text-slate-500">
+            <span class="sr-only">Todas las temporalidades</span>
             <select
               value={interval}
               onChange={(event) => handleIntervalChange(event.currentTarget.value)}
               data-testid="interval-select"
-              class="min-w-24 rounded-lg border border-white/10 bg-[#101723] px-3 py-2 text-xs normal-case tracking-normal text-slate-200 outline-none transition-colors focus:border-blue-400/50"
+              aria-label="Todas las temporalidades"
+              class="max-w-20 bg-transparent text-xs text-slate-300 outline-none"
             >
               {selectedSource.supportedIntervals.map((supportedInterval) => (
                 <option value={supportedInterval}>{supportedInterval}</option>
               ))}
             </select>
           </label>
-        </div>
-        <div class="flex items-center gap-2 pb-2 text-[11px] text-slate-500">
-          <span
-            class={
-              'size-1.5 rounded-full ' +
-              (streamStatus === 'connected'
-                ? 'bg-emerald-400'
-                : selectedSource.streamingCandles
-                  ? 'bg-amber-400'
-                  : 'bg-slate-500')
-            }
-          />
-          <span>{selectedSource.displayName}</span>
-          <span aria-hidden="true">·</span>
-          <span>{selectedInstrument.id}</span>
-          <span aria-hidden="true">·</span>
-          <span
-            data-testid="market-stream-status"
-            data-stream-status={displayedStreamStatus}
-            data-stream-candle-count={streamCandleCount}
-            data-history-recovery-count={historyRecoveryCount}
-          >
-            {streamStatusLabel}
-          </span>
-          {recoveringHistory && (
-            <span data-testid="market-stream-recovery" class="text-blue-300">
-              Sincronizando histórico…
-            </span>
-          )}
-          {streamError !== null && (
+          <div class="ml-auto flex min-w-0 items-center gap-2 px-1 text-[10px] text-slate-500">
             <span
-              class="max-w-48 truncate text-rose-300"
-              data-testid="market-stream-error"
-              title={streamError}
+              class={
+                'size-1.5 shrink-0 rounded-full ' +
+                (streamStatus === 'connected'
+                  ? 'bg-emerald-400'
+                  : selectedSource.streamingCandles
+                    ? 'bg-amber-400'
+                    : 'bg-slate-500')
+              }
+            />
+            <span
+              data-testid="market-stream-status"
+              data-stream-status={displayedStreamStatus}
+              data-stream-candle-count={streamCandleCount}
+              data-history-recovery-count={historyRecoveryCount}
+              class="whitespace-nowrap"
             >
-              {streamError}
+              {streamStatusLabel}
             </span>
-          )}
+          </div>
         </div>
+        {(recoveringHistory || streamError !== null) && (
+          <div class="mt-2 flex flex-wrap items-center gap-2 border-t border-white/[0.06] pt-2 text-[10px]">
+            {recoveringHistory && (
+              <span data-testid="market-stream-recovery" class="text-blue-300">
+                Sincronizando histórico…
+              </span>
+            )}
+            {streamError !== null && (
+              <span
+                class="max-w-full truncate text-rose-300"
+                data-testid="market-stream-error"
+                title={streamError}
+              >
+                {streamError}
+              </span>
+            )}
+          </div>
+        )}
       </div>
       <div class="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_310px] xl:grid-cols-[minmax(0,1fr)_340px]">
         <div class="min-w-0 space-y-3">
@@ -1132,10 +1197,12 @@ export function MarketChart() {
         <aside class="min-w-0 self-start lg:sticky lg:top-2">
           <MarketWatchlist
             instruments={watchlist}
+            isSearchOpen={isSearchOpen}
+            onSearchOpenChange={setIsSearchOpen}
             searchResults={searchResults}
             searchCatalogStatus={searchCatalogStatus}
             searchCatalogFailures={searchCatalogFailures}
-            onOpenSearch={() => void loadSearchCatalog()}
+            onOpenSearch={openSymbolSearch}
             availableInstruments={availableInstruments}
             availableInstrumentIds={availableInstruments.map((instrument) => instrument.id)}
             catalogStatus={catalogStatus}
