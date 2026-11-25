@@ -367,7 +367,6 @@ export function ChartCanvas({
   const selectedDrawingIdRef = useRef<string | null>(selectedDrawingId);
   const selectedDrawingIdsRef = useRef<readonly string[]>(selectedDrawingIds);
   const commitDrawingsRef = useRef<(nextDrawings: readonly ChartRenderDrawing[]) => void>(() => {});
-  const drawingSequenceRef = useRef(0);
   const drawingPanelLayoutRef = useRef<DrawingPanelLayout>(drawingPanelLayout);
   const drawingPanelLayoutLoadedRef = useRef(false);
   const drawingPropertiesPanelRef = useRef<HTMLDivElement | null>(null);
@@ -741,7 +740,7 @@ export function ChartCanvas({
 
             drawingSequenceRef.current += 1;
             const drawing: ChartRenderDrawing = Object.freeze({
-              id: 'drawing-' + drawingSequenceRef.current,
+              id: 'drawing-' + crypto.randomUUID(),
               type: gesture.type,
               start: Object.freeze({
                 timestamp: startTimestamp,
@@ -979,7 +978,6 @@ export function ChartCanvas({
       if (element !== null) {
         if (drawingSymbolRef.current !== symbol) {
           drawingSymbolRef.current = symbol;
-          drawingSequenceRef.current = 0;
           selectedDrawingIdRef.current = null;
           setSelectedDrawingId(null);
           selectedDrawingIdsRef.current = Object.freeze([]);
