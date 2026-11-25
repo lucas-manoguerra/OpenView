@@ -149,6 +149,30 @@ describe('chart drawing geometry', () => {
     ).toEqual(['trend-1']);
   });
 
+  it('selects a drawing when its path crosses the marquee even if both anchors are outside', () => {
+    const frame = createFrame();
+    const candles = createCandles();
+    const crossingDrawing: ChartRenderDrawing = Object.freeze({
+      ...trendDrawing,
+      id: 'trend-crossing',
+      start: Object.freeze({ timestamp: 1_700_000_000_000, price: 92 }),
+      end: Object.freeze({ timestamp: 1_700_000_120_000, price: 118 }),
+    });
+    const middle = dataPointToChartCoordinate({ logicalIndex: 1, price: 105 }, frame);
+
+    expect(
+      selectChartDrawingsWithinArea(
+        {
+          start: { x: middle.x - 12, y: middle.y - 12 },
+          end: { x: middle.x + 12, y: middle.y + 12 },
+        },
+        [crossingDrawing],
+        candles,
+        frame,
+      ),
+    ).toEqual(['trend-crossing']);
+  });
+
   it('rejects non-finite marquee selection coordinates', () => {
     expect(() =>
       selectChartDrawingsWithinArea(
