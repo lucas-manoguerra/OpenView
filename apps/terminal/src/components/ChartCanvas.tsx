@@ -648,6 +648,10 @@ export function ChartCanvas({
           },
           onDrawingHover: (hit: ChartDrawingHit | null): void => {
             canvas.style.cursor = hit === null ? '' : hit.target === 'body' ? 'move' : 'crosshair';
+            if (scene !== null) {
+              scene = updateChartRenderScene(scene, { hoveredDrawingHit: hit });
+              renderer.setScene(scene);
+            }
           },
           onDrawingAreaSelectionChange: (selection: CanvasDrawingAreaSelection | null): void => {
             setDrawingSelectionArea(selection);
