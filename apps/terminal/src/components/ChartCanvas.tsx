@@ -389,15 +389,6 @@ export function ChartCanvas({
     : [];
   selectedDrawingIdRef.current = selectedDrawingId;
   selectedDrawingIdsRef.current = selectedDrawingIds;
-  const getRenderableDrawings = (
-    source: readonly ChartRenderDrawing[] = drawingsRef.current,
-  ): readonly ChartRenderDrawing[] => {
-    const renderable = drawingsVisibleRef.current
-      ? source.filter((drawing) => drawing.visible !== false)
-      : [];
-    renderableDrawingsRef.current = renderable;
-    return renderable;
-  };
   commitDrawingsRef.current = (nextDrawings): void => {
     const previousDrawings = drawingsRef.current;
     const nextUndoStack = [...drawingUndoStackRef.current, previousDrawings].slice(-50);
