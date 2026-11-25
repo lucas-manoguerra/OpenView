@@ -508,7 +508,19 @@ describe('canvas pointer event adapter', () => {
 
     expect(groupEdits).toHaveLength(1);
     expect(groupEdits[0]?.drawingIds).toEqual(['trend-1', 'trend-2']);
-    expect(groupEdits[0]?.current).toEqual(chartCoordinateToDataPoint(movedBody, frame));
+    const boundedMovedBody = {
+      x: Math.max(
+        frame.layout.plotArea.x,
+        Math.min(frame.layout.plotArea.x + frame.layout.plotArea.width, movedBody.x),
+      ),
+      y: Math.max(
+        frame.layout.plotArea.y,
+        Math.min(frame.layout.plotArea.y + frame.layout.plotArea.height, movedBody.y),
+      ),
+    };
+    expect(groupEdits[0]?.current).toEqual(
+      chartCoordinateToDataPoint(boundedMovedBody, frame),
+    );
     expect(capturedPointers.has(7)).toBe(false);
     expect(selections).toEqual([
       ['trend-1'],
