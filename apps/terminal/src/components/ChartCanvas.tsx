@@ -721,6 +721,36 @@ export function ChartCanvas({
             });
             renderer.setScene(scene);
           },
+          onDrawingGroupEditPreview: (gesture: CanvasDrawingGroupEditGesture | null): void => {
+            if (scene === null) {
+              return;
+            }
+
+            if (gesture === null) {
+              scene = updateChartRenderScene(scene, {
+                drawings: getRenderableDrawings(drawingsRef.current),
+              });
+              renderer.setScene(scene);
+              return;
+            }
+
+            const selectedIds = new Set(gesture.drawingIds);
+            const previewDrawings = drawingsRef.current.map((drawing) =>
+              selectedIds.has(drawing.id)
+                ? updateChartDrawing(
+                    drawing,
+                    'body',
+                    gesture.origin,
+                    gesture.current,
+                    currentCandles,
+                  )
+                : drawing,
+            );
+            scene = updateChartRenderScene(scene, {
+              drawings: getRenderableDrawings(previewDrawings),
+            });
+            renderer.setScene(scene);
+          },
           onDrawingEdit: (gesture: CanvasDrawingEditGesture): void => {
             const drawing = drawingsRef.current.find(
               (candidate) => candidate.id === gesture.drawingId,

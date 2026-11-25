@@ -71,6 +71,7 @@ export type CanvasPointerAdapterOptions = Readonly<{
   onDrawingSelectionChange?: (drawingIds: readonly string[]) => void;
   onDrawingEdit?: (gesture: CanvasDrawingEditGesture) => void;
   onDrawingEditPreview?: (gesture: CanvasDrawingEditGesture | null) => void;
+  onDrawingGroupEditPreview?: (gesture: CanvasDrawingGroupEditGesture | null) => void;
   onDrawingGroupEdit?: (gesture: CanvasDrawingGroupEditGesture) => void;
   onDrawingAreaSelectionChange?: (selection: CanvasDrawingAreaSelection | null) => void;
   onDrawingAreaSelectionComplete?: (area: ChartDrawingSelectionArea) => void;
@@ -286,6 +287,8 @@ export const attachCanvasPointerEvents = (
 
       if (activeDrawingEdit !== null) {
         options.onDrawingEditPreview?.({ ...activeDrawingEdit, current });
+      } else if (activeDrawingGroupEdit !== null) {
+        options.onDrawingGroupEditPreview?.({ ...activeDrawingGroupEdit, current: rawCurrent });
       }
       return;
     }
@@ -357,9 +360,14 @@ export const attachCanvasPointerEvents = (
           });
         }
       }
+      const wasGroupEdit = activeDrawingGroupEdit !== null;
       activeDrawingEdit = null;
       activeDrawingGroupEdit = null;
-      options.onDrawingEditPreview?.(null);
+      if (wasGroupEdit) {
+        options.onDrawingGroupEditPreview?.(null);
+      } else {
+        options.onDrawingEditPreview?.(null);
+      }
       releaseActivePointer();
       return;
     }
@@ -412,6 +420,7 @@ export const attachCanvasPointerEvents = (
       activeDrawingEdit = null;
       activeDrawingGroupEdit = null;
       options.onDrawingEditPreview?.(null);
+      options.onDrawingGroupEditPreview?.(null);
       releaseActivePointer();
       return;
     }
