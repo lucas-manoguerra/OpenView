@@ -2,7 +2,7 @@ import type { ComponentChildren, JSX } from 'preact';
 
 export type TextFieldSize = 'small' | 'medium' | 'large';
 
-export type TextFieldProps = Omit<JSX.IntrinsicElements['input'], 'size'> & {
+export type TextFieldProps = Omit<JSX.IntrinsicElements['input'], 'size' | 'role'> & {
   label?: string;
   hint?: string;
   error?: string;
