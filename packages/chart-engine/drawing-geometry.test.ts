@@ -4,6 +4,7 @@ import {
   getLogicalIndexAtTimestamp,
   getTimestampAtLogicalIndex,
   hitTestChartDrawing,
+  selectChartDrawingsWithinArea,
   updateChartDrawing,
 } from './src/drawing-geometry';
 import type { ChartRenderCandle, ChartRenderDrawing } from './src/canvas-painter';
@@ -116,6 +117,50 @@ describe('chart drawing geometry', () => {
       drawingId: 'trend-2',
       target: 'start',
     });
+  });
+
+  it('selects unlocked drawings fully contained in a marquee area', () => {
+    const frame = createFrame();
+    const candles = createCandles();
+    const start = dataPointToChartCoordinate({ logicalIndex: 0, price: 100 }, frame);
+    const end = dataPointToChartCoordinate({ logicalIndex: 2, price: 110 }, frame);
+    const outsideDrawing: ChartRenderDrawing = Object.freeze({
+      ...trendDrawing,
+      id: 'trend-outside',
+      start: Object.freeze({ timestamp: 1_700_000_000_000, price: 115 }),
+      end: Object.freeze({ timestamp: 1_700_000_120_000, price: 118 }),
+    });
+    const lockedDrawing: ChartRenderDrawing = Object.freeze({
+      ...trendDrawing,
+      id: 'trend-locked',
+      locked: true,
+    });
+
+    expect(
+      selectChartDrawingsWithinArea(
+        {
+          start: { x: start.x - 4, y: end.y - 4 },
+          end: { x: end.x + 4, y: start.y + 4 },
+        },
+        [trendDrawing, outsideDrawing, lockedDrawing],
+        candles,
+        frame,
+      ),
+    ).toEqual(['trend-1']);
+  });
+
+  it('rejects non-finite marquee selection coordinates', () => {
+    expect(() =>
+      selectChartDrawingsWithinArea(
+        {
+          start: { x: Number.NaN, y: 0 },
+          end: { x: 100, y: 100 },
+        },
+        [trendDrawing],
+        createCandles(),
+        createFrame(),
+      ),
+    ).toThrow(RangeError);
   });
 
   it('moves both anchors by a logical-time and price delta', () => {
