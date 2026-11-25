@@ -1007,7 +1007,7 @@ export function ChartCanvas({
           const drag = drawingPropertiesDragRef.current;
           const panel = drawingPropertiesPanelRef.current;
           const parent = panel === null ? null : panel.parentElement;
-  
+
           if (
             drag === null ||
             drag.pointerId !== event.pointerId ||
@@ -1016,7 +1016,7 @@ export function ChartCanvas({
           ) {
             return;
           }
-  
+
           const maxLeft = Math.max(0, parent.clientWidth - panel.offsetWidth);
           const maxTop = Math.max(0, parent.clientHeight - panel.offsetHeight);
           const left = Math.max(0, Math.min(maxLeft, drag.left + event.clientX - drag.pointerX));
@@ -1027,7 +1027,7 @@ export function ChartCanvas({
           if (drawingPropertiesDragRef.current?.pointerId !== event.pointerId) {
             return;
           }
-  
+
           if (event.currentTarget.hasPointerCapture(event.pointerId)) {
             event.currentTarget.releasePointerCapture(event.pointerId);
           }
