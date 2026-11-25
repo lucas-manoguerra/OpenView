@@ -1704,9 +1704,7 @@ test('uses quick drawing templates and contextual coordinate controls', async ({
 
   await expect
     .poll(() =>
-      page.evaluate(
-        () => localStorage.getItem('openview.chart.drawing-tool-preferences') ?? '',
-      ),
+      page.evaluate(() => localStorage.getItem('openview.chart.drawing-tool-preferences') ?? ''),
     )
     .toContain('horizontal-line');
 
