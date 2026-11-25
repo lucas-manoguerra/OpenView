@@ -1,3 +1,4 @@
+import { useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 
 export type TabItem = {
