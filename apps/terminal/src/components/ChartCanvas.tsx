@@ -686,6 +686,41 @@ export function ChartCanvas({
             commitDrawingsRef.current(nextDrawings);
             updateDrawingSelection([]);
           },
+          onDrawingEditPreview: (gesture: CanvasDrawingEditGesture | null): void => {
+            if (scene === null) {
+              return;
+            }
+
+            if (gesture === null) {
+              scene = updateChartRenderScene(scene, {
+                drawings: getRenderableDrawings(drawingsRef.current),
+              });
+              renderer.setScene(scene);
+              return;
+            }
+
+            const drawing = drawingsRef.current.find(
+              (candidate) => candidate.id === gesture.drawingId,
+            );
+            if (drawing === undefined) {
+              return;
+            }
+
+            const previewDrawing = updateChartDrawing(
+              drawing,
+              gesture.target,
+              gesture.origin,
+              gesture.current,
+              currentCandles,
+            );
+            const previewDrawings = drawingsRef.current.map((candidate) =>
+              candidate.id === gesture.drawingId ? previewDrawing : candidate,
+            );
+            scene = updateChartRenderScene(scene, {
+              drawings: getRenderableDrawings(previewDrawings),
+            });
+            renderer.setScene(scene);
+          },
           onDrawingEdit: (gesture: CanvasDrawingEditGesture): void => {
             const drawing = drawingsRef.current.find(
               (candidate) => candidate.id === gesture.drawingId,
