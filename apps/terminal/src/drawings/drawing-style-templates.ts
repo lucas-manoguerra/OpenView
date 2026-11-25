@@ -81,15 +81,22 @@ export const restoreDrawingStyleTemplates = (
     const templates: DrawingStyleTemplate[] = [];
     const ids = new Set<string>();
     const names = new Set<string>();
+    const countsByTool = new Map<DrawingToolType, number>();
     for (const value of Reflect.get(parsed, 'templates') as unknown[]) {
       const template = createTemplate(value);
       if (template === null) continue;
       const key = template.tool + ':' + template.name.toLocaleLowerCase();
-      if (ids.has(template.id) || names.has(key)) continue;
+      if (
+        ids.has(template.id) ||
+        names.has(key) ||
+        (countsByTool.get(template.tool) ?? 0) >= MAX_CUSTOM_DRAWING_TEMPLATES
+      ) {
+        continue;
+      }
       ids.add(template.id);
+      countsByTool.set(template.tool, (countsByTool.get(template.tool) ?? 0) + 1);
       names.add(key);
       templates.push(template);
-      if (templates.length >= MAX_CUSTOM_DRAWING_TEMPLATES * DRAWING_TOOL_TYPES.length) break;
     }
     return Object.freeze(templates);
   } catch {
