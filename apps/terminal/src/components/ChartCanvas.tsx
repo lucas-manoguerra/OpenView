@@ -1061,6 +1061,72 @@ export function ChartCanvas({
     setDrawingTool(nextTool);
   };
 
+  const handleSelectedDrawingsNudge = (
+    direction: CanvasDrawingNudgeDirection,
+    currentCandles: readonly ChartRenderCandle[],
+  ): void => {
+    const selectedIds = new Set(selectedDrawingIdsRef.current);
+
+    if (selectedIds.size === 0 && selectedDrawingIdRef.current !== null) {
+      selectedIds.add(selectedDrawingIdRef.current);
+    }
+
+    if (selectedIds.size === 0) {
+      return;
+    }
+
+    let logicalDelta = 0;
+    let priceDelta = 0;
+
+    if (direction === 'left') {
+      logicalDelta = -1;
+    } else if (direction === 'right') {
+      logicalDelta = 1;
+    } else {
+      const priceIncrement = priceIncrementRef.current;
+
+      if (
+        priceIncrement === null ||
+        !Number.isFinite(priceIncrement) ||
+        priceIncrement <= 0
+      ) {
+        return;
+      }
+
+      priceDelta = direction === 'up' ? priceIncrement : -priceIncrement;
+    }
+
+    const origin = Object.freeze({ logicalIndex: 0, price: 0 });
+    const current = Object.freeze({
+      logicalIndex: logicalDelta,
+      price: priceDelta,
+    });
+    const currentDrawings = drawingsRef.current;
+
+    try {
+      const nextDrawings = currentDrawings.map((drawing) => {
+        if (!selectedIds.has(drawing.id) || drawing.locked === true) {
+          return drawing;
+        }
+
+        if (
+          (drawing.type === 'horizontal-line' && logicalDelta !== 0) ||
+          (drawing.type === 'vertical-line' && priceDelta !== 0)
+        ) {
+          return drawing;
+        }
+
+        return updateChartDrawing(drawing, 'body', origin, current, currentCandles);
+      });
+
+      if (nextDrawings.some((drawing, index) => drawing !== currentDrawings[index])) {
+        commitDrawingsRef.current(nextDrawings);
+      }
+    } catch {
+      return;
+    }
+  };
+
   const handleSelectedDrawingUpdate = (
     updates: Partial<
       Pick<
