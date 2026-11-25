@@ -50,6 +50,8 @@ export type CanvasDrawingAreaSelection = Readonly<{
   current: ChartCoordinate;
 }>;
 
+export type CanvasDrawingNudgeDirection = 'left' | 'right' | 'up' | 'down';
+
 export type CanvasPointerAdapterOptions = Readonly<{
   getAutoScalePriceRange?: () => NumericRange | null;
   getDrawingTool?: () => CanvasDrawingTool;
@@ -61,6 +63,8 @@ export type CanvasPointerAdapterOptions = Readonly<{
   getCandles?: () => readonly ChartRenderCandle[];
   getSelectedDrawingId?: () => string | null;
   getSelectedDrawingIds?: () => readonly string[];
+  getPriceIncrement?: () => number | null;
+  onDrawingNudge?: (direction: CanvasDrawingNudgeDirection) => void;
   onDrawingComplete?: (drawing: CanvasDrawingGesture) => void;
   onDrawingToolExit?: () => void;
   onDrawingSelect?: (drawingId: string | null) => void;
@@ -416,6 +420,46 @@ export const attachCanvasPointerEvents = (
         }
       }
       event.preventDefault();
+      return;
+    }
+
+    if (
+      selectedIds.length > 0 &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.altKey &&
+      (event.key === 'ArrowLeft' ||
+        event.key === 'ArrowRight' ||
+        event.key === 'ArrowUp' ||
+        event.key === 'ArrowDown')
+    ) {
+      const direction =
+        event.key === 'ArrowLeft'
+          ? 'left'
+          : event.key === 'ArrowRight'
+            ? 'right'
+            : event.key === 'ArrowUp'
+              ? 'up'
+              : 'down';
+
+      if (direction === 'up' || direction === 'down') {
+        const priceIncrement = options.getPriceIncrement?.();
+
+        if (
+          priceIncrement === undefined ||
+          priceIncrement === null ||
+          !Number.isFinite(priceIncrement) ||
+          priceIncrement <= 0
+        ) {
+          return;
+        }
+      }
+
+      if (options.onDrawingNudge !== undefined) {
+        options.onDrawingNudge(direction);
+        event.preventDefault();
+      }
+
       return;
     }
 
