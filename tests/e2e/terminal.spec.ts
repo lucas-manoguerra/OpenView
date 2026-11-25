@@ -1885,6 +1885,83 @@ test('nudges every selected drawing by one bar and one provider tick', async ({ 
   await expect(canvas).toHaveAttribute('data-drawing-undo-count', '4');
 });
 
+test('manages individual drawing visibility and lock from the object tree', async ({
+  page,
+}) => {
+  await page.goto('/');
+
+  const canvas = page.getByRole('img', {
+    name: /Gráfico interactivo de velas y volumen para BTC \/ USDT/,
+  });
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+
+  const bounds = await canvas.boundingBox();
+
+  if (bounds === null) {
+    throw new Error('The chart canvas must have a visible bounding box.');
+  }
+
+  const firstStart = { x: bounds.x + bounds.width * 0.28, y: bounds.y + bounds.height * 0.3 };
+  const firstEnd = { x: bounds.x + bounds.width * 0.52, y: bounds.y + bounds.height * 0.44 };
+  const secondStart = { x: bounds.x + bounds.width * 0.28, y: bounds.y + bounds.height * 0.56 };
+  const secondEnd = { x: bounds.x + bounds.width * 0.52, y: bounds.y + bounds.height * 0.7 };
+  const drawLine = async (
+    start: { x: number; y: number },
+    end: { x: number; y: number },
+  ): Promise<void> => {
+    await page.getByTestId('drawing-tool-trend-line').click();
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    await page.mouse.move(end.x, end.y);
+    await page.mouse.up();
+  };
+
+  await drawLine(firstStart, firstEnd);
+  await drawLine(secondStart, secondEnd);
+  await expect(canvas).toHaveAttribute('data-drawing-count', '2');
+
+  await page.getByTestId('drawing-object-tree-toggle').click();
+  const tree = page.getByTestId('drawing-object-tree');
+  await expect(tree).toBeVisible();
+  const firstRow = page.getByTestId('drawing-object-row-drawing-1');
+  const secondRow = page.getByTestId('drawing-object-row-drawing-2');
+  await expect(firstRow).toBeVisible();
+  await expect(secondRow).toBeVisible();
+
+  await page.getByTestId('drawing-object-visibility-drawing-1').click();
+  await expect(firstRow).toHaveAttribute('data-drawing-visible', 'false');
+  await expect(canvas).toHaveAttribute('data-drawing-count', '2');
+  await expect(canvas).toHaveAttribute('data-renderable-drawing-count', '1');
+
+  await page.getByTestId('drawing-object-visibility-drawing-1').click();
+  await expect(firstRow).toHaveAttribute('data-drawing-visible', 'true');
+  await expect(canvas).toHaveAttribute('data-renderable-drawing-count', '2');
+
+  await page.getByTestId('drawing-object-lock-drawing-1').click();
+  await expect(firstRow).toHaveAttribute('data-drawing-locked', 'true');
+  await page.getByTestId('drawing-tool-select').click();
+  await page.mouse.click(
+    (firstStart.x + firstEnd.x) / 2,
+    (firstStart.y + firstEnd.y) / 2,
+  );
+  await expect(canvas).toHaveAttribute('data-selected-drawing-id', '');
+
+  await page.getByTestId('drawing-object-lock-drawing-1').click();
+  await expect(firstRow).toHaveAttribute('data-drawing-locked', 'false');
+  await page.mouse.click(
+    (firstStart.x + firstEnd.x) / 2,
+    (firstStart.y + firstEnd.y) / 2,
+  );
+  await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-1');
+
+  await page.getByTestId('drawing-object-delete-drawing-1').click();
+  await expect(canvas).toHaveAttribute('data-drawing-count', '1');
+  await expect(tree.getByTestId('drawing-object-row-drawing-1')).toHaveCount(0);
+  await expect(tree.getByTestId('drawing-object-row-drawing-2')).toBeVisible();
+});
+
 test('selects, moves, edits and deletes a drawing individually', async ({ page }) => {
   await page.goto('/');
 
