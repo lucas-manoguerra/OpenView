@@ -305,6 +305,9 @@ export function ChartCanvas({
   const [drawingMagnetMode, setDrawingMagnetMode] = useState<ChartDrawingMagnetMode>(
     DEFAULT_DRAWING_INTERACTION_PREFERENCES.magnetMode,
   );
+  const [snapToIndicators, setSnapToIndicators] = useState(
+    DEFAULT_DRAWING_INTERACTION_PREFERENCES.snapToIndicators,
+  );
   const [drawingInteractionPreferencesLoaded, setDrawingInteractionPreferencesLoaded] =
     useState(false);
   const [drawingMagnetMenuOpen, setDrawingMagnetMenuOpen] = useState(false);
@@ -318,6 +321,7 @@ export function ChartCanvas({
   const drawingToolRef = useRef<CanvasDrawingTool>(drawingTool);
   const drawingToolPreferencesRef = useRef<DrawingToolPreferences>(drawingToolPreferences);
   const drawingMagnetModeRef = useRef<ChartDrawingMagnetMode>(drawingMagnetMode);
+  const snapToIndicatorsRef = useRef(snapToIndicators);
   const drawingsRef = useRef<readonly ChartRenderDrawing[]>(drawings);
   const selectedDrawingIdRef = useRef<string | null>(selectedDrawingId);
   const selectedDrawingIdsRef = useRef<readonly string[]>(selectedDrawingIds);
@@ -338,6 +342,7 @@ export function ChartCanvas({
   drawingToolRef.current = drawingTool;
   drawingToolPreferencesRef.current = drawingToolPreferences;
   drawingMagnetModeRef.current = drawingMagnetMode;
+  snapToIndicatorsRef.current = snapToIndicators;
   drawingsRef.current = drawings;
   selectedDrawingIdRef.current = selectedDrawingId;
   selectedDrawingIdsRef.current = selectedDrawingIds;
@@ -577,6 +582,8 @@ export function ChartCanvas({
           getAutoScalePriceRange: () => getVisiblePriceRange(interactionController, currentCandles),
           getDrawingTool: () => drawingToolRef.current,
           getDrawingMagnetMode: () => drawingMagnetModeRef.current,
+          getSnapToIndicators: () => snapToIndicatorsRef.current,
+          getIndicators: () => indicatorsRef.current,
           getDrawings: () => drawingsRef.current,
           getCandles: () => currentCandles,
           getSelectedDrawingId: () => selectedDrawingIdRef.current,
@@ -929,16 +936,36 @@ export function ChartCanvas({
 
     const preferences = loadBrowserDrawingInteractionPreferences();
     drawingMagnetModeRef.current = preferences.magnetMode;
+    snapToIndicatorsRef.current = preferences.snapToIndicators;
     setDrawingMagnetMode(preferences.magnetMode);
+    setSnapToIndicators(preferences.snapToIndicators);
     setDrawingInteractionPreferencesLoaded(true);
+  };
+
+  const persistDrawingInteractionPreferences = (
+    magnetMode = drawingMagnetModeRef.current,
+    snapIndicators = snapToIndicatorsRef.current,
+  ): void => {
+    saveBrowserDrawingInteractionPreferences({
+      magnetMode,
+      snapToIndicators: snapIndicators,
+    });
   };
 
   const handleDrawingMagnetModeChange = (mode: ChartDrawingMagnetMode): void => {
     drawingMagnetModeRef.current = mode;
     setDrawingMagnetMode(mode);
     setDrawingInteractionPreferencesLoaded(true);
-    saveBrowserDrawingInteractionPreferences({ magnetMode: mode });
+    persistDrawingInteractionPreferences(mode);
     setDrawingMagnetMenuOpen(false);
+  };
+
+  const handleSnapToIndicatorsChange = (): void => {
+    const nextValue = !snapToIndicatorsRef.current;
+    snapToIndicatorsRef.current = nextValue;
+    setSnapToIndicators(nextValue);
+    setDrawingInteractionPreferencesLoaded(true);
+    persistDrawingInteractionPreferences(drawingMagnetModeRef.current, nextValue);
   };
 
   const handleDrawingMagnetMenuToggle = (): void => {
@@ -1499,6 +1526,23 @@ export function ChartCanvas({
                 Imán fuerte
                 {drawingMagnetMode === 'strong' && <span aria-hidden="true">✓</span>}
               </button>
+              <span class="my-1 block h-px bg-white/10" />
+              <button
+                type="button"
+                role="menuitemcheckbox"
+                aria-checked={snapToIndicators}
+                data-testid="drawing-magnet-indicators"
+                onClick={handleSnapToIndicatorsChange}
+                class={
+                  'flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-[11px] ' +
+                  (snapToIndicators
+                    ? 'bg-blue-500/20 text-blue-200'
+                    : 'text-slate-300 hover:bg-white/5')
+                }
+              >
+                Ajustar a indicadores
+                {snapToIndicators && <span aria-hidden="true">✓</span>}
+              </button>
             </div>
           )}
         </div>
@@ -1569,6 +1613,7 @@ export function ChartCanvas({
           data-indicator-count={renderIndicators.length}
           data-drawing-count={drawings.length}
           data-drawing-magnet-mode={drawingMagnetMode}
+          data-drawing-snap-to-indicators={String(snapToIndicators)}
           data-selected-drawing-id={selectedDrawingId ?? ''}
           data-selected-drawing-type={selectedDrawing?.type ?? ''}
           data-selected-drawing-start-price={
