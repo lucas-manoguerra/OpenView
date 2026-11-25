@@ -3,7 +3,7 @@ import type { ComponentChildren, JSX } from 'preact';
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 export type ButtonSize = 'small' | 'medium' | 'large';
 
-export type ButtonProps = Omit<JSX.HTMLAttributes<HTMLButtonElement>, 'size'> & {
+export type ButtonProps = Omit<JSX.IntrinsicElements['button'], 'size'> & {
   variant?: ButtonVariant;
   size?: ButtonSize;
   fullWidth?: boolean;
@@ -40,7 +40,7 @@ export function Button({
   return (
     <button
       {...props}
-      type={props['type'] ?? 'button'}
+      type={props.type ?? 'button'}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       class={[
