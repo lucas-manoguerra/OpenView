@@ -1724,7 +1724,6 @@ test('selects multiple drawings with Ctrl click and marquee, then moves them tog
       { capture: true },
     );
   });
-  await canvas.focus();
   await page.keyboard.down('Control');
   await page.mouse.move(
     marqueeBounds.x + marqueeBounds.width * 0.22,
@@ -2406,24 +2405,24 @@ test('selects drawings with Control and moves and deletes the group together', a
     await page.mouse.up();
   };
 
-  await drawLine(0.2, 0.28);
-  await drawLine(0.42, 0.5);
+  await drawLine(0.18, 0.26);
+  await expect(canvas).toHaveAttribute('data-drawing-count', '1');
+  await drawLine(0.38, 0.46);
   await expect(canvas).toHaveAttribute('data-drawing-count', '2');
 
   const firstMidpoint = {
     x: bounds.x + bounds.width * 0.4,
-    y: bounds.y + bounds.height * 0.24,
+    y: bounds.y + bounds.height * 0.22,
   };
   const secondBody = {
     x: bounds.x + bounds.width * 0.4,
-    y: bounds.y + bounds.height * 0.46,
+    y: bounds.y + bounds.height * 0.42,
   };
 
   await page.getByTestId('drawing-tool-select').click();
   await page.mouse.click(firstMidpoint.x, firstMidpoint.y);
   await expect(canvas).toHaveAttribute('data-selected-drawing-count', '1');
 
-  await canvas.focus();
   await page.mouse.click(secondBody.x, secondBody.y, { modifiers: ['Control'] });
   await expect(canvas).toHaveAttribute('data-selected-drawing-count', '2');
   await expect(canvas).toHaveAttribute('data-selected-drawing-ids', 'drawing-1,drawing-2');
