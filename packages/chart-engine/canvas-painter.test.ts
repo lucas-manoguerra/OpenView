@@ -500,10 +500,11 @@ describe('canvas chart painter', () => {
         call.name === 'arc' &&
         call.args[0] === start.x &&
         call.args[1] === start.y &&
-        call.args[2] === 7,
+        call.args[2] === 8,
     );
     expect(hoveredAnchor).toBeDefined();
-    expect(calls.filter((call) => call.name === 'arc' && call.args[2] === 7)).toHaveLength(1);
+    expect(calls.filter((call) => call.name === 'arc' && call.args[2] === 8)).toHaveLength(1);
+    expect(calls.filter((call) => call.name === 'arc' && call.args[2] === 2)).toHaveLength(1);
   });
 
   it('renders visible control handles for the selected drawing', () => {
