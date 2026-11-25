@@ -2188,7 +2188,9 @@ export function ChartCanvas({
                       </button>
                       <button
                         type="button"
-                        aria-label={isLocked ? `Desbloquear ${drawing.id}` : `Bloquear ${drawing.id}`}
+                        aria-label={
+                          isLocked ? `Desbloquear ${drawing.id}` : `Bloquear ${drawing.id}`
+                        }
                         aria-pressed={isLocked}
                         data-testid={`drawing-object-lock-${drawing.id}`}
                         title={isLocked ? 'Desbloquear dibujo' : 'Bloquear dibujo'}
