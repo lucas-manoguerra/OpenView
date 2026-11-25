@@ -1416,7 +1416,9 @@ export function ChartCanvas({
   const handleToggleDrawingsVisibility = (): void => {
     const nextVisible = !drawingsVisibleRef.current;
     drawingsVisibleRef.current = nextVisible;
-    renderableDrawingsRef.current = nextVisible ? drawingsRef.current : [];
+    renderableDrawingsRef.current = nextVisible
+      ? drawingsRef.current.filter((drawing) => drawing.visible !== false)
+      : [];
     setDrawingsVisible(nextVisible);
     runtimeRef.current?.setDrawings(renderableDrawingsRef.current);
 
