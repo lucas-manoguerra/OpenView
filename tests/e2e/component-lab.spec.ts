@@ -25,6 +25,7 @@ test('exposes button variants and sizes in the playground', async ({ page }) => 
 
 test('updates interactive button state and accessible counter feedback', async ({ page }) => {
   await page.goto('/component-lab/core/buttons');
+  await expect(page.getByTestId('buttons-playground')).toHaveAttribute('data-hydrated', 'true');
 
   const counter = page.getByText('Clicks: 0');
   await expect(counter).toBeVisible();
@@ -38,6 +39,7 @@ test('updates interactive button state and accessible counter feedback', async (
 
 test('toggles icon button active state and loading state', async ({ page }) => {
   await page.goto('/component-lab/core/buttons');
+  await expect(page.getByTestId('buttons-playground')).toHaveAttribute('data-hydrated', 'true');
 
   const addButton = page.getByRole('button', { name: 'Añadir al gráfico' });
   await expect(addButton).toHaveAttribute('aria-pressed', 'false');
