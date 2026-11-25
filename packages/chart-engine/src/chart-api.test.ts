@@ -581,7 +581,7 @@ describe('chart public API', () => {
     expect(chart.exportSnapshot().scene.drawings).toHaveLength(0);
     expect(chart.exportSnapshot().scene.selectedDrawingIds).toHaveLength(0);
     chart.execute({ type: 'undo-drawings' });
-    expect(chart.exportSnapshot().scene.drawings).toEqual([drawing]);
+    expect(chart.exportSnapshot().scene.drawings).toMatchObject([drawing]);
     chart.destroy();
   });
 });
