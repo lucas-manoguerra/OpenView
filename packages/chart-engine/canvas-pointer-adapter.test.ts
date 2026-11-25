@@ -264,6 +264,71 @@ describe('canvas pointer event adapter', () => {
     ]);
   });
 
+  it('snaps drawing anchors to OHLC values when the temporary magnet modifier is held', () => {
+    const { canvas, dispatch } = createCanvasTarget();
+    const frame = createChartFrame(900, 500, { min: 90, max: 120 }, 2);
+    const controller = createChartInteractionController(frame);
+    const candles: readonly ChartRenderCandle[] = [
+      {
+        logicalIndex: 0,
+        timestamp: 1_700_000_000_000,
+        open: 100,
+        high: 110,
+        low: 95,
+        close: 105,
+        volume: 10,
+      },
+      {
+        logicalIndex: 1,
+        timestamp: 1_700_000_060_000,
+        open: 105,
+        high: 112,
+        low: 100,
+        close: 108,
+        volume: 20,
+      },
+      {
+        logicalIndex: 2,
+        timestamp: 1_700_000_120_000,
+        open: 108,
+        high: 114,
+        low: 104,
+        close: 106,
+        volume: 30,
+      },
+    ];
+    const gestures: CanvasDrawingGesture[] = [];
+    attachCanvasPointerEvents(canvas, controller, {
+      getDrawingTool: () => 'trend-line',
+      getDrawingMagnetMode: () => 'off',
+      getCandles: () => candles,
+      onDrawingComplete: (drawing) => gestures.push(drawing),
+    });
+    const start = dataPointToChartCoordinate({ logicalIndex: 0, price: 101 }, frame);
+    const end = dataPointToChartCoordinate({ logicalIndex: 2, price: 109 }, frame);
+
+    dispatch(
+      'pointerdown',
+      createPointerEvent({
+        clientX: 100 + start.x,
+        clientY: 50 + start.y,
+        ctrlKey: true,
+      }),
+    );
+    dispatch(
+      'pointerup',
+      createPointerEvent({
+        clientX: 100 + end.x,
+        clientY: 50 + end.y,
+        ctrlKey: true,
+      }),
+    );
+
+    expect(gestures).toHaveLength(1);
+    expect(gestures[0]?.start).toEqual({ logicalIndex: 0, price: 100 });
+    expect(gestures[0]?.end).toEqual({ logicalIndex: 2, price: 108 });
+  });
+
   it('does not create a drawing when its pointer gesture is cancelled', () => {
     const { canvas, dispatch, capturedPointers } = createCanvasTarget();
     const controller = createChartInteractionController(
