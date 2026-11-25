@@ -121,7 +121,7 @@ export function Icon({
       strokeWidth={strokeWidth}
       class={className}
       aria-hidden={decorative ? true : undefined}
-      aria-label={decorative ? undefined : label ?? name}
+      aria-label={decorative ? undefined : (label ?? name)}
       role={decorative ? undefined : 'img'}
     />
   );
