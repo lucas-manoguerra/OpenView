@@ -395,6 +395,9 @@ export function ChartCanvas({
     drawingUndoStackRef.current = Object.freeze(nextUndoStack);
     drawingRedoStackRef.current = Object.freeze([]);
     drawingsRef.current = Object.freeze([...nextDrawings]);
+    renderableDrawingsRef.current = drawingsVisibleRef.current
+      ? drawingsRef.current.filter((drawing) => drawing.visible !== false)
+      : [];
     setDrawings(drawingsRef.current);
     setDrawingUndoCount(drawingUndoStackRef.current.length);
     setDrawingRedoCount(0);
@@ -563,6 +566,9 @@ export function ChartCanvas({
             });
           }
           drawingsRef.current = event.drawings;
+          renderableDrawingsRef.current = drawingsVisibleRef.current
+            ? event.drawings.filter((drawing) => drawing.visible !== false)
+            : [];
           selectedDrawingIdRef.current = event.selectedDrawingId;
           selectedDrawingIdsRef.current = event.selectedDrawingIds;
           setDrawings(event.drawings);
