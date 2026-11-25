@@ -17,7 +17,6 @@ export function DialogPlayground() {
                 <input
                   id="dialog-layout-name"
                   autoFocus
-                  data-dialog-autofocus
                   defaultValue="Mi espacio de trabajo"
                   class="h-9 w-full rounded border border-[#434651] bg-[#131722] px-3 text-sm text-[#d1d4dc] outline-none focus:border-[#2962ff]"
                 />
