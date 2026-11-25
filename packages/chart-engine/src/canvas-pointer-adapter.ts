@@ -70,6 +70,7 @@ export type CanvasPointerAdapterOptions = Readonly<{
   onDrawingSelect?: (drawingId: string | null) => void;
   onDrawingSelectionChange?: (drawingIds: readonly string[]) => void;
   onDrawingEdit?: (gesture: CanvasDrawingEditGesture) => void;
+  onDrawingEditPreview?: (gesture: CanvasDrawingEditGesture | null) => void;
   onDrawingGroupEdit?: (gesture: CanvasDrawingGroupEditGesture) => void;
   onDrawingAreaSelectionChange?: (selection: CanvasDrawingAreaSelection | null) => void;
   onDrawingAreaSelectionComplete?: (area: ChartDrawingSelectionArea) => void;
@@ -270,11 +271,26 @@ export const attachCanvasPointerEvents = (
       return;
     }
 
-    if (
-      activeDrawingTool !== null ||
-      activeDrawingEdit !== null ||
-      activeDrawingGroupEdit !== null
-    ) {
+    if (activeDrawingEdit !== null || activeDrawingGroupEdit !== null) {
+      const position = getCanvasPosition(canvas, event);
+      const { plotArea } = controller.snapshot.frame.layout;
+      const boundedPosition = Object.freeze({
+        x: Math.max(plotArea.x, Math.min(plotArea.x + plotArea.width, position.x)),
+        y: Math.max(plotArea.y, Math.min(plotArea.y + plotArea.height, position.y)),
+      });
+      const rawCurrent = chartCoordinateToDataPoint(boundedPosition, controller.snapshot.frame);
+      const current =
+        activeDrawingEdit?.target === 'start' || activeDrawingEdit?.target === 'end'
+          ? snapDrawingPoint(rawCurrent, event)
+          : rawCurrent;
+
+      if (activeDrawingEdit !== null) {
+        options.onDrawingEditPreview?.({ ...activeDrawingEdit, current });
+      }
+      return;
+    }
+
+    if (activeDrawingTool !== null) {
       return;
     }
 
@@ -343,6 +359,7 @@ export const attachCanvasPointerEvents = (
       }
       activeDrawingEdit = null;
       activeDrawingGroupEdit = null;
+      options.onDrawingEditPreview?.(null);
       releaseActivePointer();
       return;
     }
@@ -394,6 +411,7 @@ export const attachCanvasPointerEvents = (
     if (activeDrawingEdit !== null || activeDrawingGroupEdit !== null) {
       activeDrawingEdit = null;
       activeDrawingGroupEdit = null;
+      options.onDrawingEditPreview?.(null);
       releaseActivePointer();
       return;
     }
