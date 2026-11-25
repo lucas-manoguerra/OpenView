@@ -1315,52 +1315,56 @@ export function ChartCanvas({
                   };
                   setDrawingPanelPosition({ left, top });
 
-                  const handlePointerMove = (pointerEvent: PointerEvent): void => {
-                    const drag = drawingPropertiesDragRef.current;
+                  const updatePanelPosition = (clientX: number, clientY: number): void => {
                     const currentPanel = drawingPropertiesPanelRef.current;
                     const parent = currentPanel?.parentElement ?? null;
 
-                    if (
-                      drag === null ||
-                      drag.pointerId !== pointerEvent.pointerId ||
-                      currentPanel === null ||
-                      parent === null
-                    ) {
+                    if (currentPanel === null || parent === null) {
                       return;
                     }
 
                     const maxLeft = Math.max(0, parent.clientWidth - currentPanel.offsetWidth);
                     const maxTop = Math.max(0, parent.clientHeight - currentPanel.offsetHeight);
-                    const nextLeft = Math.max(
-                      0,
-                      Math.min(maxLeft, drag.left + pointerEvent.clientX - drag.pointerX),
-                    );
-                    const nextTop = Math.max(
-                      0,
-                      Math.min(maxTop, drag.top + pointerEvent.clientY - drag.pointerY),
-                    );
+                    const nextLeft = Math.max(0, Math.min(maxLeft, left + clientX - event.clientX));
+                    const nextTop = Math.max(0, Math.min(maxTop, top + clientY - event.clientY));
                     setDrawingPanelPosition({ left: nextLeft, top: nextTop });
                   };
 
+                  const handlePointerMove = (pointerEvent: PointerEvent): void => {
+                    if (pointerEvent.pointerId === event.pointerId) {
+                      updatePanelPosition(pointerEvent.clientX, pointerEvent.clientY);
+                    }
+                  };
+
                   const handlePointerEnd = (pointerEvent: PointerEvent): void => {
-                    if (drawingPropertiesDragRef.current?.pointerId !== pointerEvent.pointerId) {
+                    if (pointerEvent.pointerId !== event.pointerId) {
                       return;
                     }
 
                     window.removeEventListener('pointermove', handlePointerMove);
                     window.removeEventListener('pointerup', handlePointerEnd);
                     window.removeEventListener('pointercancel', handlePointerEnd);
-
-                    if (dragSurface.hasPointerCapture(pointerEvent.pointerId)) {
-                      dragSurface.releasePointerCapture(pointerEvent.pointerId);
-                    }
                     drawingPropertiesDragRef.current = null;
                   };
 
-                  window.addEventListener('pointermove', handlePointerMove);
-                  window.addEventListener('pointerup', handlePointerEnd);
-                  window.addEventListener('pointercancel', handlePointerEnd);
-                  dragSurface.setPointerCapture(event.pointerId);
+                  const handleMouseMove = (mouseEvent: MouseEvent): void => {
+                    updatePanelPosition(mouseEvent.clientX, mouseEvent.clientY);
+                  };
+
+                  const handleMouseEnd = (): void => {
+                    window.removeEventListener('mousemove', handleMouseMove);
+                    window.removeEventListener('mouseup', handleMouseEnd);
+                    drawingPropertiesDragRef.current = null;
+                  };
+
+                  if (event.pointerType === 'mouse') {
+                    window.addEventListener('mousemove', handleMouseMove);
+                    window.addEventListener('mouseup', handleMouseEnd);
+                  } else {
+                    window.addEventListener('pointermove', handlePointerMove);
+                    window.addEventListener('pointerup', handlePointerEnd);
+                    window.addEventListener('pointercancel', handlePointerEnd);
+                  }
                 }}
               >
                 <span aria-hidden="true" class="text-slate-500">
