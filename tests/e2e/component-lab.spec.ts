@@ -112,7 +112,9 @@ test('navigates TradingView tabs and dropdown menus with keyboard and pointer', 
 });
 
 
-test('opens modal dialogs with focus containment, Escape and focus restoration', async ({ page }) => {
+test('opens modal dialogs with focus containment, Escape and focus restoration', async ({
+  page,
+}) => {
   await page.goto('/component-lab');
 
   await page.getByRole('link', { name: 'Dialogs · Modals' }).click();
