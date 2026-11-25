@@ -942,12 +942,13 @@ export function ChartCanvas({
       commitDrawingsRef.current(nextDrawings);
     }
 
-    const preferenceUpdates: Partial<Pick<ChartRenderDrawing, 'color' | 'lineWidth' | 'lineStyle'>> =
-      {
-        ...(updates.color === undefined ? {} : { color: updates.color }),
-        ...(updates.lineWidth === undefined ? {} : { lineWidth: updates.lineWidth }),
-        ...(updates.lineStyle === undefined ? {} : { lineStyle: updates.lineStyle }),
-      };
+    const preferenceUpdates: Partial<
+      Pick<ChartRenderDrawing, 'color' | 'lineWidth' | 'lineStyle'>
+    > = {
+      ...(updates.color === undefined ? {} : { color: updates.color }),
+      ...(updates.lineWidth === undefined ? {} : { lineWidth: updates.lineWidth }),
+      ...(updates.lineStyle === undefined ? {} : { lineStyle: updates.lineStyle }),
+    };
 
     if (selectedToolTypes.size > 0 && Object.keys(preferenceUpdates).length > 0) {
       const nextPreferences = { ...drawingToolPreferencesRef.current };
@@ -1953,7 +1954,9 @@ export function ChartCanvas({
                 <option value="dotted">Puntos</option>
               </select>
             </div>
-            {selectedDrawing !== null && selectedDrawingsShareType && selectedDrawing.type === 'rectangle' && (
+            {selectedDrawing !== null &&
+              selectedDrawingsShareType &&
+              selectedDrawing.type === 'rectangle' && (
               <div
                 class="mt-3 space-y-2 border-t border-white/10 pt-3"
                 data-testid="drawing-rectangle-properties"
