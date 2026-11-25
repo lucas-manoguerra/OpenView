@@ -64,6 +64,7 @@ test('opens the component lab and explores drawing tools and style templates', a
   await page.goto('/component-lab/drawings/coordinates');
   await expect(page.getByRole('heading', { name: 'Drawing Coordinates Panel' })).toBeVisible();
   await expect(page.getByTestId('drawing-coordinates-playground')).toBeVisible();
+  await expect(page.getByTestId('drawing-coordinate-panel')).toHaveAttribute('data-hydrated', 'true');
   await page.getByTestId('drawing-start-price').fill('42500');
   await expect(page.getByTestId('drawing-coordinate-state')).toContainText('Inicio: 42500');
   await page.getByTestId('drawing-coordinate-type').selectOption('horizontal-line');
