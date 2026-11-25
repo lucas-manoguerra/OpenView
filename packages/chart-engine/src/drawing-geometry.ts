@@ -364,10 +364,7 @@ export const selectChartDrawingsWithinArea = (
   const contains = (point: ChartCoordinate): boolean =>
     point.x >= left && point.x <= right && point.y >= top && point.y <= bottom;
 
-  const segmentIntersectsArea = (
-    start: ChartCoordinate,
-    end: ChartCoordinate,
-  ): boolean => {
+  const segmentIntersectsArea = (start: ChartCoordinate, end: ChartCoordinate): boolean => {
     const deltaX = end.x - start.x;
     const deltaY = end.y - start.y;
     let minimum = 0;
@@ -454,10 +451,7 @@ export const selectChartDrawingsWithinArea = (
 
     const coordinates = getDrawingCoordinates(drawing, candles, frame);
 
-    if (
-      coordinates !== null &&
-      intersectsArea(drawing, coordinates.start, coordinates.end)
-    ) {
+    if (coordinates !== null && intersectsArea(drawing, coordinates.start, coordinates.end)) {
       selectedIds.push(drawing.id);
     }
   }
