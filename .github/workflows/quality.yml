@@ -101,12 +101,12 @@ jobs:
         run: pnpm build
 
   e2e:
-    name: Browser tests · Chromium · shard ${{ matrix.shard }}/8
+    name: Browser tests · Chromium · shard ${{ matrix.shard }}/10
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -120,7 +120,7 @@ jobs:
       - name: Enforce maximum of five browser tests per shard
         shell: bash
         run: |
-          test_list="$(pnpm exec playwright test --list --shard=${{ matrix.shard }}/8 --reporter=list)"
+          test_list="$(pnpm exec playwright test --list --shard=${{ matrix.shard }}/10 --reporter=list)"
           printf '%s\n' "$test_list"
 
           shard_tests="$(printf '%s\n' "$test_list" | sed -nE 's/^Total: ([0-9]+) tests?.*/\1/p' | tail -n 1)"
@@ -130,7 +130,7 @@ jobs:
           fi
 
           if (( shard_tests > 5 )); then
-            echo "::error::Shard ${{ matrix.shard }}/8 contains $shard_tests tests; the maximum is five."
+            echo "::error::Shard ${{ matrix.shard }}/10 contains $shard_tests tests; the maximum is five."
             exit 1
           fi
 
