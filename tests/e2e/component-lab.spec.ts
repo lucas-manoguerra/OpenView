@@ -207,9 +207,7 @@ test('selects toolbar tools and supports horizontal and vertical keyboard naviga
   await expect(page.getByRole('button', { name: 'Cruz' })).toBeFocused();
 });
 
-test('controls chart timeframe, chart type and price scale independently', async ({
-  page,
-}) => {
+test('controls chart timeframe, chart type and price scale independently', async ({ page }) => {
   await page.goto('/component-lab/chart/controls');
 
   await expect(page.getByRole('heading', { name: 'Chart Controls' })).toBeVisible();
