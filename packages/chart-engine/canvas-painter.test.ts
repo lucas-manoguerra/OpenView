@@ -303,15 +303,11 @@ describe('canvas chart painter', () => {
         [{ ...drawings[0]!, id: 'invalid-opacity', fillOpacity: 1.1 }],
       ),
     ).toThrow(RangeError);
+    const invalidEndpoint = { ...drawings[0]!, id: 'invalid-endpoint' };
+    Object.defineProperty(invalidEndpoint, 'endStyle', { value: 'diamond' });
+
     expect(() =>
-      createChartRenderScene(
-        frame,
-        createCandles(),
-        null,
-        'candles',
-        [],
-        [{ ...drawings[0]!, id: 'invalid-endpoint', endStyle: 'diamond' as 'none' }],
-      ),
+      createChartRenderScene(frame, createCandles(), null, 'candles', [], [invalidEndpoint]),
     ).toThrow(RangeError);
   });
 
@@ -394,6 +390,8 @@ describe('canvas chart painter', () => {
       'vertical-line',
       'rectangle',
     ]);
+    expect(scene.drawings[0]?.extendStart).toBe(false);
+    expect(scene.drawings[0]?.extendEnd).toBe(true);
     expect(calls.filter((call) => call.name === 'stroke').length).toBeGreaterThanOrEqual(3);
     expect(calls.filter((call) => call.name === 'lineTo').length).toBeGreaterThanOrEqual(8);
   });
