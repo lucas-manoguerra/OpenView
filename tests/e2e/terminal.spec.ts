@@ -1896,10 +1896,14 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
   await expect
     .poll(async () => Number(await canvas.getAttribute('data-selected-drawing-start-timestamp')))
     .not.toBe(startAnchorBefore.timestamp);
-  await expect(canvas).toHaveAttribute('data-selected-drawing-end-price', String(endAnchorBefore.price));
-  await expect(
-    canvas,
-  ).toHaveAttribute('data-selected-drawing-end-timestamp', String(endAnchorBefore.timestamp));
+  await expect(canvas).toHaveAttribute(
+    'data-selected-drawing-end-price',
+    String(endAnchorBefore.price),
+  );
+  await expect(canvas).toHaveAttribute(
+    'data-selected-drawing-end-timestamp',
+    String(endAnchorBefore.timestamp),
+  );
 
   await page.getByTestId('drawing-editor-close').click();
   await expect(propertiesPanel).toBeHidden();
