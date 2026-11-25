@@ -112,6 +112,34 @@ describe('chart public API', () => {
     chart.destroy();
   });
 
+  it('hides drawings from rendering without deleting chart-owned drawing state', () => {
+    const { surface } = createSurface();
+    const drawing = {
+      id: 'drawing-1',
+      type: 'trend-line' as const,
+      start: { timestamp: 1, price: 2 },
+      end: { timestamp: 2, price: 3 },
+      color: '#ffffff',
+    };
+    const chart = createChart({
+      surface,
+      initialScene: createScene(),
+      renderer: { scheduler: { requestFrame: () => 1, cancelFrame: () => {} } },
+    });
+
+    chart.execute({ type: 'set-drawings', drawings: [drawing] });
+    chart.execute({ type: 'set-drawing-selection', drawingIds: ['drawing-1'] });
+    chart.execute({ type: 'set-drawings-visible', visible: false });
+
+    expect(chart.exportSnapshot().scene.drawings).toHaveLength(1);
+    expect(chart.exportSnapshot().scene.selectedDrawingIds).toEqual(['drawing-1']);
+
+    chart.execute({ type: 'set-drawings-visible', visible: true });
+    expect(chart.exportSnapshot().scene.drawings).toHaveLength(1);
+    expect(chart.exportSnapshot().scene.selectedDrawingIds).toEqual(['drawing-1']);
+    chart.destroy();
+  });
+
   it('round-trips a serializable object order snapshot', () => {
     const { surface } = createSurface();
     const chart = createChart({
