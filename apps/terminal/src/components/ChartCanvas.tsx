@@ -97,6 +97,9 @@ type ChartRuntime = Readonly<{
   setIndicators(indicators: readonly ChartIndicatorSeries[]): void;
   setDrawings(drawings: readonly ChartRenderDrawing[]): void;
   setDrawingsVisible(visible: boolean): void;
+  undoDrawings(): void;
+  redoDrawings(): void;
+  clearDrawingHistory(): void;
   setSelectedDrawingId(drawingId: string | null): void;
   setSelectedDrawingIds(drawingIds: readonly string[]): void;
   destroy(): void;
@@ -361,15 +364,7 @@ export function ChartCanvas({
   const renderableDrawingsRef = useRef<readonly ChartRenderDrawing[]>(drawings);
   const selectedDrawingIdRef = useRef<string | null>(selectedDrawingId);
   const selectedDrawingIdsRef = useRef<readonly string[]>(selectedDrawingIds);
-  const drawingUndoStackRef = useRef<readonly (readonly ChartRenderDrawing[])[]>([]);
-  const drawingRedoStackRef = useRef<readonly (readonly ChartRenderDrawing[])[]>([]);
-  const commitDrawingsRef = useRef<
-    (
-      nextDrawings: readonly ChartRenderDrawing[],
-      chartAlreadyUpdated?: boolean,
-      previousDrawings?: readonly ChartRenderDrawing[],
-    ) => void
-  >(() => {});
+  const commitDrawingsRef = useRef<(nextDrawings: readonly ChartRenderDrawing[]) => void>(() => {});
   const drawingSequenceRef = useRef(0);
   const drawingPanelLayoutRef = useRef<DrawingPanelLayout>(drawingPanelLayout);
   const drawingPanelLayoutLoadedRef = useRef(false);
@@ -394,24 +389,13 @@ export function ChartCanvas({
     : [];
   selectedDrawingIdRef.current = selectedDrawingId;
   selectedDrawingIdsRef.current = selectedDrawingIds;
-  commitDrawingsRef.current = (
-    nextDrawings,
-    chartAlreadyUpdated = false,
-    previousDrawings = drawingsRef.current,
-  ): void => {
-    const nextUndoStack = [...drawingUndoStackRef.current, previousDrawings].slice(-50);
-    drawingUndoStackRef.current = Object.freeze(nextUndoStack);
-    drawingRedoStackRef.current = Object.freeze([]);
+  commitDrawingsRef.current = (nextDrawings): void => {
     drawingsRef.current = Object.freeze([...nextDrawings]);
     renderableDrawingsRef.current = drawingsVisibleRef.current
       ? drawingsRef.current.filter((drawing) => drawing.visible !== false)
       : [];
     setDrawings(drawingsRef.current);
-    setDrawingUndoCount(drawingUndoStackRef.current.length);
-    setDrawingRedoCount(0);
-    if (!chartAlreadyUpdated) {
-      runtimeRef.current?.setDrawings(drawingsRef.current);
-    }
+    runtimeRef.current?.setDrawings(drawingsRef.current);
   };
   const ensureDrawingPanelLayoutLoaded = (): void => {
     if (drawingPanelLayoutLoadedRef.current) {
@@ -565,9 +549,12 @@ export function ChartCanvas({
       if (chartApi === null) {
         chartApi = createChart({ surface: canvas, initialScene: nextScene });
         chartApi.subscribe((event) => {
-          if (event.type !== 'drawing-state-changed') {
+          if (event.type === 'history-state-changed') {
+            setDrawingUndoCount(event.undoCount);
+            setDrawingRedoCount(event.redoCount);
             return;
           }
+          if (event.type !== 'drawing-state-changed') return;
           if (scene !== null) {
             scene = updateChartRenderScene(scene, {
               drawings: event.drawings,
@@ -707,15 +694,10 @@ export function ChartCanvas({
             updateDrawingSelection(chartApi?.selectDrawingsWithinArea(area) ?? []);
           },
           onDrawingGroupEdit: (gesture: CanvasDrawingGroupEditGesture): void => {
-            const previousDrawings = drawingsRef.current;
             chartApi?.execute({
               type: 'commit-drawing-edit',
               gesture: { kind: 'group', ...gesture },
             });
-            const nextDrawings = chartApi?.exportSnapshot().scene.drawings;
-            if (nextDrawings !== undefined && nextDrawings !== previousDrawings) {
-              commitDrawingsRef.current(nextDrawings, true, previousDrawings);
-            }
           },
           onDrawingDeleteMany: (drawingIds: readonly string[]): void => {
             const deletedIds = new Set(drawingIds);
@@ -743,15 +725,10 @@ export function ChartCanvas({
             });
           },
           onDrawingEdit: (gesture: CanvasDrawingEditGesture): void => {
-            const previousDrawings = drawingsRef.current;
             chartApi?.execute({
               type: 'commit-drawing-edit',
               gesture: { kind: 'single', ...gesture },
             });
-            const nextDrawings = chartApi?.exportSnapshot().scene.drawings;
-            if (nextDrawings !== undefined && nextDrawings !== previousDrawings) {
-              commitDrawingsRef.current(nextDrawings, true, previousDrawings);
-            }
           },
           onDrawingDelete: (drawingId: string): void => {
             const nextDrawings = drawingsRef.current.filter((drawing) => drawing.id !== drawingId);
@@ -910,6 +887,9 @@ export function ChartCanvas({
       setDrawingsVisible: (visible: boolean): void => {
         chartApi?.execute({ type: 'set-drawings-visible', visible });
       },
+      undoDrawings: (): void => chartApi?.execute({ type: 'undo-drawings' }),
+      redoDrawings: (): void => chartApi?.execute({ type: 'redo-drawings' }),
+      clearDrawingHistory: (): void => chartApi?.execute({ type: 'clear-drawing-history' }),
       setSelectedDrawingId: (drawingId: string | null): void => {
         if (scene === null) {
           return;
@@ -1014,12 +994,11 @@ export function ChartCanvas({
           selectedDrawingIdsRef.current = Object.freeze([]);
           setSelectedDrawingIds(selectedDrawingIdsRef.current);
           drawingsRef.current = Object.freeze([]);
-          drawingUndoStackRef.current = Object.freeze([]);
-          drawingRedoStackRef.current = Object.freeze([]);
           setDrawings(drawingsRef.current);
           setDrawingUndoCount(0);
           setDrawingRedoCount(0);
           runtimeRef.current?.setDrawings(drawingsRef.current);
+          runtimeRef.current?.clearDrawingHistory();
         }
 
         runtimeRef.current?.updateCandles(renderDataRef.current.candles, priceScaleMode);
@@ -1522,41 +1501,9 @@ export function ChartCanvas({
     updateDrawingSelection([]);
   };
 
-  const handleDrawingUndo = (): void => {
-    const previousDrawings = drawingUndoStackRef.current.at(-1);
+  const handleDrawingUndo = (): void => runtimeRef.current?.undoDrawings();
 
-    if (previousDrawings === undefined) {
-      return;
-    }
-
-    drawingUndoStackRef.current = Object.freeze(drawingUndoStackRef.current.slice(0, -1));
-    drawingRedoStackRef.current = Object.freeze(
-      [...drawingRedoStackRef.current, drawingsRef.current].slice(-50),
-    );
-    drawingsRef.current = previousDrawings;
-    setDrawings(previousDrawings);
-    setDrawingUndoCount(drawingUndoStackRef.current.length);
-    setDrawingRedoCount(drawingRedoStackRef.current.length);
-    runtimeRef.current?.setDrawings(previousDrawings);
-  };
-
-  const handleDrawingRedo = (): void => {
-    const nextDrawings = drawingRedoStackRef.current.at(-1);
-
-    if (nextDrawings === undefined) {
-      return;
-    }
-
-    drawingRedoStackRef.current = Object.freeze(drawingRedoStackRef.current.slice(0, -1));
-    drawingUndoStackRef.current = Object.freeze(
-      [...drawingUndoStackRef.current, drawingsRef.current].slice(-50),
-    );
-    drawingsRef.current = nextDrawings;
-    setDrawings(nextDrawings);
-    setDrawingUndoCount(drawingUndoStackRef.current.length);
-    setDrawingRedoCount(drawingRedoStackRef.current.length);
-    runtimeRef.current?.setDrawings(nextDrawings);
-  };
+  const handleDrawingRedo = (): void => runtimeRef.current?.redoDrawings();
 
   const handleAutoScaleChange = (): void => {
     const nextAutoScale = !autoScaleRef.current;

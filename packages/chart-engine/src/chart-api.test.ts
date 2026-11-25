@@ -243,6 +243,59 @@ describe('chart public API', () => {
     const committed = chart.exportSnapshot().scene.drawings;
     expect(committed[0]?.start.price).toBe(3);
     expect(committed[1]?.start.price).toBe(5);
+
+    chart.execute({ type: 'undo-drawings' });
+    const undone = chart.exportSnapshot().scene.drawings;
+    expect(undone[0]?.start.price).toBe(2);
+    expect(undone[1]?.start.price).toBe(4);
+    chart.execute({ type: 'redo-drawings' });
+    const redone = chart.exportSnapshot().scene.drawings;
+    expect(redone[0]?.start.price).toBe(3);
+    expect(redone[1]?.start.price).toBe(5);
+    chart.destroy();
+  });
+
+  it('owns drawing undo and redo history and clears redo after a new edit', () => {
+    const { surface } = createSurface();
+    const chart = createChart({
+      surface,
+      initialScene: createScene(),
+      renderer: { scheduler: { requestFrame: () => 1, cancelFrame: () => {} } },
+    });
+    const historyEvents: { undoCount: number; redoCount: number }[] = [];
+    const drawing = {
+      id: 'history-drawing',
+      type: 'trend-line' as const,
+      start: { timestamp: 1, price: 2 },
+      end: { timestamp: 2, price: 3 },
+      color: '#ffffff',
+    };
+    chart.subscribe((event) => {
+      if (event.type === 'history-state-changed') {
+        historyEvents.push({ undoCount: event.undoCount, redoCount: event.redoCount });
+      }
+    });
+
+    chart.execute({ type: 'set-drawings', drawings: [drawing] });
+    expect(historyEvents.at(-1)).toEqual({ undoCount: 1, redoCount: 0 });
+    chart.execute({ type: 'undo-drawings' });
+    expect(chart.exportSnapshot().scene.drawings).toEqual([]);
+    expect(historyEvents.at(-1)).toEqual({ undoCount: 0, redoCount: 1 });
+
+    chart.execute({ type: 'redo-drawings' });
+    expect(chart.exportSnapshot().scene.drawings).toHaveLength(1);
+    expect(historyEvents.at(-1)).toEqual({ undoCount: 1, redoCount: 0 });
+
+    chart.execute({ type: 'undo-drawings' });
+    chart.execute({ type: 'set-drawings', drawings: [{ ...drawing, color: '#ff0000' }] });
+    expect(historyEvents.at(-1)).toEqual({ undoCount: 1, redoCount: 0 });
+    chart.execute({ type: 'redo-drawings' });
+    expect(chart.exportSnapshot().scene.drawings[0]?.color).toBe('#ff0000');
+
+    chart.execute({ type: 'clear-drawing-history' });
+    expect(historyEvents.at(-1)).toEqual({ undoCount: 0, redoCount: 0 });
+    chart.execute({ type: 'undo-drawings' });
+    expect(chart.exportSnapshot().scene.drawings[0]?.color).toBe('#ff0000');
     chart.destroy();
   });
 
