@@ -6,13 +6,13 @@ import {
   type ChartObjectOrderItem,
 } from './chart-object-order';
 
-const objects: readonly ChartObjectOrderItem[] = [
+const objects = [
   { kind: 'price-series', id: 'candles' },
   { kind: 'volume', id: 'volume' },
   { kind: 'indicator', id: 'sma-20' },
   { kind: 'drawing', id: 'trend-1' },
   { kind: 'drawing', id: 'fib-1' },
-];
+] as const satisfies readonly ChartObjectOrderItem[];
 
 const ids = (order: readonly ChartObjectOrderItem[]) =>
   order.map((object) => `${object.kind}:${object.id}`);
@@ -53,9 +53,7 @@ describe('chart object order', () => {
     expect(ids(moveChartObjectInOrder(order, objects[0], 'front')).at(-1)).toBe(
       'price-series:candles',
     );
-    expect(ids(moveChartObjectInOrder(order, objects[4], 'back')[0])).toBe(
-      'drawing:fib-1',
-    );
+    expect(ids(moveChartObjectInOrder(order, objects[4], 'back'))[0]).toBe('drawing:fib-1');
   });
 
   it('keeps the current order and appends newly available objects', () => {
@@ -75,23 +73,19 @@ describe('chart object order', () => {
     const current = createChartObjectOrder(objects);
     const next = reconcileChartObjectOrder(current, [objects[0], objects[2], objects[4]]);
 
-    expect(ids(next)).toEqual([
-      'price-series:candles',
-      'indicator:sma-20',
-      'drawing:fib-1',
-    ]);
+    expect(ids(next)).toEqual(['price-series:candles', 'indicator:sma-20', 'drawing:fib-1']);
   });
 
   it('rejects duplicate object identities', () => {
-    expect(() =>
-      createChartObjectOrder([objects[3], { kind: 'drawing', id: 'trend-1' }]),
-    ).toThrow('Chart object order items must be unique.');
+    expect(() => createChartObjectOrder([objects[3], { kind: 'drawing', id: 'trend-1' }])).toThrow(
+      'Chart object order items must be unique.',
+    );
   });
 
   it('leaves the order unchanged when the target is not present', () => {
     const order = createChartObjectOrder(objects);
-    expect(
-      moveChartObjectInOrder(order, { kind: 'drawing', id: 'missing' }, 'front'),
-    ).toEqual(order);
+    expect(moveChartObjectInOrder(order, { kind: 'drawing', id: 'missing' }, 'front')).toEqual(
+      order,
+    );
   });
 });
