@@ -1171,7 +1171,6 @@ export function ChartCanvas({
                 Aplica el estilo a la selección o cambia el predeterminado de la herramienta activa.
               </p>
             </div>
-  
           )}
         </div>
         <button
