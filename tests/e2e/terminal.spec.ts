@@ -2062,6 +2062,29 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
   await dragHandle.scrollIntoViewIfNeeded();
   const panelBeforeDrag = await propertiesPanel.boundingBox();
   const dragHandleBounds = await dragHandle.boundingBox();
+  expect(panelBeforeDrag).not.toBeNull();
+  expect(dragHandleBounds).not.toBeNull();
+
+  if (panelBeforeDrag === null || dragHandleBounds === null) {
+    throw new Error('The drawing properties panel must be visible before dragging.');
+  }
+
+  const dragPoint = {
+    x: dragHandleBounds.x + dragHandleBounds.width / 2,
+    y: dragHandleBounds.y + dragHandleBounds.height / 2,
+  };
+  const pointerTarget = await page.evaluate(({ x, y }) => {
+    const target = document.elementFromPoint(x, y);
+    const handle = target?.closest('[data-testid="drawing-properties-drag-handle"]');
+    return {
+      handleReceivesPointer: handle !== null && handle !== undefined,
+      topElement: target?.tagName ?? null,
+      topTestId: target?.getAttribute('data-testid') ?? null,
+      topClass: typeof target?.className === 'string' ? target.className : '',
+    };
+  }, dragPoint);
+  expect(pointerTarget.handleReceivesPointer, JSON.stringify(pointerTarget)).toBe(true);
+
   await dragHandle.evaluate((element) => {
     element.dataset.pointerDownId = 'unset';
     element.dataset.pointerMoveId = 'unset';
@@ -2080,17 +2103,7 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
       { capture: true },
     );
   });
-  expect(panelBeforeDrag).not.toBeNull();
-  expect(dragHandleBounds).not.toBeNull();
-
-  if (panelBeforeDrag === null || dragHandleBounds === null) {
-    throw new Error('The drawing properties panel must be visible before dragging.');
-  }
-
-  await page.mouse.move(
-    dragHandleBounds.x + dragHandleBounds.width / 2,
-    dragHandleBounds.y + dragHandleBounds.height / 2,
-  );
+  await page.mouse.move(dragPoint.x, dragPoint.y);
   await page.mouse.down();
   await page.mouse.move(
     dragHandleBounds.x + dragHandleBounds.width / 2 + 45,
