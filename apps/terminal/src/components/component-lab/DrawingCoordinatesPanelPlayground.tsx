@@ -16,10 +16,7 @@ export function DrawingCoordinatesPanelPlayground() {
   const [drawing, setDrawing] = useState<ChartRenderDrawing>(INITIAL_DRAWING);
   const [visible, setVisible] = useState(true);
 
-  const updateAnchor = (
-    target: 'start' | 'end',
-    updates: Partial<ChartRenderDrawing['start']>,
-  ) => {
+  const updateAnchor = (target: 'start' | 'end', updates: Partial<ChartRenderDrawing['start']>) => {
     setDrawing((current) => {
       if (target === 'start') {
         return { ...current, start: { ...current.start, ...updates } };
@@ -42,7 +39,10 @@ export function DrawingCoordinatesPanelPlayground() {
               setDrawing((current) => ({
                 ...current,
                 type,
-                end: type === 'horizontal-line' || type === 'vertical-line' ? null : current.end ?? current.start,
+                end:
+                  type === 'horizontal-line' || type === 'vertical-line'
+                    ? null
+                    : (current.end ?? current.start),
               }));
             }}
             class="rounded border border-[#2a2e39] bg-[#0b0f17] px-3 py-2 text-sm text-[#d1d4dc]"
