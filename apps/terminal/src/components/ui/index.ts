@@ -20,3 +20,5 @@ export { Dialog } from './Dialog';
 export type { DialogProps } from './Dialog';
 export { Icon, iconRegistry } from './Icon';
 export type { IconName, IconProps, IconSize } from './Icon';
+export { Toolbar } from './Toolbar';
+export type { ToolbarGroup, ToolbarItem, ToolbarProps } from './Toolbar';
