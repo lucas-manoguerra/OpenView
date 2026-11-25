@@ -1,5 +1,8 @@
 import type { JSX } from 'preact';
-import { Icon, IconButton, Tooltip, type IconName } from '../ui';
+import { Icon } from './Icon';
+import { IconButton } from './IconButton';
+import { Tooltip } from './Tooltip';
+import type { IconName } from './Icon';
 
 export type ToolbarItem = {
   id: string;
@@ -74,50 +77,51 @@ export function Toolbar({
       ].join(' ')}
     >
       {groups.map((group, index) => (
-        <div
-          key={group.id}
-          role="group"
-          aria-label={group.label}
-          class={[
-            'flex',
-            orientation === 'horizontal' ? 'flex-row items-center gap-0.5' : 'flex-col gap-0.5',
-          ].join(' ')}
-        >
-          {group.items.map((item) => {
-            const active = value === item.id;
-            return (
-              <Tooltip
-                key={item.id}
-                content={item.shortcut ? `${item.label} · ${item.shortcut}` : item.label}
-                side={orientation === 'horizontal' ? 'top' : 'right'}
-              >
-                <IconButton
-                  label={item.label}
-                  size={size}
-                  active={active}
-                  disabled={item.disabled}
-                  data-toolbar-item
-                  data-testid={`toolbar-item-${item.id}`}
-                  tabIndex={active ? 0 : -1}
-                  onClick={() => onChange(item.id)}
+        <div key={group.id} class="contents">
+          <div
+            role="group"
+            aria-label={group.label}
+            class={[
+              'flex',
+              orientation === 'horizontal' ? 'flex-row items-center gap-0.5' : 'flex-col gap-0.5',
+            ].join(' ')}
+          >
+            {group.items.map((item) => {
+              const active = value === item.id;
+              return (
+                <Tooltip
+                  key={item.id}
+                  content={item.shortcut ? `${item.label} · ${item.shortcut}` : item.label}
+                  side={orientation === 'horizontal' ? 'top' : 'right'}
                 >
-                  <Icon name={item.icon} size="small" />
-                </IconButton>
-              </Tooltip>
-            );
-          })}
+                  <IconButton
+                    label={item.label}
+                    size={size}
+                    active={active}
+                    disabled={item.disabled}
+                    data-toolbar-item
+                    data-testid={`toolbar-item-${item.id}`}
+                    tabIndex={active ? 0 : -1}
+                    onClick={() => onChange(item.id)}
+                  >
+                    <Icon name={item.icon} size="small" />
+                  </IconButton>
+                </Tooltip>
+              );
+            })}
+          </div>
+          {index < groups.length - 1 ? (
+            <span
+              aria-hidden="true"
+              class={
+                orientation === 'horizontal'
+                  ? 'mx-1 h-5 w-px bg-[#2a2e39]'
+                  : 'my-1 h-px w-5 bg-[#2a2e39]'
+              }
+            />
+          ) : null}
         </div>
       ))}
-      {index < groups.length - 1 ? (
-        <span
-          aria-hidden="true"
-          class={
-            orientation === 'horizontal'
-              ? 'mx-1 h-5 w-px bg-[#2a2e39]'
-              : 'my-1 h-px w-5 bg-[#2a2e39]'
-          }
-        />
-      ) : null}
     </div>
   );
 }
