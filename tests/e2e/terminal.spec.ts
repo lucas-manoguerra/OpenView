@@ -1600,8 +1600,6 @@ test('hides drawings without deleting them and restores their selection', async 
   const startY = bounds.y + bounds.height * 0.34;
   const endX = bounds.x + bounds.width * 0.58;
   const endY = bounds.y + bounds.height * 0.56;
-  const middleX = (startX + endX) / 2;
-  const middleY = (startY + endY) / 2;
 
   await page.getByTestId('drawing-tool-trend-line').click();
   await page.mouse.move(startX, startY);
