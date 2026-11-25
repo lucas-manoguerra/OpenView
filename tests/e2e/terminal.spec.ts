@@ -1404,6 +1404,47 @@ test('draws geometric annotations and supports undo, redo and clearing', async (
   await expect(canvas).toHaveAttribute('data-drawing-count', '0');
 });
 
+test('persists the TradingView drawing magnet preference', async ({ page }) => {
+  await page.goto('/');
+
+  const canvas = page.getByRole('img', {
+    name: /Gráfico interactivo de velas y volumen para BTC \/ USDT/,
+  });
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+
+  await page.getByTestId('drawing-magnet-toggle').click();
+  const menu = page.getByTestId('drawing-magnet-menu');
+  await expect(menu).toBeVisible();
+  await page.getByTestId('drawing-magnet-weak').click();
+  await expect(canvas).toHaveAttribute('data-drawing-magnet-mode', 'weak');
+
+  const savedPreferences = await page.evaluate(() => {
+    const serialized = window.localStorage.getItem(
+      'openview.chart.drawing-interaction-preferences',
+    );
+
+    return serialized === null ? null : JSON.parse(serialized);
+  });
+
+  expect(savedPreferences).toEqual({ version: 1, magnetMode: 'weak' });
+
+  await page.reload();
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+  await page.getByTestId('drawing-tool-trend-line').click();
+  await expect(canvas).toHaveAttribute('data-drawing-magnet-mode', 'weak');
+
+  await page.getByTestId('drawing-magnet-toggle').click();
+  await expect(menu).toBeVisible();
+  await expect(page.getByTestId('drawing-magnet-weak')).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+});
+
 test('selects, moves, edits and deletes a drawing individually', async ({ page }) => {
   await page.goto('/');
 
