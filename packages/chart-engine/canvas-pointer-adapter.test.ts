@@ -863,16 +863,13 @@ describe('canvas pointer event adapter', () => {
       },
     );
 
-    dispatch(
-      'keydown',
-      {
-        key: 'ArrowRight',
-        ctrlKey: true,
-        metaKey: false,
-        altKey: false,
-        preventDefault,
-      } as unknown as KeyboardEvent,
-    );
+    dispatch('keydown', {
+      key: 'ArrowRight',
+      ctrlKey: true,
+      metaKey: false,
+      altKey: false,
+      preventDefault,
+    } as unknown as KeyboardEvent);
 
     expect(nudges).toEqual([]);
     expect(preventDefault).not.toHaveBeenCalled();
