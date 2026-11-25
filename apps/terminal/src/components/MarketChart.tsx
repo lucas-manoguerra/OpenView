@@ -28,6 +28,7 @@ import {
   type WatchlistInstrument,
 } from '../watchlist/watchlist-preferences';
 import { ChartCanvas } from './ChartCanvas';
+import { TimeframeSelector } from './ui';
 
 const DEFAULT_PROVIDER_ID = 'binance-spot';
 const DEFAULT_INTERVAL: CandleInterval = '1m';
@@ -997,47 +998,20 @@ export function MarketChart() {
             </select>
           </label>
           <span class="hidden h-6 w-px bg-white/10 sm:block" />
-          <fieldset
-            aria-label="Temporalidades rápidas"
-            data-testid="chart-timeframe-toolbar"
-            class="flex min-w-0 flex-wrap items-center gap-0.5"
-          >
-            <legend class="sr-only">Temporalidades rápidas</legend>
-            {QUICK_INTERVALS.filter((quickInterval) =>
-              selectedSource.supportedIntervals.includes(quickInterval),
-            ).map((quickInterval) => (
-              <button
-                type="button"
-                key={quickInterval}
-                aria-pressed={interval === quickInterval}
-                aria-label={quickInterval}
-                data-testid={'chart-timeframe-' + quickInterval}
-                onClick={() => handleIntervalChange(quickInterval)}
-                class={
-                  'rounded-md px-2 py-2 text-[11px] tabular-nums transition-colors ' +
-                  (interval === quickInterval
-                    ? 'bg-blue-500/20 font-semibold text-blue-200'
-                    : 'text-slate-400 hover:bg-white/[0.06] hover:text-slate-100')
-                }
-              >
-                {quickInterval}
-              </button>
-            ))}
-          </fieldset>
-          <label class="flex h-9 items-center gap-1 rounded-lg border border-white/10 bg-[#0b0f17] px-2 text-[10px] text-slate-500">
-            <span class="sr-only">Todas las temporalidades</span>
-            <select
-              value={interval}
-              onChange={(event) => handleIntervalChange(event.currentTarget.value)}
-              data-testid="interval-select"
-              aria-label="Todas las temporalidades"
-              class="max-w-20 bg-transparent text-xs text-slate-300 outline-none"
-            >
-              {selectedSource.supportedIntervals.map((supportedInterval) => (
-                <option value={supportedInterval}>{supportedInterval}</option>
-              ))}
-            </select>
-          </label>
+          <TimeframeSelector
+            value={interval}
+            options={selectedSource.supportedIntervals.map((supportedInterval) => ({
+              value: supportedInterval,
+              label: supportedInterval,
+            }))}
+            quickValues={QUICK_INTERVALS}
+            onChange={handleIntervalChange}
+            label="Temporalidades rápidas"
+            testId="chart-timeframe-toolbar"
+            testIdPrefix="chart-timeframe"
+            selectTestId="interval-select"
+            size="medium"
+          />
           <div class="ml-auto flex min-w-0 items-center gap-2 px-1 text-[10px] text-slate-500">
             <span
               class={
