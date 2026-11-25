@@ -132,7 +132,9 @@ for (const root of sourceRoots) {
 
     if (normalizedPath.startsWith('packages/chart-engine/')) {
       const forbiddenImports = imports.filter((specifier) =>
-        /^(preact|astro|tailwindcss|@tailwindcss|@astrojs)(\\/|$)/.test(specifier),
+        ['preact', 'astro', 'tailwindcss', '@tailwindcss', '@astrojs'].some(
+          (root) => specifier === root || specifier.startsWith(`${root}/`),
+        ),
       );
       const forbiddenHostImports = imports.filter(
         (specifier) =>
