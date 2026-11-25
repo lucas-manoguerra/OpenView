@@ -290,7 +290,8 @@ export const createChartRenderScene = (
     selectedDrawingId: frozenSelectedDrawingIds[frozenSelectedDrawingIds.length - 1] ?? null,
     selectedDrawingIds: frozenSelectedDrawingIds,
     hoveredDrawingHit:
-      hoveredDrawingHit !== null && frozenDrawings.some((drawing) => drawing.id === hoveredDrawingHit.drawingId)
+      hoveredDrawingHit !== null &&
+      frozenDrawings.some((drawing) => drawing.id === hoveredDrawingHit.drawingId)
         ? Object.freeze({ ...hoveredDrawingHit })
         : null,
   });
@@ -339,7 +340,8 @@ export const updateChartRenderScene = (
   const hoveredDrawingHit =
     update.hoveredDrawingHit === undefined
       ? scene.hoveredDrawingHit
-      : update.hoveredDrawingHit !== null && drawings.some((drawing) => drawing.id === update.hoveredDrawingHit?.drawingId)
+      : update.hoveredDrawingHit !== null &&
+          drawings.some((drawing) => drawing.id === update.hoveredDrawingHit?.drawingId)
         ? Object.freeze({ ...update.hoveredDrawingHit })
         : null;
 
