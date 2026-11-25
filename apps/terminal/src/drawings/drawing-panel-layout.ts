@@ -215,7 +215,7 @@ export const startDrawingPanelDrag = (
   try {
     dragTarget?.setPointerCapture(pointerId);
   } catch {
-    // Window-level listeners remain the fallback when pointer capture is unavailable.
+    return cleanup;
   }
 
   window.addEventListener('pointermove', handlePointerMove, true);
