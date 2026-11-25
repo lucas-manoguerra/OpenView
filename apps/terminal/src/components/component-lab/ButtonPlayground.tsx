@@ -37,7 +37,9 @@ export function ButtonPlayground() {
           <Button loading={loading} onClick={() => setLoading(!loading)}>
             {loading ? 'Cargando' : 'Simular carga'}
           </Button>
-          <Button fullWidth variant="primary">Ancho completo</Button>
+          <Button fullWidth variant="primary">
+            Ancho completo
+          </Button>
         </div>
       </section>
 
@@ -45,7 +47,11 @@ export function ButtonPlayground() {
         <h2 class="text-sm font-semibold text-[#d1d4dc]">IconButton y Tooltip</h2>
         <div class="flex items-center gap-2 rounded-md border border-[#2a2e39] bg-[#131722] p-4">
           <Tooltip content="Añadir al gráfico">
-            <IconButton label="Añadir al gráfico" active={active} onClick={() => setActive(!active)}>
+            <IconButton
+              label="Añadir al gráfico"
+              active={active}
+              onClick={() => setActive(!active)}
+            >
               <span class="text-base leading-none">＋</span>
             </IconButton>
           </Tooltip>
@@ -62,9 +68,15 @@ export function ButtonPlayground() {
       <section class="space-y-3">
         <h2 class="text-sm font-semibold text-[#d1d4dc]">Prueba de eventos</h2>
         <div class="flex flex-wrap items-center gap-3 rounded-md border border-[#2a2e39] bg-[#131722] p-4">
-          <Button variant="primary" onClick={() => setCount(count + 1)}>Incrementar contador</Button>
-          <Button variant="secondary" onClick={() => setCount(0)}>Reiniciar</Button>
-          <span class="font-mono text-sm tabular-nums text-[#d1d4dc]" aria-live="polite">Clicks: {count}</span>
+          <Button variant="primary" onClick={() => setCount(count + 1)}>
+            Incrementar contador
+          </Button>
+          <Button variant="secondary" onClick={() => setCount(0)}>
+            Reiniciar
+          </Button>
+          <span class="font-mono text-sm tabular-nums text-[#d1d4dc]" aria-live="polite">
+            Clicks: {count}
+          </span>
         </div>
       </section>
     </div>
