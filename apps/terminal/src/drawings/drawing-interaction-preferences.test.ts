@@ -25,30 +25,20 @@ describe('drawing interaction preferences', () => {
 
   it('restores supported magnet modes', () => {
     expect(
-      restoreDrawingInteractionPreferences(
-        JSON.stringify({ version: 1, magnetMode: 'weak' }),
-      ),
+      restoreDrawingInteractionPreferences(JSON.stringify({ version: 1, magnetMode: 'weak' })),
     ).toEqual({ magnetMode: 'weak' });
     expect(
-      restoreDrawingInteractionPreferences(
-        JSON.stringify({ version: 1, magnetMode: 'strong' }),
-      ),
+      restoreDrawingInteractionPreferences(JSON.stringify({ version: 1, magnetMode: 'strong' })),
     ).toEqual({ magnetMode: 'strong' });
   });
 
   it('falls back for malformed or unsupported preferences', () => {
-    expect(restoreDrawingInteractionPreferences('{')).toBe(
-      DEFAULT_DRAWING_INTERACTION_PREFERENCES,
-    );
+    expect(restoreDrawingInteractionPreferences('{')).toBe(DEFAULT_DRAWING_INTERACTION_PREFERENCES);
     expect(
-      restoreDrawingInteractionPreferences(
-        JSON.stringify({ version: 2, magnetMode: 'strong' }),
-      ),
+      restoreDrawingInteractionPreferences(JSON.stringify({ version: 2, magnetMode: 'strong' })),
     ).toBe(DEFAULT_DRAWING_INTERACTION_PREFERENCES);
     expect(
-      restoreDrawingInteractionPreferences(
-        JSON.stringify({ version: 1, magnetMode: 'invalid' }),
-      ),
+      restoreDrawingInteractionPreferences(JSON.stringify({ version: 1, magnetMode: 'invalid' })),
     ).toBe(DEFAULT_DRAWING_INTERACTION_PREFERENCES);
   });
 
@@ -70,9 +60,7 @@ describe('drawing interaction preferences', () => {
       },
     };
 
-    expect(loadDrawingInteractionPreferences(null)).toBe(
-      DEFAULT_DRAWING_INTERACTION_PREFERENCES,
-    );
+    expect(loadDrawingInteractionPreferences(null)).toBe(DEFAULT_DRAWING_INTERACTION_PREFERENCES);
     expect(loadDrawingInteractionPreferences(blockedStorage)).toBe(
       DEFAULT_DRAWING_INTERACTION_PREFERENCES,
     );
