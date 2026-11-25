@@ -47,6 +47,7 @@ export type ChartCommand =
   | Readonly<{ type: 'set-drawing-selection'; drawingIds: readonly string[] }>
   | Readonly<{ type: 'set-drawing-hover'; hit: ChartDrawingHit | null }>
   | Readonly<{ type: 'set-drawing-edit-preview'; gesture: ChartDrawingEditPreview | null }>
+  | Readonly<{ type: 'commit-drawing-edit'; gesture: ChartDrawingEditPreview }>
   | Readonly<{ type: 'move-object'; target: ChartObjectOrderItem; action: ChartObjectOrderAction }>
   | Readonly<{ type: 'resize'; width: number; height: number; devicePixelRatio?: number }>
   | Readonly<{ type: 'render-now' }>;
@@ -250,6 +251,46 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
           );
         }
         render();
+        return;
+      }
+
+      if (command.type === 'commit-drawing-edit') {
+        const gesture = command.gesture;
+        const nextDrawings =
+          gesture.kind === 'single'
+            ? scene.drawings.map((drawing) =>
+                drawing.id === gesture.drawingId && drawing.visible !== false
+                  ? updateChartDrawing(
+                      drawing,
+                      gesture.target,
+                      gesture.origin,
+                      gesture.current,
+                      scene.candles,
+                    )
+                  : drawing,
+              )
+            : (() => {
+                const selectedIds = new Set(gesture.drawingIds);
+                return scene.drawings.map((drawing) =>
+                  selectedIds.has(drawing.id) && drawing.visible !== false
+                    ? updateChartDrawing(
+                        drawing,
+                        'body',
+                        gesture.origin,
+                        gesture.current,
+                        scene.candles,
+                      )
+                    : drawing,
+                );
+              })();
+        drawingPreview = null;
+        if (nextDrawings.some((drawing, index) => drawing !== scene.drawings[index])) {
+          scene = updateChartRenderScene(scene, { drawings: nextDrawings });
+          render();
+          emitDrawingState();
+        } else {
+          render();
+        }
         return;
       }
 
