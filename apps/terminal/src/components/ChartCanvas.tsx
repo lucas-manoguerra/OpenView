@@ -2466,7 +2466,7 @@ export function ChartCanvas({
               data-panel-left={drawingPanelLayout.positions.coordinates?.left ?? 'default'}
               data-panel-top={drawingPanelLayout.positions.coordinates?.top ?? 'default'}
               aria-label="Coordenadas del dibujo"
-              class="absolute left-3 top-24 z-20 w-56 max-w-[calc(100%_-_3rem)] rounded-xl border border-white/10 bg-[#101723]/95 p-3 shadow-xl backdrop-blur"
+              class="absolute left-3 top-24 z-20 w-56 max-w-[calc(100%_-_3rem)] max-h-[25%] overflow-y-auto rounded-xl border border-white/10 bg-[#101723]/95 p-3 shadow-xl backdrop-blur"
               style={
                 drawingPanelLayout.positions.coordinates === null
                   ? undefined
@@ -2618,7 +2618,7 @@ export function ChartCanvas({
             data-testid="drawing-properties-panel"
             data-panel-left={drawingPanelLayout.positions.appearance?.left ?? 'default'}
             data-panel-top={drawingPanelLayout.positions.appearance?.top ?? 'default'}
-            class="absolute bottom-10 left-3 z-20 w-64 max-w-[calc(100%_-_3rem)] rounded-xl border border-white/10 bg-[#101723]/95 p-3 shadow-2xl backdrop-blur"
+            class="absolute bottom-10 left-3 z-20 w-64 max-w-[calc(100%_-_3rem)] max-h-[60%] overflow-y-auto rounded-xl border border-white/10 bg-[#101723]/95 p-3 shadow-2xl backdrop-blur"
             style={
               drawingPanelLayout.positions.appearance === null
                 ? undefined
