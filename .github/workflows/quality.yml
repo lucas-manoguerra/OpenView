@@ -101,12 +101,12 @@ jobs:
         run: pnpm build
 
   e2e:
-    name: Browser tests · Chromium · shard ${{ matrix.shard }}/4
+    name: Browser tests · Chromium · shard ${{ matrix.shard }}/8
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -117,8 +117,28 @@ jobs:
       - name: Install Chromium
         run: pnpm exec playwright install --with-deps chromium
 
+      - name: Enforce maximum of five browser tests per shard
+        shell: bash
+        run: |
+          test_list="$(pnpm exec playwright test --list --reporter=list)"
+          printf '%s\n' "$test_list"
+
+          total_tests="$(printf '%s\n' "$test_list" | sed -nE 's/^Total: ([0-9]+) tests?.*/\1/p' | tail -n 1)"
+          if [[ -z "$total_tests" ]]; then
+            echo "::error::Unable to determine the total number of Playwright tests."
+            exit 1
+          fi
+
+          max_tests=$((8 * 5))
+          if (( total_tests > max_tests )); then
+            echo "::error::Found $total_tests browser tests; eight shards can run at most $max_tests tests (five per shard). Increase the shard matrix."
+            exit 1
+          fi
+
+          echo "Found $total_tests browser tests; the eight-shard limit is $max_tests."
+
       - name: Run Playwright shard
-        run: pnpm exec playwright test --shard=${{ matrix.shard }}/4
+        run: pnpm exec playwright test --shard=${{ matrix.shard }}/8
 
       - name: Upload browser test reports
         if: ${{ !cancelled() }}
