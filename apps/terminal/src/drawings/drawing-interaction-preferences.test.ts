@@ -19,7 +19,7 @@ class MemoryStorage {
 }
 
 describe('drawing interaction preferences', () => {
-  it('defaults to magnet mode off and indicator snapping disabled', () => {
+  it('defaults to magnet and keep-drawing modes off', () => {
     expect(DEFAULT_DRAWING_INTERACTION_PREFERENCES).toEqual({
       magnetMode: 'off',
       snapToIndicators: false,
@@ -27,13 +27,18 @@ describe('drawing interaction preferences', () => {
     });
   });
 
-  it('restores supported magnet modes and optional indicator snapping', () => {
+  it('restores supported modes and optional drawing preferences', () => {
     expect(
       restoreDrawingInteractionPreferences(JSON.stringify({ version: 1, magnetMode: 'weak' })),
     ).toEqual({ magnetMode: 'weak', snapToIndicators: false, keepDrawing: false });
     expect(
       restoreDrawingInteractionPreferences(
-        JSON.stringify({ version: 1, magnetMode: 'strong', snapToIndicators: true, keepDrawing: true }),
+        JSON.stringify({
+          version: 1,
+          magnetMode: 'strong',
+          snapToIndicators: true,
+          keepDrawing: true,
+        }),
       ),
     ).toEqual({ magnetMode: 'strong', snapToIndicators: true, keepDrawing: true });
   });
@@ -48,7 +53,7 @@ describe('drawing interaction preferences', () => {
     ).toBe(DEFAULT_DRAWING_INTERACTION_PREFERENCES);
   });
 
-  it('persists and restores both interaction preferences through storage', () => {
+  it('persists and restores all drawing interaction preferences through storage', () => {
     const storage = new MemoryStorage();
 
     saveDrawingInteractionPreferences(storage, {
