@@ -50,7 +50,7 @@ export function Tabs({
 
     event.preventDefault();
     const nextTab = enabledTabs[nextIndex];
-    const nextValue = nextTab?.dataset.tabValue;
+    const nextValue = nextTab?.dataset['tabValue'];
     if (!nextTab || !nextValue) return;
     selectTab(nextValue);
     nextTab.focus();
@@ -98,8 +98,7 @@ export function Tabs({
           id={`${id}-panel`}
           role="tabpanel"
           aria-labelledby={`${id}-tab-${selectedTab.id}`}
-          tabIndex={0}
-          class="min-w-0 py-3 text-sm text-[#b2b5be] focus-visible:outline-none"
+          class="min-w-0 py-3 text-sm text-[#b2b5be]"
         >
           {selectedTab.content}
         </div>
