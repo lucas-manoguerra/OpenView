@@ -307,6 +307,7 @@ export const hitTestChartDrawing = (
   candles: readonly ChartRenderCandle[],
   frame: ChartFrame,
   tolerance = 8,
+  selectedDrawingIds: readonly string[] = [],
 ): ChartDrawingHit | null => {
   if (
     !Number.isFinite(point.x) ||
@@ -315,6 +316,30 @@ export const hitTestChartDrawing = (
     tolerance < 0
   ) {
     throw new RangeError('Drawing hit-test coordinates and tolerance must be finite.');
+  }
+
+  const selectedIds = new Set(selectedDrawingIds);
+
+  for (let index = drawings.length - 1; index >= 0; index -= 1) {
+    const drawing = drawings[index];
+
+    if (drawing === undefined || drawing.locked === true || !selectedIds.has(drawing.id)) {
+      continue;
+    }
+
+    const coordinates = getDrawingCoordinates(drawing, candles, frame);
+
+    if (coordinates === null) {
+      continue;
+    }
+
+    if (distance(point, coordinates.start) <= tolerance + 2) {
+      return Object.freeze({ drawingId: drawing.id, target: 'start' });
+    }
+
+    if (coordinates.end !== null && distance(point, coordinates.end) <= tolerance + 2) {
+      return Object.freeze({ drawingId: drawing.id, target: 'end' });
+    }
   }
 
   for (let index = drawings.length - 1; index >= 0; index -= 1) {

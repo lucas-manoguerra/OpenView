@@ -119,6 +119,28 @@ describe('chart drawing geometry', () => {
     });
   });
 
+  it('prioritizes a selected anchor over an overlapping unselected drawing body', () => {
+    const frame = createFrame();
+    const candles = createCandles();
+    const overlappingLine: ChartRenderDrawing = Object.freeze({
+      id: 'horizontal-overlap',
+      type: 'horizontal-line',
+      start: Object.freeze({ timestamp: 1_700_000_120_000, price: 100 }),
+      end: null,
+      color: '#f4c542',
+    });
+    const selectedStart = dataPointToChartCoordinate({ logicalIndex: 0, price: 100 }, frame);
+
+    expect(
+      hitTestChartDrawing(selectedStart, [trendDrawing, overlappingLine], candles, frame, 8, [
+        'trend-1',
+      ]),
+    ).toEqual({
+      drawingId: 'trend-1',
+      target: 'start',
+    });
+  });
+
   it('selects unlocked drawings fully contained in a marquee area', () => {
     const frame = createFrame();
     const candles = createCandles();
