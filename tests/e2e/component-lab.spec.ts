@@ -143,8 +143,6 @@ test('opens modal dialogs with focus containment, Escape and focus restoration',
   await expect(trigger).toBeFocused();
 
   await trigger.click();
-  await page.getByRole('button', { name: 'Cerrar diálogo al hacer clic fuera' }).click({
-    position: { x: 12, y: 12 },
-  });
+  await page.mouse.click(12, 12);
   await expect(dialog).toBeHidden();
 });
