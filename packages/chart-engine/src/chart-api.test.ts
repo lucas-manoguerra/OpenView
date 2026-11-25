@@ -29,7 +29,11 @@ const createSurface = () => {
 describe('chart public API', () => {
   it('creates, subscribes, exports and destroys an isolated chart instance', () => {
     const { surface } = createSurface();
-    const chart = createChart({ surface, initialScene: createScene() });
+    const chart = createChart({
+      surface,
+      initialScene: createScene(),
+      renderer: { scheduler: { requestFrame: () => 1, cancelFrame: () => {} } },
+    });
     const listener = vi.fn();
     const unsubscribe = chart.subscribe(listener);
 
@@ -48,7 +52,11 @@ describe('chart public API', () => {
 
   it('round-trips a serializable object order snapshot', () => {
     const { surface } = createSurface();
-    const chart = createChart({ surface, initialScene: createScene() });
+    const chart = createChart({
+      surface,
+      initialScene: createScene(),
+      renderer: { scheduler: { requestFrame: () => 1, cancelFrame: () => {} } },
+    });
     const snapshot: ChartSnapshot = chart.exportSnapshot();
     chart.importSnapshot(snapshot);
     expect(chart.exportSnapshot().objectOrder).toEqual(snapshot.objectOrder);
