@@ -360,10 +360,12 @@ export function ChartCanvas({
   ): void => {
     ensureDrawingPanelLayoutLoaded();
     const currentLayout = drawingPanelLayoutRef.current;
-    commitDrawingPanelLayout({
+    const nextLayout = {
       ...currentLayout,
       positions: Object.freeze({ ...currentLayout.positions, [panelId]: position }),
-    });
+    };
+    drawingPanelLayoutRef.current = nextLayout;
+    setDrawingPanelLayout(nextLayout);
   };
   const handleDrawingPanelVisibilityChange = (panelId: DrawingPanelId, visible: boolean): void => {
     ensureDrawingPanelLayoutLoaded();
@@ -388,8 +390,19 @@ export function ChartCanvas({
     const position = drawingPanelLayoutRef.current.positions[panelId];
 
     if (position !== null) {
-      element.style.left = String(position.left) + 'px';
-      element.style.top = String(position.top) + 'px';
+      const parent = element.parentElement;
+      const maxLeft =
+        parent === null || parent.clientWidth <= 0
+          ? position.left
+          : Math.max(0, parent.clientWidth - element.offsetWidth);
+      const maxTop =
+        parent === null || parent.clientHeight <= 0
+          ? position.top
+          : Math.max(0, parent.clientHeight - element.offsetHeight);
+      const left = Math.max(0, Math.min(maxLeft, position.left));
+      const top = Math.max(0, Math.min(maxTop, position.top));
+      element.style.left = String(left) + 'px';
+      element.style.top = String(top) + 'px';
       element.style.right = 'auto';
       element.style.bottom = 'auto';
     }
@@ -406,8 +419,11 @@ export function ChartCanvas({
     }
 
     drawingPanelDragCleanupRef.current?.();
-    drawingPanelDragCleanupRef.current = startDrawingPanelDrag(event, panel, (position) =>
-      handleDrawingPanelPositionChange(panelId, position),
+    drawingPanelDragCleanupRef.current = startDrawingPanelDrag(
+      event,
+      panel,
+      (position) => handleDrawingPanelPositionChange(panelId, position),
+      () => saveBrowserDrawingPanelLayout(drawingPanelLayoutRef.current),
     );
   };
   const updateDrawingSelection = (drawingIds: readonly string[]): void => {
@@ -451,6 +467,8 @@ export function ChartCanvas({
 
   const bindCanvas = useCallback((canvas: HTMLCanvasElement | null): void => {
     if (canvas === null) {
+      drawingPanelDragCleanupRef.current?.();
+      drawingPanelDragCleanupRef.current = null;
       runtimeRef.current?.destroy();
       runtimeRef.current = null;
       return;
