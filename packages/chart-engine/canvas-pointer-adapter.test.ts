@@ -493,6 +493,53 @@ describe('canvas pointer event adapter', () => {
     expect(capturedPointers.has(7)).toBe(false);
   });
 
+  it('emits a transient drawing preview during anchor drag and clears it on release', () => {
+    const { canvas, dispatch } = createCanvasTarget();
+    const frame = createChartFrame(900, 500, { min: 90, max: 120 }, 2);
+    const controller = createChartInteractionController(frame);
+    const candles: readonly ChartRenderCandle[] = [
+      { logicalIndex: 0, timestamp: 1_700_000_000_000, open: 100, high: 110, low: 95, close: 105, volume: 10 },
+      { logicalIndex: 1, timestamp: 1_700_000_060_000, open: 105, high: 112, low: 100, close: 108, volume: 20 },
+      { logicalIndex: 2, timestamp: 1_700_000_120_000, open: 108, high: 114, low: 105, close: 110, volume: 30 },
+    ];
+    const drawing: ChartRenderDrawing = {
+      id: 'trend-1',
+      type: 'trend-line',
+      start: { timestamp: candles[0]!.timestamp, price: 100 },
+      end: { timestamp: candles[2]!.timestamp, price: 110 },
+      color: '#60a5fa',
+    };
+    const previews: (Readonly<{ drawingId: string; target: string; current: unknown }> | null)[] = [];
+    const commits: unknown[] = [];
+    attachCanvasPointerEvents(canvas, controller, {
+      getDrawingTool: () => 'select',
+      getDrawings: () => [drawing],
+      getCandles: () => candles,
+      onDrawingEditPreview: (gesture) => previews.push(gesture),
+      onDrawingEdit: (gesture) => commits.push(gesture),
+    });
+    const start = dataPointToChartCoordinate({ logicalIndex: 0, price: 100 }, frame);
+    const moved = dataPointToChartCoordinate({ logicalIndex: 0.5, price: 103 }, frame);
+    const pointer = (point: Readonly<{ x: number; y: number }>) =>
+      createPointerEvent({ clientX: 100 + point.x, clientY: 50 + point.y });
+
+    dispatch('pointerdown', pointer(start));
+    dispatch('pointermove', pointer(moved));
+
+    expect(previews).toHaveLength(1);
+    expect(previews[0]).toMatchObject({
+      drawingId: 'trend-1',
+      target: 'start',
+      current: chartCoordinateToDataPoint(moved, frame),
+    });
+    expect(commits).toEqual([]);
+
+    dispatch('pointerup', pointer(moved));
+
+    expect(commits).toHaveLength(1);
+    expect(previews.at(-1)).toBeNull();
+  });
+
   it('selects a drawing without creating an edit when the pointer does not move', () => {
     const { canvas, dispatch } = createCanvasTarget();
     const frame = createChartFrame(900, 500, { min: 90, max: 120 }, 2);
