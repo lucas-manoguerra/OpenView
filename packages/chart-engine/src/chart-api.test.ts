@@ -71,8 +71,8 @@ describe('chart public API', () => {
     const drawing = {
       id: 'drawing-1',
       type: 'trend-line' as const,
-      start: { time: 1, price: 2 },
-      end: { time: 2, price: 3 },
+      start: { timestamp: 1, price: 2 },
+      end: { timestamp: 2, price: 3 },
       color: '#ffffff',
     };
 
