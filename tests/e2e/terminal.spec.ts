@@ -1577,7 +1577,7 @@ test('locks all drawings and prevents selection until they are unlocked', async 
   await expect(lockButton).toHaveAttribute('aria-pressed', 'false');
   await expect(canvas).toHaveAttribute('data-drawings-locked', 'false');
   await page.mouse.click((startX + endX) / 2, (startY + endY) / 2);
-  await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-1');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-order', '1');
 });
 
 test('hides drawings without deleting them and restores their selection', async ({ page }) => {
@@ -1637,7 +1637,7 @@ test('hides drawings without deleting them and restores their selection', async 
     restoredBounds.x + restoredBounds.width * 0.44,
     restoredBounds.y + restoredBounds.height * 0.45,
   );
-  await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-1');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-order', '1');
 });
 
 test('selects multiple drawings with Ctrl click and marquee, then moves them together', async ({
@@ -1691,7 +1691,7 @@ test('selects multiple drawings with Ctrl click and marquee, then moves them tog
   await page.keyboard.up('Control');
 
   await expect(canvas).toHaveAttribute('data-selected-drawing-count', '2');
-  await expect(canvas).toHaveAttribute('data-selected-drawing-ids', 'drawing-1,drawing-2');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-order', '1,2');
   const selectedStartPrice = Number(await canvas.getAttribute('data-selected-drawing-start-price'));
 
   await page.mouse.move(firstBody.x, firstBody.y);
@@ -1699,7 +1699,7 @@ test('selects multiple drawings with Ctrl click and marquee, then moves them tog
   await page.mouse.move(firstBody.x + 24, firstBody.y + 16);
   await page.mouse.up();
   await expect(canvas).toHaveAttribute('data-selected-drawing-count', '2');
-  await expect(canvas).toHaveAttribute('data-selected-drawing-ids', 'drawing-1,drawing-2');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-order', '1,2');
   await expect
     .poll(async () => Number(await canvas.getAttribute('data-selected-drawing-start-price')))
     .not.toBe(selectedStartPrice);
@@ -1745,7 +1745,7 @@ test('selects multiple drawings with Ctrl click and marquee, then moves them tog
 
   await expect(page.getByTestId('drawing-selection-marquee')).toHaveCount(0);
   await expect(canvas).toHaveAttribute('data-selected-drawing-count', '2');
-  await expect(canvas).toHaveAttribute('data-selected-drawing-ids', 'drawing-1,drawing-2');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-order', '1,2');
 
   const colorPicker = page.getByTestId('drawing-style-color');
   await colorPicker.evaluate((element: HTMLInputElement) => {
@@ -1959,39 +1959,39 @@ test('manages individual drawing visibility and lock from the object tree', asyn
   await page.getByTestId('drawing-object-tree-toggle').click();
   const tree = page.getByTestId('drawing-object-tree');
   await expect(tree).toBeVisible();
-  const firstRow = page.getByTestId('drawing-object-row-drawing-1');
-  const secondRow = page.getByTestId('drawing-object-row-drawing-2');
+  const firstRow = page.getByTestId('drawing-object-row-1');
+  const secondRow = page.getByTestId('drawing-object-row-2');
   await expect(firstRow).toBeVisible();
   await expect(secondRow).toBeVisible();
 
-  await page.getByTestId('drawing-object-visibility-drawing-1').click();
+  await page.getByTestId('drawing-object-visibility-1').click();
   await expect(firstRow).toHaveAttribute('data-drawing-visible', 'false');
   await expect(canvas).toHaveAttribute('data-drawing-count', '2');
   await expect(canvas).toHaveAttribute('data-renderable-drawing-count', '1');
 
-  await page.getByTestId('drawing-object-visibility-drawing-1').click();
+  await page.getByTestId('drawing-object-visibility-1').click();
   await expect(firstRow).toHaveAttribute('data-drawing-visible', 'true');
   await expect(canvas).toHaveAttribute('data-renderable-drawing-count', '2');
 
-  await page.getByTestId('drawing-object-lock-drawing-1').click();
+  await page.getByTestId('drawing-object-lock-1').click();
   await expect(firstRow).toHaveAttribute('data-drawing-locked', 'true');
   await page.getByTestId('drawing-tool-select').click();
   await page.mouse.click((firstStart.x + firstEnd.x) / 2, (firstStart.y + firstEnd.y) / 2);
   await expect(canvas).toHaveAttribute('data-selected-drawing-id', '');
 
-  await page.getByTestId('drawing-object-lock-drawing-1').click();
+  await page.getByTestId('drawing-object-lock-1').click();
   await expect(firstRow).toHaveAttribute('data-drawing-locked', 'false');
-  await page.getByTestId('drawing-object-select-drawing-1').click();
-  await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-1');
-  await expect(firstRow.getByTestId('drawing-object-select-drawing-1')).toHaveAttribute(
+  await page.getByTestId('drawing-object-select-1').click();
+  await expect(canvas).toHaveAttribute('data-selected-drawing-order', '1');
+  await expect(firstRow.getByTestId('drawing-object-select-1')).toHaveAttribute(
     'aria-pressed',
     'true',
   );
 
-  await page.getByTestId('drawing-object-delete-drawing-1').click();
+  await page.getByTestId('drawing-object-delete-1').click();
   await expect(canvas).toHaveAttribute('data-drawing-count', '1');
-  await expect(tree.getByTestId('drawing-object-row-drawing-1')).toHaveCount(0);
-  await expect(tree.getByTestId('drawing-object-row-drawing-2')).toBeVisible();
+  await expect(tree.getByTestId('drawing-object-row-1')).toHaveCount(0);
+  await expect(tree.getByTestId('drawing-object-row-2')).toBeVisible();
 });
 
 test('selects, moves, edits and deletes a drawing individually', async ({ page }) => {
@@ -2029,7 +2029,7 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
   const middleY = (startY + endY) / 2;
   await page.mouse.click(middleX, middleY);
 
-  await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-1');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-order', '1');
   const propertiesPanel = page.getByTestId('drawing-properties-panel');
   await expect(propertiesPanel).toBeVisible();
 
@@ -2174,7 +2174,7 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
   await page.getByTestId('drawing-editor-close').click();
   await expect(propertiesPanel).toBeHidden();
   await expect(coordinatePanel).toBeVisible();
-  await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-1');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-order', '1');
 
   await page.getByTestId('drawing-coordinate-close').click();
   await expect(coordinatePanel).toBeHidden();
@@ -2217,7 +2217,7 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
   await page.mouse.move(dragMiddleX + 35, dragMiddleY - 18);
   await page.mouse.up();
 
-  await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-1');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-order', '1');
   await expect
     .poll(() => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL()))
     .not.toBe(selectedImage);
@@ -2331,7 +2331,7 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
   await page.getByTestId('drawing-tool-select').click();
   await page.mouse.click((reloadedStartX + reloadedEndX) / 2, (reloadedStartY + reloadedEndY) / 2);
 
-  await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-1');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-order', '1');
   await expect(propertiesPanel).toBeHidden();
 
   const restoredCoordinatePanel = page.getByTestId('drawing-coordinate-panel');
@@ -2478,13 +2478,13 @@ test('selects drawings with Control and moves and deletes the group together', a
   };
 
   await page.mouse.click(secondEnd.x, secondEnd.y);
-  await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-2');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-order', '2');
 
   await page.keyboard.down('Control');
   await page.mouse.click(firstEnd.x, firstEnd.y);
   await page.keyboard.up('Control');
   await expect(canvas).toHaveAttribute('data-selected-drawing-count', '2');
-  await expect(canvas).toHaveAttribute('data-selected-drawing-ids', 'drawing-2,drawing-1');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-order', '2,1');
 
   const beforeGroupMove = await canvas.evaluate((element: HTMLCanvasElement) =>
     element.toDataURL(),
