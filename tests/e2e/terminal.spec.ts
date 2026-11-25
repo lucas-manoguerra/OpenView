@@ -1486,6 +1486,56 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
   expect(panelAfterDrag.x).toBeGreaterThan(panelBeforeDrag.x + 20);
   expect(panelAfterDrag.y).toBeGreaterThan(panelBeforeDrag.y + 10);
 
+  const coordinatePanel = page.getByTestId('drawing-coordinate-panel');
+  await expect(coordinatePanel).toBeVisible();
+  const coordinateBeforeDrag = await coordinatePanel.boundingBox();
+  const coordinateHandle = page.getByTestId('drawing-coordinate-drag-handle');
+  const coordinateHandleBounds = await coordinateHandle.boundingBox();
+
+  expect(coordinateBeforeDrag).not.toBeNull();
+  expect(coordinateHandleBounds).not.toBeNull();
+
+  if (coordinateBeforeDrag === null || coordinateHandleBounds === null) {
+    throw new Error('The drawing coordinate panel must be visible before dragging.');
+  }
+
+  await page.mouse.move(
+    coordinateHandleBounds.x + coordinateHandleBounds.width / 2,
+    coordinateHandleBounds.y + coordinateHandleBounds.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    coordinateHandleBounds.x + coordinateHandleBounds.width / 2 + 38,
+    coordinateHandleBounds.y + coordinateHandleBounds.height / 2 + 24,
+  );
+  await page.mouse.up();
+
+  const coordinateAfterDrag = await coordinatePanel.boundingBox();
+  expect(coordinateAfterDrag).not.toBeNull();
+
+  if (coordinateAfterDrag === null) {
+    throw new Error('The drawing coordinate panel must remain visible after dragging.');
+  }
+
+  expect(coordinateAfterDrag.x).toBeGreaterThan(coordinateBeforeDrag.x + 20);
+  expect(coordinateAfterDrag.y).toBeGreaterThan(coordinateBeforeDrag.y + 10);
+
+  const savedAppearanceBounds = panelAfterDrag;
+  const savedCoordinateBounds = coordinateAfterDrag;
+
+  await page.getByTestId('drawing-editor-close').click();
+  await expect(propertiesPanel).toBeHidden();
+  await expect(coordinatePanel).toBeVisible();
+  await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-1');
+
+  await page.getByTestId('drawing-panel-toggle-appearance').click();
+  await expect(propertiesPanel).toBeVisible();
+  await page.getByTestId('drawing-coordinate-close').click();
+  await expect(coordinatePanel).toBeHidden();
+  await expect(propertiesPanel).toBeVisible();
+  await page.getByTestId('drawing-panel-toggle-coordinates').click();
+  await expect(coordinatePanel).toBeVisible();
+
   const selectedImage = await canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL());
   await page.mouse.move(middleX, middleY);
   await page.mouse.down();
@@ -1504,6 +1554,10 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
   await page.mouse.move(movedStartX + 18, movedStartY + 14);
   await page.mouse.up();
 
+  await page.getByTestId('drawing-editor-close').click();
+  await expect(propertiesPanel).toBeHidden();
+  await expect(coordinatePanel).toBeVisible();
+
   const deleteSelected = page.getByTestId('drawing-delete-selected');
   await expect(deleteSelected).toBeEnabled();
   await deleteSelected.click();
@@ -1514,6 +1568,62 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
   await expect(canvas).toHaveAttribute('data-drawing-count', '1');
   await page.getByTestId('drawing-redo').click();
   await expect(canvas).toHaveAttribute('data-drawing-count', '0');
+
+  await page.reload();
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+
+  const reloadedBounds = await canvas.boundingBox();
+  expect(reloadedBounds).not.toBeNull();
+
+  if (reloadedBounds === null) {
+    throw new Error('The chart canvas must remain visible after reloading.');
+  }
+
+  const reloadedStartX = reloadedBounds.x + reloadedBounds.width * 0.3;
+  const reloadedStartY = reloadedBounds.y + reloadedBounds.height * 0.34;
+  const reloadedEndX = reloadedBounds.x + reloadedBounds.width * 0.58;
+  const reloadedEndY = reloadedBounds.y + reloadedBounds.height * 0.56;
+
+  await page.getByTestId('drawing-tool-trend-line').click();
+  await page.mouse.move(reloadedStartX, reloadedStartY);
+  await page.mouse.down();
+  await page.mouse.move(reloadedEndX, reloadedEndY);
+  await page.mouse.up();
+  await expect(canvas).toHaveAttribute('data-drawing-count', '1');
+  await page.getByTestId('drawing-tool-select').click();
+  await page.mouse.click(
+    (reloadedStartX + reloadedEndX) / 2,
+    (reloadedStartY + reloadedEndY) / 2,
+  );
+
+  await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-1');
+  await expect(propertiesPanel).toBeHidden();
+
+  const restoredCoordinatePanel = page.getByTestId('drawing-coordinate-panel');
+  await expect(restoredCoordinatePanel).toBeVisible();
+  const restoredCoordinateBounds = await restoredCoordinatePanel.boundingBox();
+  expect(restoredCoordinateBounds).not.toBeNull();
+
+  if (restoredCoordinateBounds === null) {
+    throw new Error('The coordinate panel position must be restored after reloading.');
+  }
+
+  expect(restoredCoordinateBounds.x).toBeCloseTo(savedCoordinateBounds.x, 0);
+  expect(restoredCoordinateBounds.y).toBeCloseTo(savedCoordinateBounds.y, 0);
+
+  await page.getByTestId('drawing-panel-toggle-appearance').click();
+  await expect(propertiesPanel).toBeVisible();
+  const restoredAppearanceBounds = await propertiesPanel.boundingBox();
+  expect(restoredAppearanceBounds).not.toBeNull();
+
+  if (restoredAppearanceBounds === null) {
+    throw new Error('The appearance panel position must be restored after reloading.');
+  }
+
+  expect(restoredAppearanceBounds.x).toBeCloseTo(savedAppearanceBounds.x, 0);
+  expect(restoredAppearanceBounds.y).toBeCloseTo(savedAppearanceBounds.y, 0);
 });
 
 test('selects drawings with Shift and moves and deletes the group together', async ({ page }) => {
