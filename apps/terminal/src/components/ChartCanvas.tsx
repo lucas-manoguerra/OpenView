@@ -365,10 +365,7 @@ export function ChartCanvas({
       positions: Object.freeze({ ...currentLayout.positions, [panelId]: position }),
     });
   };
-  const handleDrawingPanelVisibilityChange = (
-    panelId: DrawingPanelId,
-    visible: boolean,
-  ): void => {
+  const handleDrawingPanelVisibilityChange = (panelId: DrawingPanelId, visible: boolean): void => {
     ensureDrawingPanelLayoutLoaded();
     const currentLayout = drawingPanelLayoutRef.current;
     commitDrawingPanelLayout({
@@ -388,10 +385,8 @@ export function ChartCanvas({
     }
 
     drawingPanelDragCleanupRef.current?.();
-    drawingPanelDragCleanupRef.current = startDrawingPanelDrag(
-      event,
-      panel,
-      (position) => handleDrawingPanelPositionChange(panelId, position),
+    drawingPanelDragCleanupRef.current = startDrawingPanelDrag(event, panel, (position) =>
+      handleDrawingPanelPositionChange(panelId, position),
     );
   };
   const updateDrawingSelection = (drawingIds: readonly string[]): void => {
@@ -1664,75 +1659,111 @@ export function ChartCanvas({
                     }
               }
             >
-            <div class="mb-2 flex items-center gap-2">
-              <div
-                data-testid="drawing-coordinate-drag-handle"
-                onPointerDown={(event) => handleDrawingPanelPointerDown('coordinates', event)}
-                class="min-w-0 flex-1 cursor-grab touch-none rounded px-1 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400 active:cursor-grabbing"
-              >
-                {selectedDrawing.type === 'horizontal-line'
-                  ? 'Nivel de precio'
-                  : selectedDrawing.type === 'vertical-line'
-                    ? 'Marca temporal'
-                    : selectedDrawing.type === 'rectangle'
-                      ? 'Límites del rectángulo'
-                      : 'Puntos de anclaje'}
+              <div class="mb-2 flex items-center gap-2">
+                <div
+                  data-testid="drawing-coordinate-drag-handle"
+                  onPointerDown={(event) => handleDrawingPanelPointerDown('coordinates', event)}
+                  class="min-w-0 flex-1 cursor-grab touch-none rounded px-1 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400 active:cursor-grabbing"
+                >
+                  {selectedDrawing.type === 'horizontal-line'
+                    ? 'Nivel de precio'
+                    : selectedDrawing.type === 'vertical-line'
+                      ? 'Marca temporal'
+                      : selectedDrawing.type === 'rectangle'
+                        ? 'Límites del rectángulo'
+                        : 'Puntos de anclaje'}
+                </div>
+                <button
+                  type="button"
+                  aria-label="Ocultar panel de coordenadas"
+                  data-testid="drawing-coordinate-close"
+                  onClick={() => handleDrawingPanelVisibilityChange('coordinates', false)}
+                  class="grid size-6 shrink-0 place-items-center rounded text-xs text-slate-400 hover:bg-white/10 hover:text-white"
+                >
+                  ×
+                </button>
               </div>
-              <button
-                type="button"
-                aria-label="Ocultar panel de coordenadas"
-                data-testid="drawing-coordinate-close"
-                onClick={() => handleDrawingPanelVisibilityChange('coordinates', false)}
-                class="grid size-6 shrink-0 place-items-center rounded text-xs text-slate-400 hover:bg-white/10 hover:text-white"
-              >
-                ×
-              </button>
-            </div>
-            {selectedDrawing.type === 'horizontal-line' && (
-              <label class="grid grid-cols-[1fr_auto] items-center gap-2 text-[10px] text-slate-400">
-                Precio
-                <input
-                  type="number"
-                  step="any"
-                  aria-label="Precio de la línea horizontal"
-                  data-testid="drawing-horizontal-price"
-                  value={String(selectedDrawing.start.price)}
-                  onChange={(event) =>
-                    handleSelectedDrawingAnchorUpdate('start', {
-                      price: Number(event.currentTarget.value),
-                    })
-                  }
-                  class="w-28 rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-right text-[10px] text-slate-200 outline-none focus:border-blue-400"
-                />
-              </label>
-            )}
-            {selectedDrawing.type === 'vertical-line' && (
-              <label class="grid grid-cols-1 gap-1 text-[10px] text-slate-400">
-                Fecha y hora local
-                <input
-                  type="datetime-local"
-                  aria-label="Fecha y hora de la línea vertical"
-                  data-testid="drawing-vertical-time"
-                  value={toLocalDateTimeValue(selectedDrawing.start.timestamp)}
-                  onChange={(event) =>
-                    handleSelectedDrawingAnchorUpdate('start', {
-                      timestamp: new Date(event.currentTarget.value).getTime(),
-                    })
-                  }
-                  class="w-full rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-[10px] text-slate-200 outline-none focus:border-blue-400"
-                />
-              </label>
-            )}
-            {(selectedDrawing.type === 'trend-line' || selectedDrawing.type === 'ray') &&
-              selectedDrawing.end !== null && (
+              {selectedDrawing.type === 'horizontal-line' && (
+                <label class="grid grid-cols-[1fr_auto] items-center gap-2 text-[10px] text-slate-400">
+                  Precio
+                  <input
+                    type="number"
+                    step="any"
+                    aria-label="Precio de la línea horizontal"
+                    data-testid="drawing-horizontal-price"
+                    value={String(selectedDrawing.start.price)}
+                    onChange={(event) =>
+                      handleSelectedDrawingAnchorUpdate('start', {
+                        price: Number(event.currentTarget.value),
+                      })
+                    }
+                    class="w-28 rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-right text-[10px] text-slate-200 outline-none focus:border-blue-400"
+                  />
+                </label>
+              )}
+              {selectedDrawing.type === 'vertical-line' && (
+                <label class="grid grid-cols-1 gap-1 text-[10px] text-slate-400">
+                  Fecha y hora local
+                  <input
+                    type="datetime-local"
+                    aria-label="Fecha y hora de la línea vertical"
+                    data-testid="drawing-vertical-time"
+                    value={toLocalDateTimeValue(selectedDrawing.start.timestamp)}
+                    onChange={(event) =>
+                      handleSelectedDrawingAnchorUpdate('start', {
+                        timestamp: new Date(event.currentTarget.value).getTime(),
+                      })
+                    }
+                    class="w-full rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-[10px] text-slate-200 outline-none focus:border-blue-400"
+                  />
+                </label>
+              )}
+              {(selectedDrawing.type === 'trend-line' || selectedDrawing.type === 'ray') &&
+                selectedDrawing.end !== null && (
+                  <div class="space-y-2">
+                    <label class="grid grid-cols-[1fr_auto] items-center gap-2 text-[10px] text-slate-400">
+                      Precio inicial
+                      <input
+                        type="number"
+                        step="any"
+                        aria-label="Precio inicial del dibujo"
+                        data-testid="drawing-start-price"
+                        value={String(selectedDrawing.start.price)}
+                        onChange={(event) =>
+                          handleSelectedDrawingAnchorUpdate('start', {
+                            price: Number(event.currentTarget.value),
+                          })
+                        }
+                        class="w-28 rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-right text-[10px] text-slate-200 outline-none focus:border-blue-400"
+                      />
+                    </label>
+                    <label class="grid grid-cols-[1fr_auto] items-center gap-2 text-[10px] text-slate-400">
+                      Precio final
+                      <input
+                        type="number"
+                        step="any"
+                        aria-label="Precio final del dibujo"
+                        data-testid="drawing-end-price"
+                        value={String(selectedDrawing.end.price)}
+                        onChange={(event) =>
+                          handleSelectedDrawingAnchorUpdate('end', {
+                            price: Number(event.currentTarget.value),
+                          })
+                        }
+                        class="w-28 rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-right text-[10px] text-slate-200 outline-none focus:border-blue-400"
+                      />
+                    </label>
+                  </div>
+                )}
+              {selectedDrawing.type === 'rectangle' && selectedDrawing.end !== null && (
                 <div class="space-y-2">
                   <label class="grid grid-cols-[1fr_auto] items-center gap-2 text-[10px] text-slate-400">
-                    Precio inicial
+                    Precio del primer punto
                     <input
                       type="number"
                       step="any"
-                      aria-label="Precio inicial del dibujo"
-                      data-testid="drawing-start-price"
+                      aria-label="Precio del primer punto del rectángulo"
+                      data-testid="drawing-rectangle-start-price"
                       value={String(selectedDrawing.start.price)}
                       onChange={(event) =>
                         handleSelectedDrawingAnchorUpdate('start', {
@@ -1743,12 +1774,12 @@ export function ChartCanvas({
                     />
                   </label>
                   <label class="grid grid-cols-[1fr_auto] items-center gap-2 text-[10px] text-slate-400">
-                    Precio final
+                    Precio del segundo punto
                     <input
                       type="number"
                       step="any"
-                      aria-label="Precio final del dibujo"
-                      data-testid="drawing-end-price"
+                      aria-label="Precio del segundo punto del rectángulo"
+                      data-testid="drawing-rectangle-end-price"
                       value={String(selectedDrawing.end.price)}
                       onChange={(event) =>
                         handleSelectedDrawingAnchorUpdate('end', {
@@ -1760,43 +1791,7 @@ export function ChartCanvas({
                   </label>
                 </div>
               )}
-            {selectedDrawing.type === 'rectangle' && selectedDrawing.end !== null && (
-              <div class="space-y-2">
-                <label class="grid grid-cols-[1fr_auto] items-center gap-2 text-[10px] text-slate-400">
-                  Precio del primer punto
-                  <input
-                    type="number"
-                    step="any"
-                    aria-label="Precio del primer punto del rectángulo"
-                    data-testid="drawing-rectangle-start-price"
-                    value={String(selectedDrawing.start.price)}
-                    onChange={(event) =>
-                      handleSelectedDrawingAnchorUpdate('start', {
-                        price: Number(event.currentTarget.value),
-                      })
-                    }
-                    class="w-28 rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-right text-[10px] text-slate-200 outline-none focus:border-blue-400"
-                  />
-                </label>
-                <label class="grid grid-cols-[1fr_auto] items-center gap-2 text-[10px] text-slate-400">
-                  Precio del segundo punto
-                  <input
-                    type="number"
-                    step="any"
-                    aria-label="Precio del segundo punto del rectángulo"
-                    data-testid="drawing-rectangle-end-price"
-                    value={String(selectedDrawing.end.price)}
-                    onChange={(event) =>
-                      handleSelectedDrawingAnchorUpdate('end', {
-                        price: Number(event.currentTarget.value),
-                      })
-                    }
-                    class="w-28 rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-right text-[10px] text-slate-200 outline-none focus:border-blue-400"
-                  />
-                </label>
-              </div>
-            )}
-            </section>
+              </section>
           )}
         {selectedDrawing !== null && drawingPanelLayout.visible.appearance && (
           <div
