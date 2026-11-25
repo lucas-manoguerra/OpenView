@@ -119,6 +119,7 @@ test('opens modal dialogs with focus containment, Escape and focus restoration',
   await page.getByRole('link', { name: 'Dialogs · Modals' }).click();
   await expect(page).toHaveURL(/dialogs$/);
   await expect(page.getByRole('heading', { name: 'Dialogs & Modals' })).toBeVisible();
+  await page.waitForLoadState('networkidle');
 
   const trigger = page.getByRole('button', { name: 'Abrir diálogo de configuración' });
   await trigger.click();
