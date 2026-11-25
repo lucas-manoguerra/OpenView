@@ -72,5 +72,5 @@ test('inspects form controls in isolation and updates their values', async ({ pa
 
   await expect(page.getByLabel('Con error')).toHaveAttribute('aria-invalid', 'true');
   await expect(page.getByText('Formato de símbolo no válido.')).toBeVisible();
-  await expect(page.getByLabel('Deshabilitado')).toBeDisabled();
+  await expect(page.getByRole('textbox', { name: 'Deshabilitado' })).toBeDisabled();
 });
