@@ -363,7 +363,11 @@ export function ChartCanvas({
   const selectedDrawingIdsRef = useRef<readonly string[]>(selectedDrawingIds);
   const drawingUndoStackRef = useRef<readonly (readonly ChartRenderDrawing[])[]>([]);
   const drawingRedoStackRef = useRef<readonly (readonly ChartRenderDrawing[])[]>([]);
-  const commitDrawingsRef = useRef<(nextDrawings: readonly ChartRenderDrawing[]) => void>(() => {});
+  const commitDrawingsRef = useRef<(
+    nextDrawings: readonly ChartRenderDrawing[],
+    chartAlreadyUpdated?: boolean,
+    previousDrawings?: readonly ChartRenderDrawing[],
+  ) => void>(() => {});
   const drawingSequenceRef = useRef(0);
   const drawingPanelLayoutRef = useRef<DrawingPanelLayout>(drawingPanelLayout);
   const drawingPanelLayoutLoadedRef = useRef(false);
@@ -388,8 +392,11 @@ export function ChartCanvas({
     : [];
   selectedDrawingIdRef.current = selectedDrawingId;
   selectedDrawingIdsRef.current = selectedDrawingIds;
-  commitDrawingsRef.current = (nextDrawings): void => {
-    const previousDrawings = drawingsRef.current;
+  commitDrawingsRef.current = (
+    nextDrawings,
+    chartAlreadyUpdated = false,
+    previousDrawings = drawingsRef.current,
+  ): void => {
     const nextUndoStack = [...drawingUndoStackRef.current, previousDrawings].slice(-50);
     drawingUndoStackRef.current = Object.freeze(nextUndoStack);
     drawingRedoStackRef.current = Object.freeze([]);
@@ -400,7 +407,9 @@ export function ChartCanvas({
     setDrawings(drawingsRef.current);
     setDrawingUndoCount(drawingUndoStackRef.current.length);
     setDrawingRedoCount(0);
-    runtimeRef.current?.setDrawings(drawingsRef.current);
+    if (!chartAlreadyUpdated) {
+      runtimeRef.current?.setDrawings(drawingsRef.current);
+    }
   };
   const ensureDrawingPanelLayoutLoaded = (): void => {
     if (drawingPanelLayoutLoadedRef.current) {
@@ -696,19 +705,15 @@ export function ChartCanvas({
             updateDrawingSelection(chartApi?.selectDrawingsWithinArea(area) ?? []);
           },
           onDrawingGroupEdit: (gesture: CanvasDrawingGroupEditGesture): void => {
-            const selectedIds = new Set(gesture.drawingIds);
-            const nextDrawings = drawingsRef.current.map((drawing) =>
-              selectedIds.has(drawing.id)
-                ? updateChartDrawing(
-                    drawing,
-                    'body',
-                    gesture.origin,
-                    gesture.current,
-                    currentCandles,
-                  )
-                : drawing,
-            );
-            commitDrawingsRef.current(nextDrawings);
+            const previousDrawings = drawingsRef.current;
+            chartApi?.execute({
+              type: 'commit-drawing-edit',
+              gesture: { kind: 'group', ...gesture },
+            });
+            const nextDrawings = chartApi?.exportSnapshot().scene.drawings;
+            if (nextDrawings !== undefined && nextDrawings !== previousDrawings) {
+              commitDrawingsRef.current(nextDrawings, true, previousDrawings);
+            }
           },
           onDrawingDeleteMany: (drawingIds: readonly string[]): void => {
             const deletedIds = new Set(drawingIds);
@@ -736,26 +741,15 @@ export function ChartCanvas({
             });
           },
           onDrawingEdit: (gesture: CanvasDrawingEditGesture): void => {
-            const drawing = drawingsRef.current.find(
-              (candidate) => candidate.id === gesture.drawingId,
-            );
-
-            if (drawing === undefined) {
-              return;
+            const previousDrawings = drawingsRef.current;
+            chartApi?.execute({
+              type: 'commit-drawing-edit',
+              gesture: { kind: 'single', ...gesture },
+            });
+            const nextDrawings = chartApi?.exportSnapshot().scene.drawings;
+            if (nextDrawings !== undefined && nextDrawings !== previousDrawings) {
+              commitDrawingsRef.current(nextDrawings, true, previousDrawings);
             }
-
-            const updatedDrawing = updateChartDrawing(
-              drawing,
-              gesture.target,
-              gesture.origin,
-              gesture.current,
-              currentCandles,
-            );
-            commitDrawingsRef.current(
-              drawingsRef.current.map((candidate) =>
-                candidate.id === gesture.drawingId ? updatedDrawing : candidate,
-              ),
-            );
           },
           onDrawingDelete: (drawingId: string): void => {
             const nextDrawings = drawingsRef.current.filter((drawing) => drawing.id !== drawingId);
