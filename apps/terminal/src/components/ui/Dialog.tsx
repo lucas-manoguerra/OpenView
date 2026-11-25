@@ -23,7 +23,12 @@ export function Dialog({
 
   const setDialogRef = (element: HTMLDialogElement | null) => {
     dialogRef.current = element;
-    if (element && !element.open) element.showModal();
+    if (!element) return;
+    dialogRef.current = element;
+    if (!element.open) element.showModal();
+    requestAnimationFrame(() => {
+      element.querySelector<HTMLElement>('[autofocus]')?.focus();
+    });
   };
 
   const openDialog = () => setOpen(true);
@@ -34,11 +39,37 @@ export function Dialog({
     requestAnimationFrame(() => triggerRef.current?.focus());
   };
 
+  const handleDialogKeyDown = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeDialog();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const focusable = Array.from(
+      dialog.querySelectorAll<HTMLElement>(
+        'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
+      ),
+    ).filter((element) => element.offsetParent !== null);
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (!first || !last) return;
+
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
   return (
     <>
-      <style>
-        {'.tradingview-dialog::backdrop { background: rgba(0, 0, 0, 0.6); }'}
-      </style>
+      <style>{'.tradingview-dialog::backdrop { background: rgba(0, 0, 0, 0.6); }'}</style>
       <button
         ref={triggerRef}
         type="button"
@@ -58,6 +89,7 @@ export function Dialog({
             event.preventDefault();
             closeDialog();
           }}
+          onKeyDown={handleDialogKeyDown}
           onClick={(event) => {
             if (event.target === event.currentTarget) closeDialog();
           }}
