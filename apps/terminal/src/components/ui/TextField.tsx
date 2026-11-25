@@ -31,15 +31,20 @@ export function TextField({
   disabled = false,
   ...props
 }: TextFieldProps) {
-  const describedBy = [
-    hint && !error ? `${id ?? 'text-field'}-hint` : undefined,
-    error ? `${id ?? 'text-field'}-error` : undefined,
-  ]
-    .filter(Boolean)
-    .join(' ') || undefined;
+  const describedBy =
+    [
+      hint && !error ? `${id ?? 'text-field'}-hint` : undefined,
+      error ? `${id ?? 'text-field'}-error` : undefined,
+    ]
+      .filter(Boolean)
+      .join(' ') || undefined;
 
   return (
-    <label class={['flex min-w-0 flex-col gap-1.5', fullWidth ? 'w-full' : '', className].filter(Boolean).join(' ')}>
+    <label
+      class={['flex min-w-0 flex-col gap-1.5', fullWidth ? 'w-full' : '', className]
+        .filter(Boolean)
+        .join(' ')}
+    >
       {label ? <span class="text-xs font-medium text-[#b2b5be]">{label}</span> : null}
       <span
         class={[
@@ -47,7 +52,9 @@ export function TextField({
           'focus-within:border-[#2962ff] focus-within:ring-1 focus-within:ring-[#2962ff]/30',
           error ? 'border-[#f23645]' : 'border-[#434651] hover:border-[#5d606b]',
           disabled ? 'cursor-not-allowed opacity-45' : '',
-        ].filter(Boolean).join(' ')}
+        ]
+          .filter(Boolean)
+          .join(' ')}
       >
         {leading ? <span class="shrink-0 pl-2.5 text-xs text-[#787b86]">{leading}</span> : null}
         <input
@@ -64,8 +71,16 @@ export function TextField({
         />
         {trailing ? <span class="shrink-0 pr-2.5 text-xs text-[#787b86]">{trailing}</span> : null}
       </span>
-      {error ? <span id={`${id ?? 'text-field'}-error`} class="text-[11px] text-[#f23645]">{error}</span> : null}
-      {!error && hint ? <span id={`${id ?? 'text-field'}-hint`} class="text-[11px] text-[#787b86]">{hint}</span> : null}
+      {error ? (
+        <span id={`${id ?? 'text-field'}-error`} class="text-[11px] text-[#f23645]">
+          {error}
+        </span>
+      ) : null}
+      {!error && hint ? (
+        <span id={`${id ?? 'text-field'}-hint`} class="text-[11px] text-[#787b86]">
+          {hint}
+        </span>
+      ) : null}
     </label>
   );
 }
