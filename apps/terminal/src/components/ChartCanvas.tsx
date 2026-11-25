@@ -1305,12 +1305,17 @@ export function ChartCanvas({
       return;
     }
 
-    const nextTemplates = [
-      ...customDrawingTemplates.filter(
-        (candidate) => candidate.name.toLowerCase() !== template.name.toLowerCase(),
-      ),
-      template,
-    ].slice(-MAX_CUSTOM_DRAWING_TEMPLATES);
+    const otherToolTemplates = customDrawingTemplates.filter(
+      (candidate) => candidate.tool !== template.tool,
+    );
+    const sameToolTemplates = customDrawingTemplates
+      .filter(
+        (candidate) =>
+          candidate.tool === template.tool &&
+          candidate.name.toLowerCase() !== template.name.toLowerCase(),
+      )
+      .slice(-(MAX_CUSTOM_DRAWING_TEMPLATES - 1));
+    const nextTemplates = [...otherToolTemplates, ...sameToolTemplates, template];
 
     setCustomDrawingTemplates(nextTemplates);
     saveBrowserDrawingStyleTemplates(nextTemplates);
