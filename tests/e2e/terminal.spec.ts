@@ -1799,9 +1799,7 @@ test('moves all selected drawings by one bar and one market tick with arrow keys
 
   const timestampsAfterRight = await readSelectedTimestamps();
   await page.keyboard.press('ArrowUp');
-  await expect
-    .poll(readSelectedPrices)
-    .toEqual(pricesBefore.map((value) => value + tickSize));
+  await expect.poll(readSelectedPrices).toEqual(pricesBefore.map((value) => value + tickSize));
   await expect.poll(readSelectedTimestamps).toEqual(timestampsAfterRight);
   await expect(canvas).toHaveAttribute('data-selected-drawing-count', '2');
   await expect(canvas).toHaveAttribute('data-drawing-undo-count', '4');
