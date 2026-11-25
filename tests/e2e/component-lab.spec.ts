@@ -147,10 +147,13 @@ test('opens modal dialogs with focus containment, Escape and focus restoration',
   await expect(dialog).toBeHidden();
 });
 
-test('inspects the centralized Lucide icon catalog and its accessible variants', async ({ page }) => {
+test('inspects the centralized Lucide icon catalog and its accessible variants', async ({
+  page,
+}) => {
   await page.goto('/component-lab/core/icons');
 
   await expect(page.getByRole('heading', { name: 'Icons' })).toBeVisible();
+  await expect(page.getByTestId('icons-playground')).toHaveAttribute('data-hydrated', 'true');
   await expect(page.getByTestId('icon-item')).toHaveCount(38);
   await expect(page.getByTestId('icons-current-size')).toHaveText('18px · stroke 1.8');
 
