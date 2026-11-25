@@ -2,7 +2,16 @@
 
 ## Misión
 
-Construir OpenView como una plataforma gratuita, modular, extensible y de alto rendimiento. La implementación es propia y comienza desde cero. TradingView Lightweight Charts es una referencia para estudiar comportamientos y capacidades, no una fuente de código para copiar.
+Construir OpenView como una plataforma gratuita, modular, extensible y de alto rendimiento, con el objetivo de alcanzar una réplica integral y de alta fidelidad de la plataforma TradingView. La implementación es propia y comienza desde cero. TradingView es la única referencia de producto.
+
+## Fuente única de producto: TradingView
+
+- La plataforma TradingView oficial es la única referencia externa para definir el producto: estructura visual, jerarquía, estilos, componentes, charting, herramientas, paneles, flujos, controles, menús, diálogos, interacciones, atajos, terminología, UI y UX.
+- No consultar, incorporar, adaptar ni tomar inspiración de otras plataformas de trading, gráficos, brokers, exchanges, terminales, productos financieros o sistemas de diseño para decidir cómo debe verse o comportarse OpenView.
+- El objetivo es la paridad integral con TradingView, no una aproximación estética ni una selección parcial de funcionalidades. Avanzar por áreas funcionales verificables y registrar las diferencias pendientes.
+- Cuando un comportamiento no esté especificado, investigar el comportamiento observable de TradingView en el contexto correspondiente. No completar vacíos con convenciones tomadas de otras plataformas.
+- La documentación de proveedores, protocolos, estándares web y APIs puede consultarse exclusivamente para verificar contratos y hechos técnicos; no puede utilizarse como referencia de producto, UI o UX.
+- TradingView Lightweight Charts no sustituye a la plataforma TradingView como referencia de producto ni como modelo de arquitectura o interacción. Se mantienen las prohibiciones de copiar código, estructuras internas o incorporar esa biblioteca como dependencia.
 
 ## Jerarquía de autoridad
 
