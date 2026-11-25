@@ -1326,7 +1326,7 @@ test('exposes auto, lock and inverted price scale controls', async ({ page }) =>
   await expect(lockScale).toHaveAttribute('aria-pressed', 'false');
 });
 
-test('draws time-anchored trend and horizontal lines and clears them', async ({ page }) => {
+test('draws geometric annotations and supports undo, redo and clearing', async ({ page }) => {
   await page.goto('/');
 
   const canvas = page.getByRole('img', {
@@ -1343,29 +1343,64 @@ test('draws time-anchored trend and horizontal lines and clears them', async ({ 
     throw new Error('The chart canvas must have a visible bounding box.');
   }
 
-  const trendLineTool = page.getByTestId('drawing-tool-trend-line');
-  await trendLineTool.click();
-  await expect(trendLineTool).toHaveAttribute('aria-pressed', 'true');
+  const drawDrag = async (
+    toolId: string,
+    fromX: number,
+    fromY: number,
+    toX: number,
+    toY: number,
+  ) => {
+    await page.getByTestId(toolId).click();
+    await page.mouse.move(fromX, fromY);
+    await page.mouse.down();
+    await page.mouse.move(toX, toY);
+    await page.mouse.up();
+  };
 
-  const startX = bounds.x + bounds.width * 0.32;
-  const startY = bounds.y + bounds.height * 0.38;
-  const endX = bounds.x + bounds.width * 0.58;
-  const endY = bounds.y + bounds.height * 0.55;
+  const startX = bounds.x + bounds.width * 0.28;
+  const startY = bounds.y + bounds.height * 0.32;
+  const endX = bounds.x + bounds.width * 0.52;
+  const endY = bounds.y + bounds.height * 0.54;
 
-  await page.mouse.move(startX, startY);
-  await page.mouse.down();
-  await page.mouse.move(endX, endY);
-  await page.mouse.up();
-
+  await drawDrag('drawing-tool-trend-line', startX, startY, endX, endY);
   await expect(canvas).toHaveAttribute('data-drawing-count', '1');
 
-  const horizontalLineTool = page.getByTestId('drawing-tool-horizontal-line');
-  await horizontalLineTool.click();
-  await expect(horizontalLineTool).toHaveAttribute('aria-pressed', 'true');
-  await page.mouse.click(bounds.x + bounds.width * 0.64, bounds.y + bounds.height * 0.62);
+  await drawDrag('drawing-tool-ray', startX + 12, startY + 20, endX + 30, endY - 15);
   await expect(canvas).toHaveAttribute('data-drawing-count', '2');
 
+  await page.getByTestId('drawing-tool-horizontal-line').click();
+  await page.mouse.click(bounds.x + bounds.width * 0.64, bounds.y + bounds.height * 0.62);
+  await expect(canvas).toHaveAttribute('data-drawing-count', '3');
+
+  await page.getByTestId('drawing-tool-vertical-line').click();
+  await page.mouse.click(bounds.x + bounds.width * 0.72, bounds.y + bounds.height * 0.42);
+  await expect(canvas).toHaveAttribute('data-drawing-count', '4');
+
+  await drawDrag(
+    'drawing-tool-rectangle',
+    bounds.x + bounds.width * 0.36,
+    bounds.y + bounds.height * 0.24,
+    bounds.x + bounds.width * 0.58,
+    bounds.y + bounds.height * 0.68,
+  );
+  await expect(canvas).toHaveAttribute('data-drawing-count', '5');
+  await expect(canvas).toHaveAttribute('data-drawing-undo-count', '5');
+
+  const undo = page.getByTestId('drawing-undo');
+  const redo = page.getByTestId('drawing-redo');
+
+  await undo.click();
+  await expect(canvas).toHaveAttribute('data-drawing-count', '4');
+  await expect(canvas).toHaveAttribute('data-drawing-redo-count', '1');
+  await redo.click();
+  await expect(canvas).toHaveAttribute('data-drawing-count', '5');
+  await expect(canvas).toHaveAttribute('data-drawing-redo-count', '0');
+
   await page.getByTestId('drawing-clear-all').click();
+  await expect(canvas).toHaveAttribute('data-drawing-count', '0');
+  await undo.click();
+  await expect(canvas).toHaveAttribute('data-drawing-count', '5');
+  await redo.click();
   await expect(canvas).toHaveAttribute('data-drawing-count', '0');
 });
 

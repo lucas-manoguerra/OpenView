@@ -31,7 +31,7 @@ export type ChartDrawingPoint = Readonly<{
 
 export type ChartRenderDrawing = Readonly<{
   id: string;
-  type: 'trend-line' | 'horizontal-line';
+  type: 'trend-line' | 'ray' | 'horizontal-line' | 'vertical-line' | 'rectangle';
   start: ChartDrawingPoint;
   end: ChartDrawingPoint | null;
   color: string;
@@ -128,7 +128,9 @@ const normalizeChartDrawings = (
       if (
         !Number.isFinite(drawing.start.timestamp) ||
         !Number.isFinite(drawing.start.price) ||
-        (drawing.type === 'trend-line' && drawing.end === null)
+        (drawing.type !== 'horizontal-line' &&
+          drawing.type !== 'vertical-line' &&
+          drawing.end === null)
       ) {
         throw new RangeError('Chart drawings must contain finite anchored points.');
       }
@@ -757,34 +759,84 @@ const drawDrawings = (context: CanvasRenderingContext2D, scene: ChartRenderScene
   }
 
   const { frame } = scene;
-  const { plotArea } = frame.layout;
+  const { plotArea, volumeArea } = frame.layout;
+  const plotRight = plotArea.x + plotArea.width;
+  const plotBottom = plotArea.y + plotArea.height;
 
   context.save();
   context.beginPath();
-  context.rect(plotArea.x, plotArea.y, plotArea.width, plotArea.height);
+  context.rect(plotArea.x, plotArea.y, plotArea.width, plotArea.height + volumeArea.height);
   context.clip();
 
   for (const drawing of scene.drawings) {
+    const startIndex = getLogicalIndexAtTimestamp(drawing.start.timestamp, scene.candles);
+
+    if (startIndex === null) {
+      continue;
+    }
+
+    const startX = plotArea.x + logicalIndexToCoordinate(startIndex, frame.timeScale);
     const startY = plotArea.y + priceToCoordinate(drawing.start.price, frame.priceScale);
 
+    context.beginPath();
+
     if (drawing.type === 'horizontal-line') {
-      context.beginPath();
       context.moveTo(plotArea.x, startY);
-      context.lineTo(plotArea.x + plotArea.width, startY);
+      context.lineTo(plotRight, startY);
+    } else if (drawing.type === 'vertical-line') {
+      context.moveTo(startX, plotArea.y);
+      context.lineTo(startX, plotBottom + volumeArea.height);
     } else if (drawing.end !== null) {
-      const startIndex = getLogicalIndexAtTimestamp(drawing.start.timestamp, scene.candles);
       const endIndex = getLogicalIndexAtTimestamp(drawing.end.timestamp, scene.candles);
 
-      if (startIndex === null || endIndex === null) {
+      if (endIndex === null) {
         continue;
       }
 
-      context.beginPath();
-      context.moveTo(plotArea.x + logicalIndexToCoordinate(startIndex, frame.timeScale), startY);
-      context.lineTo(
-        plotArea.x + logicalIndexToCoordinate(endIndex, frame.timeScale),
-        plotArea.y + priceToCoordinate(drawing.end.price, frame.priceScale),
-      );
+      const endX = plotArea.x + logicalIndexToCoordinate(endIndex, frame.timeScale);
+      const endY = plotArea.y + priceToCoordinate(drawing.end.price, frame.priceScale);
+
+      if (drawing.type === 'rectangle') {
+        context.moveTo(startX, startY);
+        context.lineTo(endX, startY);
+        context.lineTo(endX, endY);
+        context.lineTo(startX, endY);
+        context.lineTo(startX, startY);
+      } else if (drawing.type === 'ray') {
+        const deltaX = endX - startX;
+        const deltaY = endY - startY;
+
+        if (deltaX === 0 && deltaY === 0) {
+          continue;
+        }
+
+        const horizontalIntersection =
+          deltaX > 0
+            ? (plotRight - startX) / deltaX
+            : deltaX < 0
+              ? (plotArea.x - startX) / deltaX
+              : Number.POSITIVE_INFINITY;
+        const verticalIntersection =
+          deltaY > 0
+            ? (plotBottom - startY) / deltaY
+            : deltaY < 0
+              ? (plotArea.y - startY) / deltaY
+              : Number.POSITIVE_INFINITY;
+        const positiveIntersections = [horizontalIntersection, verticalIntersection].filter(
+          (intersection) => intersection >= 0 && Number.isFinite(intersection),
+        );
+        const extent = Math.min(...positiveIntersections);
+
+        if (!Number.isFinite(extent)) {
+          continue;
+        }
+
+        context.moveTo(startX, startY);
+        context.lineTo(startX + deltaX * extent, startY + deltaY * extent);
+      } else {
+        context.moveTo(startX, startY);
+        context.lineTo(endX, endY);
+      }
     } else {
       continue;
     }

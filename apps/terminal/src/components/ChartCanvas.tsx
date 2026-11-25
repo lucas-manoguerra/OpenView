@@ -291,6 +291,8 @@ export function ChartCanvas({
   const [activeIndicators, setActiveIndicators] = useState<readonly string[]>([]);
   const [drawingTool, setDrawingTool] = useState<CanvasDrawingTool>('cursor');
   const [drawings, setDrawings] = useState<readonly ChartRenderDrawing[]>([]);
+  const [drawingUndoCount, setDrawingUndoCount] = useState(0);
+  const [drawingRedoCount, setDrawingRedoCount] = useState(0);
   const [autoScale, setAutoScale] = useState(true);
   const [priceScaleLocked, setPriceScaleLocked] = useState(false);
   const [priceScaleInverted, setPriceScaleInverted] = useState(false);
@@ -299,6 +301,9 @@ export function ChartCanvas({
   const indicatorsRef = useRef<readonly ChartIndicatorSeries[]>([]);
   const drawingToolRef = useRef<CanvasDrawingTool>(drawingTool);
   const drawingsRef = useRef<readonly ChartRenderDrawing[]>(drawings);
+  const drawingUndoStackRef = useRef<readonly (readonly ChartRenderDrawing[])[]>([]);
+  const drawingRedoStackRef = useRef<readonly (readonly ChartRenderDrawing[])[]>([]);
+  const commitDrawingsRef = useRef<(nextDrawings: readonly ChartRenderDrawing[]) => void>(() => {});
   const drawingSequenceRef = useRef(0);
   const drawingSymbolRef = useRef(symbol);
   const autoScaleRef = useRef(autoScale);
@@ -307,6 +312,17 @@ export function ChartCanvas({
   chartTypeRef.current = chartType;
   drawingToolRef.current = drawingTool;
   drawingsRef.current = drawings;
+  commitDrawingsRef.current = (nextDrawings): void => {
+    const previousDrawings = drawingsRef.current;
+    const nextUndoStack = [...drawingUndoStackRef.current, previousDrawings].slice(-50);
+    drawingUndoStackRef.current = Object.freeze(nextUndoStack);
+    drawingRedoStackRef.current = Object.freeze([]);
+    drawingsRef.current = Object.freeze([...nextDrawings]);
+    setDrawings(drawingsRef.current);
+    setDrawingUndoCount(drawingUndoStackRef.current.length);
+    setDrawingRedoCount(0);
+    runtimeRef.current?.setDrawings(drawingsRef.current);
+  };
   autoScaleRef.current = autoScale;
   priceScaleLockedRef.current = priceScaleLocked;
   const renderCandles = useMemo(() => createRenderCandles(candles), [candles]);
@@ -458,14 +474,7 @@ export function ChartCanvas({
                     }),
               color: '#60a5fa',
             });
-            const nextDrawings = Object.freeze([...drawingsRef.current, drawing]);
-            drawingsRef.current = nextDrawings;
-            setDrawings(nextDrawings);
-
-            if (scene !== null) {
-              scene = updateChartRenderScene(scene, { drawings: nextDrawings });
-              renderer.setScene(scene);
-            }
+            commitDrawingsRef.current([...drawingsRef.current, drawing]);
           },
         });
       } else {
@@ -644,7 +653,11 @@ export function ChartCanvas({
           drawingSymbolRef.current = symbol;
           drawingSequenceRef.current = 0;
           drawingsRef.current = Object.freeze([]);
+          drawingUndoStackRef.current = Object.freeze([]);
+          drawingRedoStackRef.current = Object.freeze([]);
           setDrawings(drawingsRef.current);
+          setDrawingUndoCount(0);
+          setDrawingRedoCount(0);
           runtimeRef.current?.setDrawings(drawingsRef.current);
         }
 
@@ -677,9 +690,45 @@ export function ChartCanvas({
   };
 
   const handleClearDrawings = (): void => {
-    drawingsRef.current = Object.freeze([]);
-    setDrawings(drawingsRef.current);
-    runtimeRef.current?.setDrawings(drawingsRef.current);
+    if (drawingsRef.current.length > 0) {
+      commitDrawingsRef.current([]);
+    }
+  };
+
+  const handleDrawingUndo = (): void => {
+    const previousDrawings = drawingUndoStackRef.current.at(-1);
+
+    if (previousDrawings === undefined) {
+      return;
+    }
+
+    drawingUndoStackRef.current = Object.freeze(drawingUndoStackRef.current.slice(0, -1));
+    drawingRedoStackRef.current = Object.freeze(
+      [...drawingRedoStackRef.current, drawingsRef.current].slice(-50),
+    );
+    drawingsRef.current = previousDrawings;
+    setDrawings(previousDrawings);
+    setDrawingUndoCount(drawingUndoStackRef.current.length);
+    setDrawingRedoCount(drawingRedoStackRef.current.length);
+    runtimeRef.current?.setDrawings(previousDrawings);
+  };
+
+  const handleDrawingRedo = (): void => {
+    const nextDrawings = drawingRedoStackRef.current.at(-1);
+
+    if (nextDrawings === undefined) {
+      return;
+    }
+
+    drawingRedoStackRef.current = Object.freeze(drawingRedoStackRef.current.slice(0, -1));
+    drawingUndoStackRef.current = Object.freeze(
+      [...drawingUndoStackRef.current, drawingsRef.current].slice(-50),
+    );
+    drawingsRef.current = nextDrawings;
+    setDrawings(nextDrawings);
+    setDrawingUndoCount(drawingUndoStackRef.current.length);
+    setDrawingRedoCount(drawingRedoStackRef.current.length);
+    runtimeRef.current?.setDrawings(nextDrawings);
   };
 
   const handleAutoScaleChange = (): void => {
@@ -751,6 +800,22 @@ export function ChartCanvas({
         </button>
         <button
           type="button"
+          aria-label="Rayo"
+          aria-pressed={drawingTool === 'ray'}
+          data-testid="drawing-tool-ray"
+          title="Rayo"
+          onClick={() => handleDrawingToolChange('ray')}
+          class={
+            'grid size-8 place-items-center rounded text-sm transition-colors ' +
+            (drawingTool === 'ray'
+              ? 'bg-blue-500/20 text-blue-200'
+              : 'text-slate-400 hover:bg-white/5 hover:text-slate-100')
+          }
+        >
+          ➤
+        </button>
+        <button
+          type="button"
           aria-label="Línea horizontal"
           aria-pressed={drawingTool === 'horizontal-line'}
           data-testid="drawing-tool-horizontal-line"
@@ -765,7 +830,62 @@ export function ChartCanvas({
         >
           —
         </button>
+        <button
+          type="button"
+          aria-label="Línea vertical"
+          aria-pressed={drawingTool === 'vertical-line'}
+          data-testid="drawing-tool-vertical-line"
+          title="Línea vertical"
+          onClick={() => handleDrawingToolChange('vertical-line')}
+          class={
+            'grid size-8 place-items-center rounded text-sm transition-colors ' +
+            (drawingTool === 'vertical-line'
+              ? 'bg-blue-500/20 text-blue-200'
+              : 'text-slate-400 hover:bg-white/5 hover:text-slate-100')
+          }
+        >
+          │
+        </button>
+        <button
+          type="button"
+          aria-label="Rectángulo"
+          aria-pressed={drawingTool === 'rectangle'}
+          data-testid="drawing-tool-rectangle"
+          title="Rectángulo"
+          onClick={() => handleDrawingToolChange('rectangle')}
+          class={
+            'grid size-8 place-items-center rounded text-sm transition-colors ' +
+            (drawingTool === 'rectangle'
+              ? 'bg-blue-500/20 text-blue-200'
+              : 'text-slate-400 hover:bg-white/5 hover:text-slate-100')
+          }
+        >
+          ▱
+        </button>
+
         <span class="my-1 h-px w-6 bg-white/10" />
+        <button
+          type="button"
+          aria-label="Deshacer dibujo"
+          data-testid="drawing-undo"
+          title="Deshacer"
+          disabled={drawingUndoCount === 0}
+          onClick={handleDrawingUndo}
+          class="grid size-8 place-items-center rounded text-sm text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-100 disabled:opacity-30"
+        >
+          ↶
+        </button>
+        <button
+          type="button"
+          aria-label="Rehacer dibujo"
+          data-testid="drawing-redo"
+          title="Rehacer"
+          disabled={drawingRedoCount === 0}
+          onClick={handleDrawingRedo}
+          class="grid size-8 place-items-center rounded text-sm text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-100 disabled:opacity-30"
+        >
+          ↷
+        </button>
         <button
           type="button"
           aria-label="Borrar todos los dibujos"
@@ -797,6 +917,8 @@ export function ChartCanvas({
           data-indicator-count={renderIndicators.length}
           data-drawing-count={drawings.length}
           data-drawing-tool={drawingTool}
+          data-drawing-undo-count={drawingUndoCount}
+          data-drawing-redo-count={drawingRedoCount}
           data-interval={interval}
         />
         <span ref={bindDataUpdate} class="hidden" aria-hidden="true" />
