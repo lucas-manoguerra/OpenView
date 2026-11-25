@@ -970,10 +970,7 @@ export function ChartCanvas({
   };
 
   const selectedDrawing = drawings.find((drawing) => drawing.id === selectedDrawingId) ?? null;
-  const drawingStyleTemplates = [
-    ...BUILT_IN_DRAWING_STYLE_TEMPLATES,
-    ...customDrawingTemplates,
-  ];
+  const drawingStyleTemplates = [...BUILT_IN_DRAWING_STYLE_TEMPLATES, ...customDrawingTemplates];
 
   return (
     <div class="grid h-[390px] min-h-[340px] w-full grid-cols-[38px_minmax(0,1fr)] bg-[#0b0f17]">
