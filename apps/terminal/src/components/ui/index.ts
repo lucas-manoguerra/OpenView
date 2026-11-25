@@ -16,3 +16,5 @@ export { DropdownMenu } from './DropdownMenu';
 export type { DropdownMenuItem, DropdownMenuProps } from './DropdownMenu';
 export { Tabs } from './Tabs';
 export type { TabItem, TabsProps } from './Tabs';
+export { Dialog } from './Dialog';
+export type { DialogProps } from './Dialog';
