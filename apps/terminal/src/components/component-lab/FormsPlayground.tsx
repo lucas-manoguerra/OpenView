@@ -28,7 +28,11 @@ export function FormsPlayground() {
           <TextField
             label="Símbolo"
             value={symbol}
-            onInput={(event) => setSymbol(event.currentTarget.value.toUpperCase())}
+            onInput={(event) => {
+              const normalizedSymbol = event.currentTarget.value.toUpperCase();
+              event.currentTarget.value = normalizedSymbol;
+              setSymbol(normalizedSymbol);
+            }}
             leading="⌕"
             hint="Admite escritura continua, por ejemplo BTCUSDT."
             data-testid="forms-symbol-input"
