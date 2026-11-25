@@ -228,7 +228,7 @@ describe('chart public API', () => {
         current: { logicalIndex: 1, price: 4 },
       },
     });
-    expect(chart.exportSnapshot().scene.drawings[0]?.end.price).toBe(4);
+    expect(chart.exportSnapshot().scene.drawings[0]?.end?.price).toBe(4);
     expect(chart.exportSnapshot().scene.selectedDrawingIds).toEqual(['drawing-single']);
 
     chart.execute({
