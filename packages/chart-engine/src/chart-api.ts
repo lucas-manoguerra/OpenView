@@ -144,7 +144,8 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
           scene.hoveredDrawingHit !== null &&
           drawingIds.has(scene.hoveredDrawingHit.drawingId) &&
           command.drawings.some(
-            (drawing) => drawing.id === scene.hoveredDrawingHit?.drawingId && drawing.visible !== false,
+            (drawing) =>
+              drawing.id === scene.hoveredDrawingHit?.drawingId && drawing.visible !== false,
           )
             ? scene.hoveredDrawingHit
             : null;
