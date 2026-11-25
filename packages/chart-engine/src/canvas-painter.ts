@@ -373,8 +373,7 @@ export const updateChartRenderScene = (
     scene.objectOrder.length === availableObjects.length &&
     scene.objectOrder.every(
       (item, index) =>
-        item.kind === availableObjects[index]?.kind &&
-        item.id === availableObjects[index]?.id,
+        item.kind === availableObjects[index]?.kind && item.id === availableObjects[index]?.id,
     );
   const objectOrder =
     update.objectOrder === undefined && orderMatchesAvailable
