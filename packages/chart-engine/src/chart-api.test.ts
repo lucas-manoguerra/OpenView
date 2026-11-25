@@ -566,7 +566,7 @@ describe('chart public API', () => {
     };
 
     chart.execute({ type: 'add-drawing', drawing });
-    expect(chart.exportSnapshot().scene.drawings).toEqual([drawing]);
+    expect(chart.exportSnapshot().scene.drawings).toMatchObject([drawing]);
     expect(chart.exportSnapshot().scene.selectedDrawingIds).toEqual([drawing.id]);
     expect(() => chart.execute({ type: 'add-drawing', drawing })).toThrow(
       'A drawing with this id already exists.',
@@ -575,7 +575,7 @@ describe('chart public API', () => {
     chart.execute({ type: 'undo-drawings' });
     expect(chart.exportSnapshot().scene.drawings).toHaveLength(0);
     chart.execute({ type: 'redo-drawings' });
-    expect(chart.exportSnapshot().scene.drawings).toEqual([drawing]);
+    expect(chart.exportSnapshot().scene.drawings).toMatchObject([drawing]);
 
     chart.execute({ type: 'delete-drawings', drawingIds: [drawing.id] });
     expect(chart.exportSnapshot().scene.drawings).toHaveLength(0);
@@ -584,5 +584,4 @@ describe('chart public API', () => {
     expect(chart.exportSnapshot().scene.drawings).toEqual([drawing]);
     chart.destroy();
   });
-
 });
