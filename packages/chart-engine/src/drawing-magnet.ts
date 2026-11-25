@@ -47,8 +47,7 @@ const findClosestCandle = (
     return left;
   }
 
-  return Math.abs(left.logicalIndex - logicalIndex) <=
-    Math.abs(right.logicalIndex - logicalIndex)
+  return Math.abs(left.logicalIndex - logicalIndex) <= Math.abs(right.logicalIndex - logicalIndex)
     ? left
     : right;
 };
