@@ -28,11 +28,12 @@ export function Tabs({ tabs, defaultValue, value, onChange, id = 'tradingview-ta
     onChange?.(nextValue);
   };
 
-  const handleKeyDown = (event: KeyboardEvent & { currentTarget: HTMLDivElement }) => {
-    const enabledTabs = Array.from(
-      event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]:not(:disabled)'),
+  const enabledTabs = tabs.filter((tab) => !tab.disabled);
+
+  const handleKeyDown = (event: KeyboardEvent) => {
+    const currentIndex = enabledTabs.findIndex(
+      (tab) => `${id}-tab-${tab.id}` === (event.target as HTMLElement).id,
     );
-    const currentIndex = enabledTabs.indexOf(event.target as HTMLButtonElement);
     if (currentIndex < 0 || enabledTabs.length === 0) return;
 
     let nextIndex = currentIndex;
@@ -45,10 +46,9 @@ export function Tabs({ tabs, defaultValue, value, onChange, id = 'tradingview-ta
 
     event.preventDefault();
     const nextTab = enabledTabs[nextIndex];
-    const nextValue = nextTab?.dataset['tabValue'];
-    if (!nextTab || !nextValue) return;
-    selectTab(nextValue);
-    nextTab.focus();
+    if (!nextTab) return;
+    selectTab(nextTab.id);
+    document.getElementById(`${id}-tab-${nextTab.id}`)?.focus();
   };
 
   return (
