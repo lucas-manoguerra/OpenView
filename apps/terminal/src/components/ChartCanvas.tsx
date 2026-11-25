@@ -295,6 +295,7 @@ export function ChartCanvas({
   const [drawingToolPreferences, setDrawingToolPreferences] =
     useState<DrawingToolPreferences>(DEFAULT_DRAWING_TOOL_PREFERENCES);
   const [drawingToolPreferencesLoaded, setDrawingToolPreferencesLoaded] = useState(false);
+  const [quickDrawingTemplatesOpen, setQuickDrawingTemplatesOpen] = useState(false);
   const [autoScale, setAutoScale] = useState(true);
   const [priceScaleLocked, setPriceScaleLocked] = useState(false);
   const [priceScaleInverted, setPriceScaleInverted] = useState(false);
@@ -1112,56 +1113,64 @@ export function ChartCanvas({
         >
           ◉
         </button>
-        <details class="group relative z-30">
-          <summary
+        <div class="relative z-30">
+          <button
+            type="button"
             aria-label="Plantillas rápidas de dibujo"
+            aria-expanded={quickDrawingTemplatesOpen}
             title="Plantillas rápidas de dibujo"
             data-testid="drawing-template-quick-toggle"
-            onClick={ensureDrawingTemplatesLoaded}
-            class="grid size-8 cursor-pointer list-none place-items-center rounded text-sm text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-100 [&::-webkit-details-marker]:hidden"
+            onClick={() => {
+              ensureDrawingTemplatesLoaded();
+              setQuickDrawingTemplatesOpen(!quickDrawingTemplatesOpen);
+            }}
+            class="grid size-8 place-items-center rounded text-sm text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-100"
           >
             ◈
-          </summary>
-          <div
-            data-testid="drawing-template-quick-menu"
-            class="absolute left-full top-0 ml-2 w-48 rounded-xl border border-white/10 bg-[#101723]/98 p-2 shadow-2xl"
-          >
-            <div class="mb-2 px-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-              Estilos rápidos
+          </button>
+          {quickDrawingTemplatesOpen && (
+            <div
+              data-testid="drawing-template-quick-menu"
+              class="absolute left-full top-0 ml-2 w-48 rounded-xl border border-white/10 bg-[#101723]/98 p-2 shadow-2xl"
+            >
+              <div class="mb-2 px-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                Estilos rápidos
+              </div>
+              <div class="space-y-1">
+                {drawingStyleTemplates.map((template) => (
+                  <button
+                    type="button"
+                    key={template.id}
+                    data-testid={'drawing-template-quick-' + template.id}
+                    disabled={
+                      selectedDrawingIds.length === 0 &&
+                      (drawingTool === 'cursor' || drawingTool === 'select')
+                    }
+                    onClick={() => handleQuickDrawingTemplateApply(template)}
+                    class={
+                      'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[10px] transition-colors ' +
+                      (selectedDrawingTemplateId === template.id
+                        ? 'bg-blue-500/15 text-blue-100'
+                        : 'text-slate-300 hover:bg-white/5') +
+                      ' disabled:cursor-not-allowed disabled:opacity-30'
+                    }
+                  >
+                    <span
+                      class="size-2.5 shrink-0 rounded-full border border-white/20"
+                      style={{ backgroundColor: template.color }}
+                    />
+                    <span class="min-w-0 flex-1 truncate">{template.name}</span>
+                    <span class="text-[9px] text-slate-500">{template.lineWidth}px</span>
+                  </button>
+                ))}
+              </div>
+              <p class="mt-2 border-t border-white/10 px-1 pt-2 text-[9px] leading-relaxed text-slate-500">
+                Aplica el estilo a la selección o cambia el predeterminado de la herramienta activa.
+              </p>
             </div>
-            <div class="space-y-1">
-              {drawingStyleTemplates.map((template) => (
-                <button
-                  type="button"
-                  key={template.id}
-                  data-testid={'drawing-template-quick-' + template.id}
-                  disabled={
-                    selectedDrawingIds.length === 0 &&
-                    (drawingTool === 'cursor' || drawingTool === 'select')
-                  }
-                  onClick={() => handleQuickDrawingTemplateApply(template)}
-                  class={
-                    'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[10px] transition-colors ' +
-                    (selectedDrawingTemplateId === template.id
-                      ? 'bg-blue-500/15 text-blue-100'
-                      : 'text-slate-300 hover:bg-white/5') +
-                    ' disabled:cursor-not-allowed disabled:opacity-30'
-                  }
-                >
-                  <span
-                    class="size-2.5 shrink-0 rounded-full border border-white/20"
-                    style={{ backgroundColor: template.color }}
-                  />
-                  <span class="min-w-0 flex-1 truncate">{template.name}</span>
-                  <span class="text-[9px] text-slate-500">{template.lineWidth}px</span>
-                </button>
-              ))}
-            </div>
-            <p class="mt-2 border-t border-white/10 px-1 pt-2 text-[9px] leading-relaxed text-slate-500">
-              Aplica el estilo a la selección o cambia el predeterminado de la herramienta activa.
-            </p>
-          </div>
-        </details>
+  
+          )}
+        </div>
         <button
           type="button"
           aria-label="Línea de tendencia"
