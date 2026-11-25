@@ -69,9 +69,9 @@ describe('drawing tool preferences', () => {
 
   it('falls back safely for corrupt data and unknown schema versions', () => {
     expect(restoreDrawingToolPreferences('{')).toEqual(DEFAULT_DRAWING_TOOL_PREFERENCES);
-    expect(
-      restoreDrawingToolPreferences(JSON.stringify({ version: 2, tools: {} })),
-    ).toEqual(DEFAULT_DRAWING_TOOL_PREFERENCES);
+    expect(restoreDrawingToolPreferences(JSON.stringify({ version: 2, tools: {} }))).toEqual(
+      DEFAULT_DRAWING_TOOL_PREFERENCES,
+    );
     expect(restoreDrawingToolPreferences(null)).toEqual(DEFAULT_DRAWING_TOOL_PREFERENCES);
   });
 
@@ -101,9 +101,7 @@ describe('drawing tool preferences', () => {
 
   it('uses defaults when storage is unavailable or throws', () => {
     expect(loadDrawingToolPreferences(null)).toEqual(DEFAULT_DRAWING_TOOL_PREFERENCES);
-    expect(() =>
-      saveDrawingToolPreferences(null, DEFAULT_DRAWING_TOOL_PREFERENCES),
-    ).not.toThrow();
+    expect(() => saveDrawingToolPreferences(null, DEFAULT_DRAWING_TOOL_PREFERENCES)).not.toThrow();
 
     const blockedStorage = {
       getItem: () => {
