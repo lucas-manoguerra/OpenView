@@ -4,6 +4,7 @@ import type { CandleInterval } from '@openview/market-data';
 import { ChartTypeSelector, PriceScaleSelector, type ChartControlOption } from './ui';
 import { DrawingToolCatalogMenu } from './DrawingToolCatalogMenu';
 import { DrawingPropertiesPanel } from './drawings/DrawingPropertiesPanel';
+import { DrawingCoordinatesPanel } from './drawings/DrawingCoordinatesPanel';
 import {
   DEFAULT_DRAWING_INTERACTION_PREFERENCES,
   loadBrowserDrawingInteractionPreferences,
@@ -2481,66 +2482,15 @@ export function ChartCanvas({
         {selectedDrawingHasSingleSelection &&
           selectedDrawing !== null &&
           drawingPanelLayout.visible.coordinates && (
-            <section
-              ref={(element) => attachDrawingPanelElement('coordinates', element)}
-              data-testid="drawing-coordinate-panel"
-              data-panel-left={drawingPanelLayout.positions.coordinates?.left ?? 'default'}
-              data-panel-top={drawingPanelLayout.positions.coordinates?.top ?? 'default'}
-              aria-label="Coordenadas del dibujo"
-              class="absolute left-3 top-24 z-20 w-56 max-w-[calc(100%_-_3rem)] max-h-[25%] overflow-y-auto rounded-xl border border-white/10 bg-[#101723]/95 p-3 shadow-xl backdrop-blur"
-              style={
-                drawingPanelLayout.positions.coordinates === null
-                  ? undefined
-                  : {
-                      left: drawingPanelLayout.positions.coordinates.left,
-                      top: drawingPanelLayout.positions.coordinates.top,
-                      right: 'auto',
-                      bottom: 'auto',
-                    }
-              }
-            >
-              <div class="mb-2 flex items-center gap-2">
-                <div
-                  data-testid="drawing-coordinate-drag-handle"
-                  onPointerDown={(event) => handleDrawingPanelPointerDown('coordinates', event)}
-                  class="min-w-0 flex-1 cursor-grab touch-none rounded px-1 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400 active:cursor-grabbing"
-                >
-                  {selectedDrawing.type === 'horizontal-line'
-                    ? 'Nivel de precio'
-                    : selectedDrawing.type === 'vertical-line'
-                      ? 'Marca temporal'
-                      : selectedDrawing.type === 'rectangle'
-                        ? 'Límites del rectángulo'
-                        : 'Puntos de anclaje'}
-                </div>
-                <button
-                  type="button"
-                  aria-label="Ocultar panel de coordenadas"
-                  data-testid="drawing-coordinate-close"
-                  onClick={() => handleDrawingPanelVisibilityChange('coordinates', false)}
-                  class="grid size-6 shrink-0 place-items-center rounded text-xs text-slate-400 hover:bg-white/10 hover:text-white"
-                >
-                  ×
-                </button>
-              </div>
-              {selectedDrawing.type === 'horizontal-line' && (
-                <label class="grid grid-cols-[1fr_auto] items-center gap-2 text-[10px] text-slate-400">
-                  Precio
-                  <input
-                    type="number"
-                    step="any"
-                    aria-label="Precio de la línea horizontal"
-                    data-testid="drawing-horizontal-price"
-                    value={String(selectedDrawing.start.price)}
-                    onChange={(event) =>
-                      handleSelectedDrawingAnchorUpdate('start', {
-                        price: Number(event.currentTarget.value),
-                      })
-                    }
-                    class="w-28 rounded border border-white/10 bg-[#0b0f17] px-2 py-1.5 text-right text-[10px] text-slate-200 outline-none focus:border-blue-400"
-                  />
-                </label>
-              )}
+            <DrawingCoordinatesPanel
+              selectedDrawing={selectedDrawing}
+              panelPosition={drawingPanelLayout.positions.coordinates}
+              panelRef={(element) => attachDrawingPanelElement('coordinates', element)}
+              onDragStart={(event) => handleDrawingPanelPointerDown('coordinates', event)}
+              onClose={() => handleDrawingPanelVisibilityChange('coordinates', false)}
+              onAnchorUpdate={handleSelectedDrawingAnchorUpdate}
+            />
+          )}
               {selectedDrawing.type === 'vertical-line' && (
                 <label class="grid grid-cols-1 gap-1 text-[10px] text-slate-400">
                   Fecha y hora local
