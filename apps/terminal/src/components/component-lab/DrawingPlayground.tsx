@@ -90,7 +90,12 @@ export function DrawingPlayground() {
   };
 
   return (
-    <div class="space-y-6" data-testid="drawings-playground" data-hydrated="false" ref={setPlaygroundRef}>
+    <div
+      class="space-y-6"
+      data-testid="drawings-playground"
+      data-hydrated="false"
+      ref={setPlaygroundRef}
+    >
       <section class="space-y-3">
         <h2 class="text-sm font-semibold text-[#d1d4dc]">Catálogo de herramientas</h2>
         <div class="flex min-h-28 items-start gap-3 rounded-md border border-[#2a2e39] bg-[#131722] p-4">
@@ -246,7 +251,9 @@ export function DrawingPlayground() {
               Eliminar seleccionada
             </button>
           </div>
-          <span class="text-[10px] text-[#787b86]" data-testid="drawing-template-count">{toolTemplates.length} plantillas personalizadas de esta herramienta</span>
+          <span class="text-[10px] text-[#787b86]" data-testid="drawing-template-count">
+            {toolTemplates.length} plantillas personalizadas de esta herramienta
+          </span>
         </div>
       </section>
     </div>
