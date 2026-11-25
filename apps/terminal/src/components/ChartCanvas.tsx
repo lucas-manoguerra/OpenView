@@ -986,7 +986,10 @@ export function ChartCanvas({
           return;
         }
 
-        scene = updateChartRenderScene(scene, { selectedDrawingIds: drawingIds });
+        scene = updateChartRenderScene(scene, {
+          selectedDrawingId: drawingIds[drawingIds.length - 1] ?? null,
+          selectedDrawingIds: drawingIds,
+        });
         chartApi?.execute({ type: 'set-drawing-selection', drawingIds });
       },
       setChartType: (nextChartType: ChartType): void => {
