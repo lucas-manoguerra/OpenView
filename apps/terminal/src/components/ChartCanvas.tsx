@@ -1999,7 +1999,7 @@ export function ChartCanvas({
                     </span>
                   </label>
                 </div>
-            )}
+              )}
             {selectedDrawing !== null &&
               selectedDrawingsShareType &&
               (selectedDrawing.type === 'trend-line' || selectedDrawing.type === 'ray') && (
