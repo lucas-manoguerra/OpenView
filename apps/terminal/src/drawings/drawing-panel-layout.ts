@@ -166,7 +166,8 @@ export const startDrawingPanelDrag = (
 
   event.preventDefault();
 
-  const pointerType = event.pointerType;
+  const pointerId = event.pointerId;
+  const dragTarget = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
   const startX = event.clientX;
   const startY = event.clientY;
   const startLeft = panel.offsetLeft;
@@ -179,6 +180,9 @@ export const startDrawingPanelDrag = (
     }
 
     active = false;
+    if (dragTarget?.hasPointerCapture(pointerId)) {
+      dragTarget.releasePointerCapture(pointerId);
+    }
     window.removeEventListener('pointermove', handlePointerMove, true);
     window.removeEventListener('pointerup', handlePointerEnd, true);
     window.removeEventListener('pointercancel', handlePointerEnd, true);
@@ -186,7 +190,7 @@ export const startDrawingPanelDrag = (
   };
 
   const handlePointerMove = (pointerEvent: PointerEvent): void => {
-    if (!active || pointerEvent.pointerType !== pointerType) {
+    if (!active || pointerEvent.pointerId !== pointerId) {
       return;
     }
 
@@ -203,10 +207,16 @@ export const startDrawingPanelDrag = (
   };
 
   const handlePointerEnd = (pointerEvent: PointerEvent): void => {
-    if (pointerEvent.pointerType === pointerType) {
+    if (pointerEvent.pointerId === pointerId) {
       cleanup();
     }
   };
+
+  try {
+    dragTarget?.setPointerCapture(pointerId);
+  } catch {
+    // Window-level listeners remain the fallback when pointer capture is unavailable.
+  }
 
   window.addEventListener('pointermove', handlePointerMove, true);
   window.addEventListener('pointerup', handlePointerEnd, true);
