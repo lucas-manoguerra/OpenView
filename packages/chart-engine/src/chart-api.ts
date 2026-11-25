@@ -5,7 +5,11 @@ import {
   type ChartObjectOrderAction,
   type ChartObjectOrderItem,
 } from './chart-object-order';
-import { updateChartRenderScene, type ChartRenderScene } from './canvas-painter';
+import {
+  updateChartRenderScene,
+  type ChartRenderDrawing,
+  type ChartRenderScene,
+} from './canvas-painter';
 import {
   createCanvasRenderer,
   type CanvasRenderer,
@@ -15,6 +19,8 @@ import {
 
 export type ChartCommand =
   | Readonly<{ type: 'set-scene'; scene: ChartRenderScene }>
+  | Readonly<{ type: 'set-drawings'; drawings: readonly ChartRenderDrawing[] }>
+  | Readonly<{ type: 'set-drawing-selection'; drawingIds: readonly string[] }>
   | Readonly<{ type: 'move-object'; target: ChartObjectOrderItem; action: ChartObjectOrderAction }>
   | Readonly<{ type: 'resize'; width: number; height: number; devicePixelRatio?: number }>
   | Readonly<{ type: 'render-now' }>;
@@ -22,6 +28,12 @@ export type ChartCommand =
 export type ChartEvent =
   | Readonly<{ type: 'scene-changed'; scene: ChartRenderScene }>
   | Readonly<{ type: 'object-order-changed'; order: readonly ChartObjectOrderItem[] }>
+  | Readonly<{
+      type: 'drawing-state-changed';
+      drawings: readonly ChartRenderDrawing[];
+      selectedDrawingId: string | null;
+      selectedDrawingIds: readonly string[];
+    }>
   | Readonly<{ type: 'destroyed' }>;
 
 export type ChartSnapshot = Readonly<{
@@ -75,6 +87,17 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
     renderer.setScene(updateChartRenderScene(scene, { objectOrder }));
   };
 
+  const emitDrawingState = (): void => {
+    emit(
+      Object.freeze({
+        type: 'drawing-state-changed',
+        drawings: scene.drawings,
+        selectedDrawingId: scene.selectedDrawingId,
+        selectedDrawingIds: scene.selectedDrawingIds,
+      }),
+    );
+  };
+
   renderer.resize(scene.frame.layout.bounds.width, scene.frame.layout.bounds.height);
   render();
 
@@ -88,6 +111,38 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
         render();
         emit(Object.freeze({ type: 'scene-changed', scene }));
         emit(Object.freeze({ type: 'object-order-changed', order: objectOrder }));
+        emitDrawingState();
+        return;
+      }
+
+      if (command.type === 'set-drawings') {
+        const drawingIds = new Set(command.drawings.map((drawing) => drawing.id));
+        const selectedDrawingIds = scene.selectedDrawingIds.filter((id) => drawingIds.has(id));
+        const selectedDrawingId =
+          scene.selectedDrawingId !== null && drawingIds.has(scene.selectedDrawingId)
+            ? scene.selectedDrawingId
+            : (selectedDrawingIds[selectedDrawingIds.length - 1] ?? null);
+        scene = updateChartRenderScene(scene, {
+          drawings: command.drawings,
+          selectedDrawingId,
+          selectedDrawingIds,
+        });
+        objectOrder = reconcileChartObjectOrder(objectOrder, getAvailableObjects(scene));
+        render();
+        emitDrawingState();
+        emit(Object.freeze({ type: 'object-order-changed', order: objectOrder }));
+        return;
+      }
+
+      if (command.type === 'set-drawing-selection') {
+        const availableIds = new Set(scene.drawings.map((drawing) => drawing.id));
+        const selectedDrawingIds = Object.freeze(
+          [...new Set(command.drawingIds)].filter((id) => availableIds.has(id)),
+        );
+        const selectedDrawingId = selectedDrawingIds[selectedDrawingIds.length - 1] ?? null;
+        scene = updateChartRenderScene(scene, { selectedDrawingId, selectedDrawingIds });
+        render();
+        emitDrawingState();
         return;
       }
 
@@ -138,6 +193,7 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
       render();
       emit(Object.freeze({ type: 'scene-changed', scene }));
       emit(Object.freeze({ type: 'object-order-changed', order: objectOrder }));
+      emitDrawingState();
     },
 
     destroy(): void {

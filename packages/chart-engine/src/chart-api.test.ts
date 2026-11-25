@@ -59,6 +59,59 @@ describe('chart public API', () => {
     expect(() => chart.exportSnapshot()).toThrow('destroyed');
   });
 
+  it('owns drawing mutations and selection through public commands', () => {
+    const { surface } = createSurface();
+    const chart = createChart({
+      surface,
+      initialScene: createScene(),
+      renderer: { scheduler: { requestFrame: () => 1, cancelFrame: () => {} } },
+    });
+    const listener = vi.fn();
+    chart.subscribe(listener);
+    const drawing = {
+      id: 'drawing-1',
+      type: 'trend-line' as const,
+      start: { timestamp: 1, price: 2 },
+      end: { timestamp: 2, price: 3 },
+      color: '#ffffff',
+    };
+
+    chart.execute({ type: 'set-drawings', drawings: [drawing] });
+    const normalizedDrawings = chart.exportSnapshot().scene.drawings;
+    expect(normalizedDrawings).toEqual([
+      expect.objectContaining({
+        ...drawing,
+        lineWidth: 1.5,
+        lineStyle: 'solid',
+        fillColor: '#ffffff',
+        fillOpacity: 0,
+        extendStart: false,
+        extendEnd: false,
+        startStyle: 'none',
+        endStyle: 'none',
+        locked: false,
+        visible: true,
+      }),
+    ]);
+    expect(listener).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'drawing-state-changed',
+        drawings: normalizedDrawings,
+        selectedDrawingId: null,
+        selectedDrawingIds: [],
+      }),
+    );
+
+    chart.execute({ type: 'set-drawing-selection', drawingIds: ['missing', 'drawing-1'] });
+    expect(chart.exportSnapshot().scene.selectedDrawingId).toBe('drawing-1');
+    expect(chart.exportSnapshot().scene.selectedDrawingIds).toEqual(['drawing-1']);
+
+    chart.execute({ type: 'set-drawings', drawings: [] });
+    expect(chart.exportSnapshot().scene.selectedDrawingId).toBeNull();
+    expect(chart.exportSnapshot().scene.selectedDrawingIds).toEqual([]);
+    chart.destroy();
+  });
+
   it('round-trips a serializable object order snapshot', () => {
     const { surface } = createSurface();
     const chart = createChart({
