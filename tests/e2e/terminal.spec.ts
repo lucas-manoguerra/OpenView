@@ -1543,10 +1543,10 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
   await expect(coordinatePanel).toBeVisible();
   await expect(canvas).toHaveAttribute('data-selected-drawing-id', 'drawing-1');
 
-  await page.getByTestId('drawing-panel-toggle-appearance').click();
-  await expect(propertiesPanel).toBeVisible();
   await page.getByTestId('drawing-coordinate-close').click();
   await expect(coordinatePanel).toBeHidden();
+  await expect(propertiesPanel).toBeHidden();
+  await page.getByTestId('drawing-panel-toggle-appearance').click();
   await expect(propertiesPanel).toBeVisible();
   await page.getByTestId('drawing-panel-toggle-coordinates').click();
   await expect(coordinatePanel).toBeVisible();
