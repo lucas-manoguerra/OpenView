@@ -170,6 +170,8 @@ export const attachCanvasPointerEvents = (
         options.getDrawings?.() ?? [],
         options.getCandles?.() ?? [],
         controller.snapshot.frame,
+        8,
+        getSelectedDrawingIds(),
       );
       const selectedIds = getSelectedDrawingIds();
       const multiSelectModifier = event.ctrlKey || event.metaKey;
