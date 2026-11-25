@@ -59,9 +59,7 @@ test('opens the component lab and explores drawing tools and style templates', a
   await expect(page.getByTestId('drawing-style-color')).toHaveValue('#ef5350');
   await page.getByTestId('drawing-template-name').fill('Resistance');
   await page.getByTestId('drawing-template-save').click();
-  await expect(page.getByTestId('drawing-template-select')).toHaveValue(
-    /component-lab-/,
-  );
+  await expect(page.getByTestId('drawing-template-select')).toHaveValue(/component-lab-/);
 });
 
 test('exposes button variants and sizes in the playground', async ({ page }) => {
