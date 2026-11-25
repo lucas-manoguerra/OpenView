@@ -687,10 +687,7 @@ export function ChartCanvas({
           },
           onDrawingHover: (hit: ChartDrawingHit | null): void => {
             canvas.style.cursor = hit === null ? '' : hit.target === 'body' ? 'move' : 'crosshair';
-            if (scene !== null) {
-              scene = updateChartRenderScene(scene, { hoveredDrawingHit: hit });
-              publishScene(scene);
-            }
+            chartApi?.execute({ type: 'set-drawing-hover', hit });
           },
           onDrawingAreaSelectionChange: (selection: CanvasDrawingAreaSelection | null): void => {
             setDrawingSelectionArea(selection);
