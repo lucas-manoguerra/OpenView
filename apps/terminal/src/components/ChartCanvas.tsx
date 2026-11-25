@@ -908,7 +908,20 @@ export function ChartCanvas({
   };
 
   const handleSelectedDrawingUpdate = (
-    updates: Partial<Pick<ChartRenderDrawing, 'color' | 'lineWidth' | 'lineStyle'>>,
+    updates: Partial<
+      Pick<
+        ChartRenderDrawing,
+        | 'color'
+        | 'lineWidth'
+        | 'lineStyle'
+        | 'fillColor'
+        | 'fillOpacity'
+        | 'extendStart'
+        | 'extendEnd'
+        | 'startStyle'
+        | 'endStyle'
+      >
+    >,
   ): void => {
     ensureDrawingToolPreferencesLoaded();
     const selectedIds = new Set(selectedDrawingIdsRef.current);
@@ -929,13 +942,20 @@ export function ChartCanvas({
       commitDrawingsRef.current(nextDrawings);
     }
 
-    if (selectedToolTypes.size > 0) {
+    const preferenceUpdates: Partial<Pick<ChartRenderDrawing, 'color' | 'lineWidth' | 'lineStyle'>> =
+      {
+        ...(updates.color === undefined ? {} : { color: updates.color }),
+        ...(updates.lineWidth === undefined ? {} : { lineWidth: updates.lineWidth }),
+        ...(updates.lineStyle === undefined ? {} : { lineStyle: updates.lineStyle }),
+      };
+
+    if (selectedToolTypes.size > 0 && Object.keys(preferenceUpdates).length > 0) {
       const nextPreferences = { ...drawingToolPreferencesRef.current };
 
       for (const tool of selectedToolTypes) {
         nextPreferences[tool] = Object.freeze({
           ...nextPreferences[tool],
-          ...updates,
+          ...preferenceUpdates,
         });
       }
 
@@ -1156,6 +1176,12 @@ export function ChartCanvas({
   const drawingStyleTemplates = [...BUILT_IN_DRAWING_STYLE_TEMPLATES, ...customDrawingTemplates];
   const selectedDrawingHasSingleSelection =
     selectedDrawing !== null && selectedDrawingIds.length === 1;
+  const selectedDrawingsShareType =
+    selectedDrawing !== null &&
+    selectedDrawingIds.length > 0 &&
+    drawings
+      .filter((drawing) => selectedDrawingIds.includes(drawing.id))
+      .every((drawing) => drawing.type === selectedDrawing.type);
 
   return (
     <div class="grid h-[390px] min-h-[340px] w-full grid-cols-[38px_minmax(0,1fr)] bg-[#0b0f17]">
@@ -1415,6 +1441,16 @@ export function ChartCanvas({
             selectedDrawing === null ? '' : String(selectedDrawing.lineWidth ?? 1.5)
           }
           data-selected-drawing-line-style={selectedDrawing?.lineStyle ?? 'solid'}
+          data-selected-drawing-fill-color={
+            selectedDrawing?.fillColor ?? selectedDrawing?.color ?? ''
+          }
+          data-selected-drawing-fill-opacity={String(selectedDrawing?.fillOpacity ?? 0)}
+          data-selected-drawing-extend-start={String(selectedDrawing?.extendStart ?? false)}
+          data-selected-drawing-extend-end={String(
+            selectedDrawing?.extendEnd ?? selectedDrawing?.type === 'ray',
+          )}
+          data-selected-drawing-start-style={selectedDrawing?.startStyle ?? 'none'}
+          data-selected-drawing-end-style={selectedDrawing?.endStyle ?? 'none'}
           data-drawing-tool={drawingTool}
           data-drawing-undo-count={drawingUndoCount}
           data-drawing-redo-count={drawingRedoCount}
@@ -1917,6 +1953,130 @@ export function ChartCanvas({
                 <option value="dotted">Puntos</option>
               </select>
             </div>
+            {selectedDrawingsShareType && selectedDrawing.type === 'rectangle' && (
+              <div
+                class="mt-3 space-y-2 border-t border-white/10 pt-3"
+                data-testid="drawing-rectangle-properties"
+              >
+                <div class="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-2">
+                  <label htmlFor="drawing-fill-color" class="text-[10px] text-slate-400">
+                    Color de relleno
+                  </label>
+                  <input
+                    id="drawing-fill-color"
+                    type="color"
+                    aria-label="Color de relleno"
+                    data-testid="drawing-fill-color"
+                    value={selectedDrawing.fillColor ?? selectedDrawing.color}
+                    onInput={(event) =>
+                      handleSelectedDrawingUpdate({ fillColor: event.currentTarget.value })
+                    }
+                    class="h-7 w-10 cursor-pointer rounded border border-white/10 bg-transparent p-0.5"
+                  />
+                </div>
+                <label class="flex items-center justify-between gap-3 text-[10px] text-slate-400">
+                  Opacidad del relleno
+                  <input
+                    type="range"
+                    aria-label="Opacidad del relleno"
+                    data-testid="drawing-fill-opacity"
+                    min="0"
+                    max="100"
+                    step="5"
+                    value={String(Math.round((selectedDrawing.fillOpacity ?? 0) * 100))}
+                    onInput={(event) =>
+                      handleSelectedDrawingUpdate({
+                        fillOpacity: Number(event.currentTarget.value) / 100,
+                      })
+                    }
+                    class="w-28 accent-blue-400"
+                  />
+                  <span class="w-8 text-right tabular-nums text-slate-300">
+                    {Math.round((selectedDrawing.fillOpacity ?? 0) * 100)}%
+                  </span>
+                </label>
+              </div>
+            )}
+            {selectedDrawingsShareType &&
+              (selectedDrawing.type === 'trend-line' || selectedDrawing.type === 'ray') && (
+                <div
+                  class="mt-3 space-y-2 border-t border-white/10 pt-3"
+                  data-testid="drawing-line-properties"
+                >
+                  <div class="grid grid-cols-2 gap-2">
+                    <label class="flex items-center gap-2 text-[10px] text-slate-400">
+                      <input
+                        type="checkbox"
+                        aria-label="Extender inicio"
+                        data-testid="drawing-extend-start"
+                        checked={selectedDrawing.extendStart ?? false}
+                        onChange={(event) =>
+                          handleSelectedDrawingUpdate({ extendStart: event.currentTarget.checked })
+                        }
+                        class="accent-blue-400"
+                      />
+                      Extender inicio
+                    </label>
+                    <label class="flex items-center gap-2 text-[10px] text-slate-400">
+                      <input
+                        type="checkbox"
+                        aria-label="Extender final"
+                        data-testid="drawing-extend-end"
+                        checked={selectedDrawing.extendEnd ?? selectedDrawing.type === 'ray'}
+                        onChange={(event) =>
+                          handleSelectedDrawingUpdate({ extendEnd: event.currentTarget.checked })
+                        }
+                        class="accent-blue-400"
+                      />
+                      Extender final
+                    </label>
+                  </div>
+                  <div class="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-2">
+                    <label htmlFor="drawing-start-style" class="text-[10px] text-slate-400">
+                      Estilo de inicio
+                    </label>
+                    <select
+                      id="drawing-start-style"
+                      aria-label="Estilo de inicio"
+                      data-testid="drawing-start-style"
+                      value={selectedDrawing.startStyle ?? 'none'}
+                      onChange={(event) =>
+                        handleSelectedDrawingUpdate({
+                          startStyle: event.currentTarget.value as NonNullable<
+                            ChartRenderDrawing['startStyle']
+                          >,
+                        })
+                      }
+                      class="min-w-24 rounded border border-white/10 bg-[#0b0f17] px-2 py-1 text-[10px] text-slate-200 outline-none focus:border-blue-400"
+                    >
+                      <option value="none">Ninguno</option>
+                      <option value="arrow">Flecha</option>
+                      <option value="circle">Círculo</option>
+                    </select>
+                    <label htmlFor="drawing-end-style" class="text-[10px] text-slate-400">
+                      Estilo final
+                    </label>
+                    <select
+                      id="drawing-end-style"
+                      aria-label="Estilo final"
+                      data-testid="drawing-end-style"
+                      value={selectedDrawing.endStyle ?? 'none'}
+                      onChange={(event) =>
+                        handleSelectedDrawingUpdate({
+                          endStyle: event.currentTarget.value as NonNullable<
+                            ChartRenderDrawing['endStyle']
+                          >,
+                        })
+                      }
+                      class="min-w-24 rounded border border-white/10 bg-[#0b0f17] px-2 py-1 text-[10px] text-slate-200 outline-none focus:border-blue-400"
+                    >
+                      <option value="none">Ninguno</option>
+                      <option value="arrow">Flecha</option>
+                      <option value="circle">Círculo</option>
+                    </select>
+                  </div>
+                </div>
+              )}
             <div class="mt-3 border-t border-white/10 pt-3">
               <div class="flex items-center justify-between gap-2">
                 <span class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
