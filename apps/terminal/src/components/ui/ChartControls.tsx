@@ -1,6 +1,7 @@
 export type ChartControlOption = {
   value: string;
   label: string;
+  ariaLabel?: string;
   disabled?: boolean;
 };
 
@@ -11,6 +12,9 @@ export type TimeframeSelectorProps = {
   onChange: (value: string) => void;
   label?: string;
   disabled?: boolean;
+  testId?: string;
+  testIdPrefix?: string;
+  size?: 'small' | 'medium';
 };
 
 export function TimeframeSelector({
@@ -20,13 +24,16 @@ export function TimeframeSelector({
   onChange,
   label = 'Temporalidad',
   disabled = false,
+  testId = 'timeframe-selector',
+  testIdPrefix = 'timeframe',
+  size = 'small',
 }: TimeframeSelectorProps) {
   const quickOptions = options.filter((option) => quickValues.includes(option.value));
 
   return (
     <fieldset
       aria-label={label}
-      data-testid="timeframe-selector"
+      data-testid={testId}
       class="flex min-w-0 items-center gap-1"
     >
       <legend class="sr-only">{label}</legend>
@@ -37,11 +44,12 @@ export function TimeframeSelector({
             type="button"
             disabled={disabled || option.disabled}
             aria-pressed={value === option.value}
-            aria-label={option.label}
-            data-testid={`timeframe-${option.value}`}
+            aria-label={option.ariaLabel ?? option.label}
+            data-testid={`${testIdPrefix}-${option.value}`}
             onClick={() => onChange(option.value)}
             class={[
-              'h-7 shrink-0 rounded px-2 text-[11px] tabular-nums transition-colors',
+              (size === 'medium' ? 'h-8 px-2.5' : 'h-7 px-2') +
+                ' shrink-0 rounded text-[11px] tabular-nums transition-colors',
               'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#2962ff]',
               'disabled:cursor-not-allowed disabled:opacity-40',
               value === option.value
@@ -79,6 +87,8 @@ export type ChartTypeSelectorProps = {
   onChange: (value: string) => void;
   label?: string;
   disabled?: boolean;
+  testId?: string;
+  showLabel?: boolean;
 };
 
 export function ChartTypeSelector({
@@ -87,13 +97,15 @@ export function ChartTypeSelector({
   onChange,
   label = 'Tipo de gráfico',
   disabled = false,
+  testId = 'chart-type-selector',
+  showLabel = true,
 }: ChartTypeSelectorProps) {
   return (
     <label class="inline-flex h-8 items-center gap-2 rounded-md border border-[#2a2e39] bg-[#131722] px-2.5">
-      <span class="text-[10px] text-[#787b86]">{label}</span>
+      {showLabel ? <span class="text-[10px] text-[#787b86]">{label}</span> : null}
       <select
         aria-label={label}
-        data-testid="chart-type-selector"
+        data-testid={testId}
         value={value}
         disabled={disabled}
         onChange={(event) => onChange(event.currentTarget.value)}
@@ -115,6 +127,7 @@ export type PriceScaleSelectorProps = {
   onChange: (value: string) => void;
   label?: string;
   disabled?: boolean;
+  testIdPrefix?: string;
 };
 
 export function PriceScaleSelector({
@@ -123,6 +136,7 @@ export function PriceScaleSelector({
   onChange,
   label = 'Escala de precios',
   disabled = false,
+  testIdPrefix = 'price-scale',
 }: PriceScaleSelectorProps) {
   return (
     <fieldset
