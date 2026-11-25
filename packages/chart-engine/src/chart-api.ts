@@ -5,6 +5,13 @@ import {
   type ChartObjectOrderAction,
   type ChartObjectOrderItem,
 } from './chart-object-order';
+import type { ChartCoordinate } from './chart-frame';
+import {
+  hitTestChartDrawing,
+  selectChartDrawingsWithinArea,
+  type ChartDrawingHit,
+  type ChartDrawingSelectionArea,
+} from './drawing-geometry';
 import {
   updateChartRenderScene,
   type ChartRenderDrawing,
@@ -48,6 +55,8 @@ export type ChartApi = Readonly<{
   subscribe(listener: (event: ChartEvent) => void): () => void;
   exportSnapshot(): ChartSnapshot;
   importSnapshot(snapshot: ChartSnapshot): void;
+  hitTestDrawing(point: ChartCoordinate, tolerance?: number): ChartDrawingHit | null;
+  selectDrawingsWithinArea(area: ChartDrawingSelectionArea): readonly string[];
   destroy(): void;
 }>;
 
@@ -182,6 +191,31 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
       assertActive();
       listeners.add(listener);
       return () => listeners.delete(listener);
+    },
+
+    hitTestDrawing(point: ChartCoordinate, tolerance = 8): ChartDrawingHit | null {
+      assertActive();
+      if (!drawingsVisible) {
+        return null;
+      }
+      const visibleDrawings = scene.drawings.filter((drawing) => drawing.visible !== false);
+      return hitTestChartDrawing(
+        point,
+        visibleDrawings,
+        scene.candles,
+        scene.frame,
+        tolerance,
+        scene.selectedDrawingIds,
+      );
+    },
+
+    selectDrawingsWithinArea(area: ChartDrawingSelectionArea): readonly string[] {
+      assertActive();
+      if (!drawingsVisible) {
+        return Object.freeze([]);
+      }
+      const visibleDrawings = scene.drawings.filter((drawing) => drawing.visible !== false);
+      return selectChartDrawingsWithinArea(area, visibleDrawings, scene.candles, scene.frame);
     },
 
     exportSnapshot(): ChartSnapshot {

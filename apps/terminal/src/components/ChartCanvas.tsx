@@ -48,7 +48,6 @@ import {
   createChart,
   type ChartApi,
   getTimestampAtLogicalIndex,
-  selectChartDrawingsWithinArea,
   updateChartDrawing,
   calculateExponentialMovingAverage,
   calculateSimpleMovingAverage,
@@ -678,6 +677,7 @@ export function ChartCanvas({
           getCandles: () => currentCandles,
           getSelectedDrawingId: () => selectedDrawingIdRef.current,
           getSelectedDrawingIds: () => selectedDrawingIdsRef.current,
+          hitTestDrawing: (point, tolerance) => chartApi?.hitTestDrawing(point, tolerance) ?? null,
           getPriceIncrement: () => priceIncrementRef.current,
           onDrawingNudge: (direction: CanvasDrawingNudgeDirection): void => {
             handleSelectedDrawingsNudge(direction, currentCandles);
@@ -696,14 +696,7 @@ export function ChartCanvas({
             setDrawingSelectionArea(selection);
           },
           onDrawingAreaSelectionComplete: (area: ChartDrawingSelectionArea): void => {
-            updateDrawingSelection(
-              selectChartDrawingsWithinArea(
-                area,
-                renderableDrawingsRef.current,
-                currentCandles,
-                interactionController.snapshot.frame,
-              ),
-            );
+            updateDrawingSelection(chartApi?.selectDrawingsWithinArea(area) ?? []);
           },
           onDrawingGroupEdit: (gesture: CanvasDrawingGroupEditGesture): void => {
             const selectedIds = new Set(gesture.drawingIds);
