@@ -2177,6 +2177,10 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
     await appearanceToggle.click();
   }
   await expect(propertiesPanel).toBeHidden();
+  await expect(coordinateToggle).toBeVisible();
+  if ((await coordinateToggle.getAttribute('aria-pressed')) !== 'true') {
+    await coordinateToggle.click();
+  }
   await expect(coordinatePanel).toBeVisible();
 
   const deleteSelected = page.getByTestId('drawing-delete-selected');
