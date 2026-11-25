@@ -1,0 +1,19 @@
+:root {
+  color-scheme: dark;
+  --tv-color-platform-background: #0b0e14;
+  --tv-color-pane-background: #131722;
+  --tv-color-toolbar-background: #1e222d;
+  --tv-color-popup-background: #1e222d;
+  --tv-color-border: #2a2e39;
+  --tv-color-border-strong: #434651;
+  --tv-color-text-primary: #d1d4dc;
+  --tv-color-text-secondary: #787b86;
+  --tv-color-text-muted: #5d606b;
+  --tv-color-accent: #2962ff;
+  --tv-color-accent-hover: #1e53e5;
+  --tv-color-positive: #089981;
+  --tv-color-negative: #f23645;
+  --tv-radius-control: 6px;
+  --tv-height-control: 32px;
+  --tv-font-size-control: 13px;
+}
