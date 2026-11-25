@@ -1455,6 +1455,15 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
   await page.getByTestId('drawing-style-line').selectOption('dashed');
   await expect(canvas).toHaveAttribute('data-selected-drawing-line-style', 'dashed');
 
+  await page.getByTestId('drawing-extend-start').check();
+  await expect(canvas).toHaveAttribute('data-selected-drawing-extend-start', 'true');
+  await page.getByTestId('drawing-extend-end').check();
+  await expect(canvas).toHaveAttribute('data-selected-drawing-extend-end', 'true');
+  await page.getByTestId('drawing-start-style').selectOption('arrow');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-start-style', 'arrow');
+  await page.getByTestId('drawing-end-style').selectOption('circle');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-end-style', 'circle');
+
   const panelBeforeDrag = await propertiesPanel.boundingBox();
   const dragHandle = page.getByTestId('drawing-properties-drag-handle');
   const dragHandleBounds = await dragHandle.boundingBox();
@@ -1671,6 +1680,58 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
   }));
 
   expect(restoredAppearancePosition).toEqual(savedAppearancePosition);
+});
+
+test('edits rectangle fill color and opacity', async ({ page }) => {
+  await page.goto('/');
+
+  const canvas = page.getByRole('img', {
+    name: /Gráfico interactivo de velas y volumen para BTC \/ USDT/,
+  });
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+
+  const bounds = await canvas.boundingBox();
+  expect(bounds).not.toBeNull();
+
+  if (bounds === null) {
+    throw new Error('The chart canvas must have a visible bounding box.');
+  }
+
+  const startX = bounds.x + bounds.width * 0.32;
+  const startY = bounds.y + bounds.height * 0.3;
+  const endX = bounds.x + bounds.width * 0.56;
+  const endY = bounds.y + bounds.height * 0.65;
+
+  await page.getByTestId('drawing-tool-rectangle').click();
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await page.mouse.move(endX, endY);
+  await page.mouse.up();
+  await expect(canvas).toHaveAttribute('data-drawing-count', '1');
+
+  await page.getByTestId('drawing-tool-select').click();
+  await page.mouse.click((startX + endX) / 2, (startY + endY) / 2);
+  await expect(canvas).toHaveAttribute('data-selected-drawing-type', 'rectangle');
+
+  const fillProperties = page.getByTestId('drawing-rectangle-properties');
+  await expect(fillProperties).toBeVisible();
+  await expect(page.getByTestId('drawing-fill-opacity')).toHaveValue('0');
+
+  const fillColor = page.getByTestId('drawing-fill-color');
+  await fillColor.evaluate((element: HTMLInputElement) => {
+    element.value = '#22c55e';
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await expect(canvas).toHaveAttribute('data-selected-drawing-fill-color', '#22c55e');
+
+  await page.getByTestId('drawing-fill-opacity').evaluate((element: HTMLInputElement) => {
+    element.value = '45';
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await expect(canvas).toHaveAttribute('data-selected-drawing-fill-opacity', '0.45');
+  await expect(page.getByTestId('drawing-fill-opacity')).toHaveValue('45');
 });
 
 test('selects drawings with Shift and moves and deletes the group together', async ({ page }) => {
