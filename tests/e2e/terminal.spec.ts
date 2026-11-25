@@ -1523,8 +1523,12 @@ test('returns to the cursor by default and keeps the tool active when requested'
   await trendLineTool.click();
   await expect(canvas).toHaveAttribute('data-keep-drawing', 'true');
   await expect(trendLineTool).toHaveAttribute('aria-pressed', 'true');
+  const drawingCountAfterReload = Number(await canvas.getAttribute('data-drawing-count'));
   await drawTrendLine(160);
-  await expect(canvas).toHaveAttribute('data-drawing-count', '3');
+  await expect(canvas).toHaveAttribute(
+    'data-drawing-count',
+    String(drawingCountAfterReload + 1),
+  );
   await expect(trendLineTool).toHaveAttribute('aria-pressed', 'true');
 });
 
