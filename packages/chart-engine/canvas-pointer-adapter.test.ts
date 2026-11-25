@@ -458,8 +458,7 @@ describe('canvas pointer event adapter', () => {
       },
     ];
     let selectedIds: readonly string[] = [];
-    const selections: readonly string[][] = [];
-    const mutableSelections = selections as string[][];
+    const selections: string[][] = [];
     const groupEdits: CanvasDrawingGroupEditGesture[] = [];
     attachCanvasPointerEvents(canvas, controller, {
       getDrawingTool: () => 'select',
@@ -468,7 +467,7 @@ describe('canvas pointer event adapter', () => {
       getSelectedDrawingIds: () => selectedIds,
       onDrawingSelectionChange: (ids) => {
         selectedIds = ids;
-        mutableSelections.push([...ids]);
+        selections.push([...ids]);
       },
       onDrawingGroupEdit: (gesture) => groupEdits.push(gesture),
     });
