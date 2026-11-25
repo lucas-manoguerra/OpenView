@@ -224,10 +224,19 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
           scene.selectedDrawingId !== null && availableIds.has(scene.selectedDrawingId)
             ? scene.selectedDrawingId
             : (selectedDrawingIds[selectedDrawingIds.length - 1] ?? null);
+        const hoveredDrawingHit =
+          scene.hoveredDrawingHit !== null &&
+          previousDrawings.some(
+            (drawing) =>
+              drawing.id === scene.hoveredDrawingHit?.drawingId && drawing.visible !== false,
+          )
+            ? scene.hoveredDrawingHit
+            : null;
         scene = updateChartRenderScene(scene, {
           drawings: previousDrawings,
           selectedDrawingId,
           selectedDrawingIds,
+          hoveredDrawingHit,
         });
         objectOrder = reconcileChartObjectOrder(objectOrder, getAvailableObjects(scene));
         render();
@@ -442,6 +451,9 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
         throw new RangeError('Unsupported chart snapshot version.');
       }
       const nextScene = snapshot.scene;
+      drawingPreview = null;
+      drawingUndoStack.length = 0;
+      drawingRedoStack.length = 0;
       const available = getAvailableObjects(nextScene);
       const importedOrder = createChartObjectOrder(snapshot.objectOrder);
       scene = nextScene;
@@ -450,6 +462,7 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
       emit(Object.freeze({ type: 'scene-changed', scene }));
       emit(Object.freeze({ type: 'object-order-changed', order: objectOrder }));
       emitDrawingState();
+      emitHistoryState();
     },
 
     destroy(): void {

@@ -299,6 +299,93 @@ describe('chart public API', () => {
     chart.destroy();
   });
 
+  it('reconciles hovered drawings when undo and redo restore a different collection', () => {
+    const { surface } = createSurface();
+    const chart = createChart({
+      surface,
+      initialScene: createScene(),
+      renderer: { scheduler: { requestFrame: () => 1, cancelFrame: () => {} } },
+    });
+    const firstDrawing = {
+      id: 'history-hover-first',
+      type: 'trend-line' as const,
+      start: { timestamp: 1, price: 2 },
+      end: { timestamp: 2, price: 3 },
+      color: '#ffffff',
+    };
+    const secondDrawing = { ...firstDrawing, id: 'history-hover-second' };
+
+    chart.execute({ type: 'set-drawings', drawings: [firstDrawing] });
+    chart.execute({
+      type: 'set-drawing-hover',
+      hit: { drawingId: firstDrawing.id, target: 'start' },
+    });
+    chart.execute({ type: 'set-drawings', drawings: [secondDrawing] });
+    chart.execute({
+      type: 'set-drawing-hover',
+      hit: { drawingId: secondDrawing.id, target: 'end' },
+    });
+
+    chart.execute({ type: 'undo-drawings' });
+    expect(chart.exportSnapshot().scene.drawings[0]?.id).toBe(firstDrawing.id);
+    expect(chart.exportSnapshot().scene.hoveredDrawingHit).toBeNull();
+
+    chart.execute({
+      type: 'set-drawing-hover',
+      hit: { drawingId: firstDrawing.id, target: 'start' },
+    });
+    chart.execute({ type: 'redo-drawings' });
+    expect(chart.exportSnapshot().scene.drawings[0]?.id).toBe(secondDrawing.id);
+    expect(chart.exportSnapshot().scene.hoveredDrawingHit).toBeNull();
+    chart.destroy();
+  });
+
+  it('clears transient previews and drawing history when importing a snapshot', () => {
+    const { surface } = createSurface();
+    const candles = [
+      { timestamp: 1, open: 2, high: 4, low: 1, close: 3, volume: 10, logicalIndex: 0 },
+      { timestamp: 2, open: 3, high: 5, low: 2, close: 4, volume: 12, logicalIndex: 1 },
+    ];
+    const frame = createChartFrame(320, 240, { min: 0, max: 10 }, 1);
+    const chart = createChart({
+      surface,
+      initialScene: createChartRenderScene(frame, candles),
+      renderer: { scheduler: { requestFrame: () => 1, cancelFrame: () => {} } },
+    });
+    const drawing = {
+      id: 'snapshot-history-drawing',
+      type: 'trend-line' as const,
+      start: { timestamp: 1, price: 2 },
+      end: { timestamp: 2, price: 3 },
+      color: '#ffffff',
+    };
+    const historyEvents: { undoCount: number; redoCount: number }[] = [];
+    chart.subscribe((event) => {
+      if (event.type === 'history-state-changed') {
+        historyEvents.push({ undoCount: event.undoCount, redoCount: event.redoCount });
+      }
+    });
+
+    chart.execute({ type: 'set-drawings', drawings: [drawing] });
+    chart.execute({
+      type: 'set-drawing-edit-preview',
+      gesture: {
+        kind: 'single',
+        drawingId: drawing.id,
+        target: 'end',
+        origin: { logicalIndex: 1, price: 3 },
+        current: { logicalIndex: 1, price: 4 },
+      },
+    });
+    const snapshot = chart.exportSnapshot();
+    chart.importSnapshot(snapshot);
+
+    expect(historyEvents.at(-1)).toEqual({ undoCount: 0, redoCount: 0 });
+    chart.execute({ type: 'undo-drawings' });
+    expect(chart.exportSnapshot().scene.drawings).toHaveLength(1);
+    chart.destroy();
+  });
+
   it('preserves chart-owned drawings and selection when the host updates the scene', () => {
     const { surface } = createSurface();
     const chart = createChart({
