@@ -62,12 +62,14 @@ import {
   type ChartRenderDrawing,
   type ChartDrawingMagnetMode,
   type ChartDrawingSelectionArea,
+  type CanvasDrawingNudgeDirection,
   type NumericRange,
   type PriceScaleMode,
 } from '@openview/chart-engine';
 
 type ChartCanvasProps = Readonly<{
   candles: readonly Candle[];
+  priceIncrement: number | null;
   symbol: string;
   interval: CandleInterval;
   loading: boolean;
@@ -271,6 +273,7 @@ const hasSameSize = (first: CanvasResize | null, second: CanvasResize): boolean 
 
 export function ChartCanvas({
   candles,
+  priceIncrement,
   symbol,
   interval,
   loading,
@@ -329,6 +332,7 @@ export function ChartCanvas({
   const indicatorsRef = useRef<readonly ChartIndicatorSeries[]>([]);
   const drawingToolRef = useRef<CanvasDrawingTool>(drawingTool);
   const drawingToolPreferencesRef = useRef<DrawingToolPreferences>(drawingToolPreferences);
+  const priceIncrementRef = useRef<number | null>(priceIncrement);
   const drawingMagnetModeRef = useRef<ChartDrawingMagnetMode>(drawingMagnetMode);
   const snapToIndicatorsRef = useRef(snapToIndicators);
   const keepDrawingRef = useRef(keepDrawing);
@@ -353,6 +357,7 @@ export function ChartCanvas({
   chartTypeRef.current = chartType;
   drawingToolRef.current = drawingTool;
   drawingToolPreferencesRef.current = drawingToolPreferences;
+  priceIncrementRef.current = priceIncrement;
   drawingMagnetModeRef.current = drawingMagnetMode;
   snapToIndicatorsRef.current = snapToIndicators;
   keepDrawingRef.current = keepDrawing;
@@ -611,6 +616,10 @@ export function ChartCanvas({
           getCandles: () => currentCandles,
           getSelectedDrawingId: () => selectedDrawingIdRef.current,
           getSelectedDrawingIds: () => selectedDrawingIdsRef.current,
+          getPriceIncrement: () => priceIncrementRef.current,
+          onDrawingNudge: (direction: CanvasDrawingNudgeDirection): void => {
+            handleSelectedDrawingsNudge(direction, currentCandles);
+          },
           onDrawingSelectionChange: (drawingIds: readonly string[]): void => {
             updateDrawingSelection(drawingIds);
           },
@@ -1837,6 +1846,7 @@ export function ChartCanvas({
           data-indicator-count={renderIndicators.length}
           data-drawing-count={drawings.length}
           data-renderable-drawing-count={renderableDrawingsRef.current.length}
+          data-price-increment={priceIncrement ?? ''}
           data-drawings-locked={String(allDrawingsLocked)}
           data-drawings-visible={String(drawingsVisible)}
           data-drawing-magnet-mode={drawingMagnetMode}
