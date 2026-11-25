@@ -384,8 +384,6 @@ export function ChartCanvas({
   snapToIndicatorsRef.current = snapToIndicators;
   keepDrawingRef.current = keepDrawing;
   drawingsVisibleRef.current = drawingsVisible;
-  // Drawing collections and selection are projected from ChartApi events.
-  // Do not overwrite those authoritative refs from a potentially stale React render.
   renderableDrawingsRef.current = drawingsVisibleRef.current
     ? drawingsRef.current.filter((drawing) => drawing.visible !== false)
     : [];
