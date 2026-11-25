@@ -559,6 +559,17 @@ export function ChartCanvas({
       scene = nextScene;
       if (chartApi === null) {
         chartApi = createChart({ surface: canvas, initialScene: nextScene });
+        chartApi.subscribe((event) => {
+          if (event.type !== 'drawing-state-changed') {
+            return;
+          }
+          drawingsRef.current = event.drawings;
+          selectedDrawingIdRef.current = event.selectedDrawingId;
+          selectedDrawingIdsRef.current = event.selectedDrawingIds;
+          setDrawings(event.drawings);
+          setSelectedDrawingId(event.selectedDrawingId);
+          setSelectedDrawingIds(event.selectedDrawingIds);
+        });
         if (lastSize !== null) {
           chartApi.execute({
             type: 'resize',
@@ -956,15 +967,19 @@ export function ChartCanvas({
         }
 
         scene = updateChartRenderScene(scene, { drawings: nextDrawings });
-        publishScene(scene);
+        chartApi?.execute({ type: 'set-drawings', drawings: nextDrawings });
       },
       setSelectedDrawingId: (drawingId: string | null): void => {
         if (scene === null) {
           return;
         }
 
-        scene = updateChartRenderScene(scene, { selectedDrawingId: drawingId });
-        publishScene(scene);
+        const drawingIds = drawingId === null ? [] : [drawingId];
+        scene = updateChartRenderScene(scene, {
+          selectedDrawingId: drawingId,
+          selectedDrawingIds: drawingIds,
+        });
+        chartApi?.execute({ type: 'set-drawing-selection', drawingIds });
       },
       setSelectedDrawingIds: (drawingIds: readonly string[]): void => {
         if (scene === null) {
@@ -972,7 +987,7 @@ export function ChartCanvas({
         }
 
         scene = updateChartRenderScene(scene, { selectedDrawingIds: drawingIds });
-        publishScene(scene);
+        chartApi?.execute({ type: 'set-drawing-selection', drawingIds });
       },
       setChartType: (nextChartType: ChartType): void => {
         if (scene === null) {
