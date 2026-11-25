@@ -166,7 +166,7 @@ export const startDrawingPanelDrag = (
 
   event.preventDefault();
 
-  const pointerId = event.pointerId;
+  const pointerType = event.pointerType;
   const startX = event.clientX;
   const startY = event.clientY;
   const startLeft = panel.offsetLeft;
@@ -186,7 +186,7 @@ export const startDrawingPanelDrag = (
   };
 
   const handlePointerMove = (pointerEvent: PointerEvent): void => {
-    if (!active || pointerEvent.pointerId !== pointerId) {
+    if (!active || pointerEvent.pointerType !== pointerType) {
       return;
     }
 
@@ -203,7 +203,7 @@ export const startDrawingPanelDrag = (
   };
 
   const handlePointerEnd = (pointerEvent: PointerEvent): void => {
-    if (pointerEvent.pointerId === pointerId) {
+    if (pointerEvent.pointerType === pointerType) {
       cleanup();
     }
   };
