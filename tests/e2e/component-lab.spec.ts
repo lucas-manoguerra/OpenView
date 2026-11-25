@@ -206,3 +206,35 @@ test('selects toolbar tools and supports horizontal and vertical keyboard naviga
   await page.keyboard.press('ArrowDown');
   await expect(page.getByRole('button', { name: 'Cruz' })).toBeFocused();
 });
+
+test('controls chart timeframe, chart type and price scale independently', async ({ page }) => {
+  await page.goto('/component-lab/chart/controls');
+
+  await expect(page.getByRole('heading', { name: 'Chart Controls' })).toBeVisible();
+  await expect(page.getByTestId('chart-controls-playground')).toHaveAttribute(
+    'data-hydrated',
+    'true',
+  );
+
+  const timeframeToolbar = page.getByTestId('timeframe-selector');
+  await expect(timeframeToolbar.getByRole('button', { name: '15m' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await timeframeToolbar.getByRole('button', { name: '1h' }).click();
+  await expect(page.getByTestId('selected-timeframe')).toContainText('1h');
+
+  await page.getByLabel('Todas las temporalidades').selectOption('1M');
+  await expect(page.getByTestId('selected-timeframe')).toContainText('1M');
+
+  await page.getByLabel('Tipo de gráfico').selectOption('line');
+  await expect(page.getByTestId('selected-chart-type')).toHaveText('line');
+
+  await page.getByRole('button', { name: '%' }).click();
+  await expect(page.getByTestId('selected-price-scale')).toHaveText('percentage');
+
+  await page.getByLabel('Deshabilitar controles').check();
+  await expect(page.getByLabel('Todas las temporalidades')).toBeDisabled();
+  await expect(page.getByLabel('Tipo de gráfico')).toBeDisabled();
+  await expect(page.getByRole('button', { name: '%' })).toBeDisabled();
+});

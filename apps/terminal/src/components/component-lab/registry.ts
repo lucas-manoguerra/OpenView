@@ -50,11 +50,11 @@ export const componentLabRegistry: readonly ComponentLabEntry[] = [
   },
   {
     id: 'chart',
-    name: 'Chart',
+    name: 'Chart Controls',
     family: 'Chart',
-    route: '/component-lab/chart',
-    status: 'planned',
-    description: 'Controles del gráfico, timeframes y barras de herramientas.',
+    route: '/component-lab/chart/controls',
+    status: 'available',
+    description: 'Selectores de temporalidad, tipo de gráfico y escala de precios.',
   },
   {
     id: 'drawings',
