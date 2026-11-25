@@ -1647,7 +1647,9 @@ export function ChartCanvas({
         <span class="my-1 h-px w-6 bg-white/10" />
         <button
           type="button"
-          aria-label={allDrawingsLocked ? 'Desbloquear todos los dibujos' : 'Bloquear todos los dibujos'}
+          aria-label={
+            allDrawingsLocked ? 'Desbloquear todos los dibujos' : 'Bloquear todos los dibujos'
+          }
           aria-pressed={allDrawingsLocked}
           data-testid="drawings-lock-toggle"
           title={allDrawingsLocked ? 'Desbloquear todos los dibujos' : 'Bloquear todos los dibujos'}
