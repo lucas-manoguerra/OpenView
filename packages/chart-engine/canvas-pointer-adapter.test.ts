@@ -460,6 +460,8 @@ describe('canvas pointer event adapter', () => {
     let selectedIds: readonly string[] = [];
     const selections: string[][] = [];
     const groupEdits: CanvasDrawingGroupEditGesture[] = [];
+    const deletedGroups: readonly string[][] = [];
+    const mutableDeletedGroups = deletedGroups as string[][];
     attachCanvasPointerEvents(canvas, controller, {
       getDrawingTool: () => 'select',
       getDrawings: () => drawings,
@@ -470,6 +472,7 @@ describe('canvas pointer event adapter', () => {
         selections.push([...ids]);
       },
       onDrawingGroupEdit: (gesture) => groupEdits.push(gesture),
+      onDrawingDeleteMany: (drawingIds) => mutableDeletedGroups.push([...drawingIds]),
     });
 
     const firstBody = dataPointToChartCoordinate({ logicalIndex: 1, price: 104 }, frame);
@@ -492,6 +495,14 @@ describe('canvas pointer event adapter', () => {
     dispatch('pointerup', pointerEvent(secondBody, { shiftKey: true }));
     expect(selectedIds).toEqual(['trend-1', 'trend-2']);
 
+    dispatch('pointerdown', pointerEvent(secondBody, { shiftKey: true }));
+    dispatch('pointerup', pointerEvent(secondBody, { shiftKey: true }));
+    expect(selectedIds).toEqual(['trend-1']);
+
+    dispatch('pointerdown', pointerEvent(secondBody, { shiftKey: true }));
+    dispatch('pointerup', pointerEvent(secondBody, { shiftKey: true }));
+    expect(selectedIds).toEqual(['trend-1', 'trend-2']);
+
     const movedBody = { x: firstBody.x + 35, y: firstBody.y - 18 };
     dispatch('pointerdown', pointerEvent(firstBody));
     dispatch('pointerup', pointerEvent(movedBody));
@@ -500,7 +511,16 @@ describe('canvas pointer event adapter', () => {
     expect(groupEdits[0]?.drawingIds).toEqual(['trend-1', 'trend-2']);
     expect(groupEdits[0]?.current).toEqual(chartCoordinateToDataPoint(movedBody, frame));
     expect(capturedPointers.has(7)).toBe(false);
-    expect(selections).toEqual([['trend-1'], ['trend-1', 'trend-2'], ['trend-1', 'trend-2']]);
+    expect(selections).toEqual([
+      ['trend-1'],
+      ['trend-1', 'trend-2'],
+      ['trend-1'],
+      ['trend-1', 'trend-2'],
+      ['trend-1', 'trend-2'],
+    ]);
+
+    dispatch('keydown', { key: 'Delete', preventDefault: vi.fn() } as unknown as KeyboardEvent);
+    expect(deletedGroups).toEqual([['trend-1', 'trend-2']]);
   });
 
   it('deletes the selected drawing on Delete and deselects on Escape', () => {
