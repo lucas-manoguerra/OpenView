@@ -2388,9 +2388,7 @@ test('selects drawings with Shift and moves and deletes the group together', asy
   await page.mouse.click(firstMidpoint.x, firstMidpoint.y);
   await expect(canvas).toHaveAttribute('data-selected-drawing-count', '1');
 
-  await page.keyboard.down('Shift');
-  await page.mouse.click(secondMidpoint.x, secondMidpoint.y);
-  await page.keyboard.up('Shift');
+  await page.mouse.click(secondMidpoint.x, secondMidpoint.y, { modifiers: ['Shift'] });
   await expect(canvas).toHaveAttribute('data-selected-drawing-count', '2');
   await expect(canvas).toHaveAttribute('data-selected-drawing-ids', 'drawing-1,drawing-2');
 
@@ -2633,6 +2631,7 @@ test('discovers drawing tools by family and activates implemented tools', async 
   ).toHaveCount(11);
 
   await expect(catalog.getByTestId('drawing-tool-catalog-item-trend-line')).toBeEnabled();
+  await catalog.getByTestId('drawing-tool-group-fibonacci').click();
   await expect(catalog.getByTestId('drawing-tool-catalog-item-fib-retracement')).toBeDisabled();
 
   await catalog.getByTestId('drawing-tool-catalog-search').fill('retroceso');
