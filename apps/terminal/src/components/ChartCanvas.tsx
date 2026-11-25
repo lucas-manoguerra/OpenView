@@ -363,11 +363,13 @@ export function ChartCanvas({
   const selectedDrawingIdsRef = useRef<readonly string[]>(selectedDrawingIds);
   const drawingUndoStackRef = useRef<readonly (readonly ChartRenderDrawing[])[]>([]);
   const drawingRedoStackRef = useRef<readonly (readonly ChartRenderDrawing[])[]>([]);
-  const commitDrawingsRef = useRef<(
-    nextDrawings: readonly ChartRenderDrawing[],
-    chartAlreadyUpdated?: boolean,
-    previousDrawings?: readonly ChartRenderDrawing[],
-  ) => void>(() => {});
+  const commitDrawingsRef = useRef<
+    (
+      nextDrawings: readonly ChartRenderDrawing[],
+      chartAlreadyUpdated?: boolean,
+      previousDrawings?: readonly ChartRenderDrawing[],
+    ) => void
+  >(() => {});
   const drawingSequenceRef = useRef(0);
   const drawingPanelLayoutRef = useRef<DrawingPanelLayout>(drawingPanelLayout);
   const drawingPanelLayoutLoadedRef = useRef(false);
