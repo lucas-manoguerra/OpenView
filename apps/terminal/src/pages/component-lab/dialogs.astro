@@ -1,0 +1,26 @@
+---
+import TerminalLayout from '../../layouts/TerminalLayout.astro';
+import { DialogPlayground } from '../../components/component-lab/DialogPlayground';
+---
+
+<TerminalLayout title="Dialogs — Component Lab">
+  <main class="min-h-screen bg-[#0b0e14] text-[#d1d4dc]">
+    <header class="flex h-12 items-center justify-between border-b border-[#2a2e39] bg-[#131722] px-4">
+      <a href="/component-lab" class="text-sm font-semibold text-white no-underline">← Component Lab</a>
+      <span class="text-xs text-[#787b86]">Panels / Dialogs</span>
+    </header>
+    <div class="mx-auto max-w-5xl space-y-6 px-5 py-8">
+      <div>
+        <p class="text-[10px] font-semibold uppercase tracking-widest text-[#2962ff]">Panel components</p>
+        <h1 class="mt-2 text-2xl font-semibold tracking-tight text-white">Dialogs & Modals</h1>
+        <p class="mt-2 text-sm leading-6 text-[#787b86]">Ventanas modales con foco administrado, cierre contextual y semántica accesible.</p>
+      </div>
+      <div class="grid gap-3 sm:grid-cols-3">
+        <div class="rounded-md border border-[#2a2e39] bg-[#131722] p-3"><p class="text-xs text-[#787b86]">Componentes</p><p class="mt-1 text-xl font-semibold text-white">1</p></div>
+        <div class="rounded-md border border-[#2a2e39] bg-[#131722] p-3"><p class="text-xs text-[#787b86]">Métodos de cierre</p><p class="mt-1 text-xl font-semibold text-white">3</p></div>
+        <div class="rounded-md border border-[#2a2e39] bg-[#131722] p-3"><p class="text-xs text-[#787b86]">Controles de foco</p><p class="mt-1 text-xl font-semibold text-white">3</p></div>
+      </div>
+      <DialogPlayground client:load />
+    </div>
+  </main>
+</TerminalLayout>
