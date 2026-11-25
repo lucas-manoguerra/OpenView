@@ -1058,6 +1058,34 @@ test('changes chart rendering style between candles, bars, line and area', async
   await expect(canvas).toHaveAttribute('data-chart-type', 'candles');
 });
 
+test('adds and removes SMA and EMA overlays from the chart', async ({ page }) => {
+  await page.goto('/');
+
+  const canvas = page.locator('canvas[data-candles-count]');
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+  await expect(canvas).toHaveAttribute('data-indicator-count', '0');
+
+  const indicatorMenu = page.getByTestId('chart-indicators-menu');
+  await indicatorMenu.locator('summary').click();
+
+  const sma20 = page.getByTestId('chart-indicator-sma-20');
+  const ema20 = page.getByTestId('chart-indicator-ema-20');
+  const initialImage = await canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL());
+
+  await sma20.check();
+  await expect(canvas).toHaveAttribute('data-indicator-count', '1');
+  await expect
+    .poll(() => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL()))
+    .not.toBe(initialImage);
+
+  await ema20.check();
+  await expect(canvas).toHaveAttribute('data-indicator-count', '2');
+  await sma20.uncheck();
+  await expect(canvas).toHaveAttribute('data-indicator-count', '1');
+});
+
 test('updates the canvas backing store when the terminal layout changes', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/');

@@ -181,6 +181,44 @@ describe('canvas chart painter', () => {
     expect(updateChartRenderScene(updated, { chartType: 'line' })).toBe(updated);
   });
 
+  it('renders indicator overlays above the selected chart type', () => {
+    const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 10);
+    const indicators = [
+      {
+        id: 'sma-3',
+        label: 'SMA 3',
+        color: '#f4c542',
+        points: [
+          { logicalIndex: 0, value: 101 },
+          { logicalIndex: 1, value: 104 },
+          { logicalIndex: 2, value: 108 },
+        ],
+      },
+    ];
+    const scene = createChartRenderScene(frame, createCandles(), null, 'candles', indicators);
+    const { context, calls } = createMockContext();
+
+    drawChartScene(context, scene);
+
+    expect(scene.indicators).toHaveLength(1);
+    expect(Object.isFrozen(scene.indicators)).toBe(true);
+    expect(Object.isFrozen(scene.indicators[0])).toBe(true);
+    expect(calls.filter((call) => call.name === 'stroke').length).toBeGreaterThan(3);
+    expect(() =>
+      createChartRenderScene(frame, createCandles(), null, 'candles', [
+        {
+          id: 'invalid',
+          label: 'Invalid',
+          color: '#fff',
+          points: [
+            { logicalIndex: 2, value: 100 },
+            { logicalIndex: 1, value: 101 },
+          ],
+        },
+      ]),
+    ).toThrow(RangeError);
+  });
+
   it('draws a separate volume panel with bars relative to the visible maximum', () => {
     const frame = createChartFrame(800, 500, { min: 90, max: 120 }, 10, {
       layout: { volumeHeight: 80 },

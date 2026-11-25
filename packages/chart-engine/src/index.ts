@@ -17,6 +17,7 @@ export {
   type ChartType,
   type ChartRenderSceneUpdate,
   type ChartRenderTheme,
+  type ChartIndicatorSeries,
 } from './canvas-painter';
 export {
   createChartInteractionController,
@@ -96,3 +97,10 @@ export {
   type TimeAxisPoint,
   type TimeAxisTick,
 } from './time-axis';
+
+export {
+  calculateExponentialMovingAverage,
+  calculateSimpleMovingAverage,
+  type MovingAverageInput,
+  type MovingAveragePoint,
+} from './indicators';
