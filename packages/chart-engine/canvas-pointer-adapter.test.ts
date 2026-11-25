@@ -498,9 +498,33 @@ describe('canvas pointer event adapter', () => {
     const frame = createChartFrame(900, 500, { min: 90, max: 120 }, 2);
     const controller = createChartInteractionController(frame);
     const candles: readonly ChartRenderCandle[] = [
-      { logicalIndex: 0, timestamp: 1_700_000_000_000, open: 100, high: 110, low: 95, close: 105, volume: 10 },
-      { logicalIndex: 1, timestamp: 1_700_000_060_000, open: 105, high: 112, low: 100, close: 108, volume: 20 },
-      { logicalIndex: 2, timestamp: 1_700_000_120_000, open: 108, high: 114, low: 105, close: 110, volume: 30 },
+      {
+        logicalIndex: 0,
+        timestamp: 1_700_000_000_000,
+        open: 100,
+        high: 110,
+        low: 95,
+        close: 105,
+        volume: 10,
+      },
+      {
+        logicalIndex: 1,
+        timestamp: 1_700_000_060_000,
+        open: 105,
+        high: 112,
+        low: 100,
+        close: 108,
+        volume: 20,
+      },
+      {
+        logicalIndex: 2,
+        timestamp: 1_700_000_120_000,
+        open: 108,
+        high: 114,
+        low: 105,
+        close: 110,
+        volume: 30,
+      },
     ];
     const drawing: ChartRenderDrawing = {
       id: 'trend-1',
@@ -509,7 +533,8 @@ describe('canvas pointer event adapter', () => {
       end: { timestamp: candles[2]!.timestamp, price: 110 },
       color: '#60a5fa',
     };
-    const previews: (Readonly<{ drawingId: string; target: string; current: unknown }> | null)[] = [];
+    const previews: (Readonly<{ drawingId: string; target: string; current: unknown }> | null)[] =
+      [];
     const commits: unknown[] = [];
     attachCanvasPointerEvents(canvas, controller, {
       getDrawingTool: () => 'select',
