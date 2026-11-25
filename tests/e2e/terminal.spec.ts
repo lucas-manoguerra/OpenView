@@ -1704,6 +1704,17 @@ test('selects multiple drawings with Ctrl click and marquee, then moves them tog
   await expect(page.getByTestId('drawing-selection-marquee')).toHaveCount(0);
   await expect(canvas).toHaveAttribute('data-selected-drawing-count', '2');
   await expect(canvas).toHaveAttribute('data-selected-drawing-ids', 'drawing-1,drawing-2');
+
+  const colorPicker = page.getByTestId('drawing-style-color');
+  await colorPicker.evaluate((element: HTMLInputElement) => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+    setter?.call(element, '#ef4444');
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await expect(canvas).toHaveAttribute('data-selected-drawing-colors', '#ef4444,#ef4444');
+
+  await page.getByTestId('drawing-style-width').selectOption('4');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-widths', '4,4');
 });
 
 test('selects, moves, edits and deletes a drawing individually', async ({ page }) => {
