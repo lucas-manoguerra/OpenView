@@ -1046,46 +1046,44 @@ export function ChartCanvas({
         class="relative h-full min-w-0 bg-[#0b0f17]"
         data-testid="chart-surface"
         data-provider-error={error === null ? 'false' : 'true'}
-        onPointerMove={(event) => {
-          const drag = drawingPropertiesDragRef.current;
-          const panel = drawingPropertiesPanelRef.current;
-          const parent = panel === null ? null : panel.parentElement;
+      onPointerMove={(event) => {
+        const drag = drawingPropertiesDragRef.current;
+        const panel = drawingPropertiesPanelRef.current;
+        const parent = panel === null ? null : panel.parentElement;
 
-          if (
-            drag === null ||
-            drag.pointerId !== event.pointerId ||
-            panel === null ||
-            parent === null
-          ) {
-            return;
-          }
+        if (
+          drag === null ||
+          drag.pointerId !== event.pointerId ||
+          panel === null ||
+          parent === null
+        ) {
+          return;
+        }
 
-          const maxLeft = Math.max(0, parent.clientWidth - panel.offsetWidth);
-          const maxTop = Math.max(0, parent.clientHeight - panel.offsetHeight);
-          const left = Math.max(
-            0,
-            Math.min(maxLeft, drag.left + event.clientX - drag.pointerX),
-          );
-          const top = Math.max(0, Math.min(maxTop, drag.top + event.clientY - drag.pointerY));
-          setDrawingPanelPosition({ left, top });
-        }}
-        onPointerUp={(event) => {
-          if (drawingPropertiesDragRef.current?.pointerId !== event.pointerId) {
-            return;
-          }
+        const maxLeft = Math.max(0, parent.clientWidth - panel.offsetWidth);
+        const maxTop = Math.max(0, parent.clientHeight - panel.offsetHeight);
+        const left = Math.max(0, Math.min(maxLeft, drag.left + event.clientX - drag.pointerX));
+        const top = Math.max(0, Math.min(maxTop, drag.top + event.clientY - drag.pointerY));
+        setDrawingPanelPosition({ left, top });
+      }}
+      onPointerUp={(event) => {
+        if (drawingPropertiesDragRef.current?.pointerId !== event.pointerId) {
+          return;
+        }
 
-          const panel = drawingPropertiesPanelRef.current;
-
-          if (panel !== null && panel.hasPointerCapture(event.pointerId)) {
-            panel.releasePointerCapture(event.pointerId);
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+        drawingPropertiesDragRef.current = null;
+      }}
+      onPointerCancel={(event) => {
+        if (drawingPropertiesDragRef.current?.pointerId === event.pointerId) {
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
           }
           drawingPropertiesDragRef.current = null;
-        }}
-        onPointerCancel={(event) => {
-          if (drawingPropertiesDragRef.current?.pointerId === event.pointerId) {
-            drawingPropertiesDragRef.current = null;
-          }
-        }}
+        }
+      }}
       >
         <canvas
           ref={bindCanvas}
@@ -1336,7 +1334,9 @@ export function ChartCanvas({
 
                   const panel = drawingPropertiesPanelRef.current;
 
-                  if (panel === null) {
+                  const dragSurface = panel?.parentElement;
+
+                  if (panel === null || dragSurface === null || dragSurface === undefined) {
                     return;
                   }
 
@@ -1350,7 +1350,7 @@ export function ChartCanvas({
                     top,
                   };
                   setDrawingPanelPosition({ left, top });
-                  panel.setPointerCapture(event.pointerId);
+                  dragSurface.setPointerCapture(event.pointerId);
                 }}
               >
                 <span aria-hidden="true" class="text-slate-500">
