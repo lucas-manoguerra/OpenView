@@ -14,7 +14,11 @@ import type {
   QuoteUpdate,
 } from '../contracts';
 import { MarketDataProviderError } from '../errors';
-import { normalizeMarketInstruments, tryCreateMarketInstrument } from '../instrument-catalog';
+import {
+  normalizeMarketInstruments,
+  parsePriceIncrement,
+  tryCreateMarketInstrument,
+} from '../instrument-catalog';
 import { MarketDataRequestScheduler, type RequestWaiter } from '../request-scheduler';
 import {
   createReconnectingWebSocketSubscription,
@@ -682,7 +686,9 @@ export class BybitSpotMarketDataProvider implements MarketDataProvider {
         throw new RangeError('Bybit returned an instrument without base and quote assets.');
       }
 
-      const instrument = tryCreateMarketInstrument(baseAsset, quoteAsset);
+      const priceFilter = readProperty(item, 'priceFilter');
+      const priceIncrement = parsePriceIncrement(readProperty(priceFilter, 'tickSize'));
+      const instrument = tryCreateMarketInstrument(baseAsset, quoteAsset, priceIncrement);
 
       if (instrument !== null) {
         instruments.push(instrument);

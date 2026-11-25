@@ -20,6 +20,7 @@ describe('Binance Spot instrument discovery', () => {
             isSpotTradingAllowed: true,
             baseAsset: 'BTC',
             quoteAsset: 'USDT',
+            filters: [{ filterType: 'PRICE_FILTER', tickSize: '0.01' }],
           },
           {
             symbol: 'ETHBTC',
@@ -59,6 +60,7 @@ describe('Binance Spot instrument discovery', () => {
         symbol: 'BTC/USDT',
         baseAsset: 'BTC',
         quoteAsset: 'USDT',
+        priceIncrement: 0.01,
       },
       {
         id: 'ETH-BTC',

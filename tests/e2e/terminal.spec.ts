@@ -101,7 +101,13 @@ const installBinanceMock = async (page: Page): Promise<void> => {
       contentType: 'application/json',
       body: JSON.stringify({
         symbols: [
-          { status: 'TRADING', isSpotTradingAllowed: true, baseAsset: 'BTC', quoteAsset: 'USDT' },
+          {
+            status: 'TRADING',
+            isSpotTradingAllowed: true,
+            baseAsset: 'BTC',
+            quoteAsset: 'USDT',
+            filters: [{ filterType: 'PRICE_FILTER', tickSize: '0.01' }],
+          },
           { status: 'TRADING', isSpotTradingAllowed: true, baseAsset: 'ETH', quoteAsset: 'USDT' },
           { status: 'TRADING', isSpotTradingAllowed: true, baseAsset: 'SOL', quoteAsset: 'USDT' },
           { status: 'TRADING', isSpotTradingAllowed: true, baseAsset: 'XRP', quoteAsset: 'USDT' },
@@ -1715,6 +1721,168 @@ test('selects multiple drawings with Ctrl click and marquee, then moves them tog
 
   await page.getByTestId('drawing-style-width').selectOption('4');
   await expect(canvas).toHaveAttribute('data-selected-drawing-widths', '4,4');
+});
+
+test('moves all selected drawings by one bar and one market tick with arrow keys', async ({
+  page,
+}) => {
+  await page.goto('/');
+
+  const canvas = page.getByRole('img', {
+    name: /Gráfico interactivo de velas y volumen para BTC \/ USDT/,
+  });
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-price-increment')))
+    .toBeGreaterThan(0);
+
+  const bounds = await canvas.boundingBox();
+
+  if (bounds === null) {
+    throw new Error('The chart canvas must have a visible bounding box.');
+  }
+
+  const firstStart = { x: bounds.x + bounds.width * 0.29, y: bounds.y + bounds.height * 0.28 };
+  const firstEnd = { x: bounds.x + bounds.width * 0.52, y: bounds.y + bounds.height * 0.43 };
+  const secondStart = { x: bounds.x + bounds.width * 0.29, y: bounds.y + bounds.height * 0.55 };
+  const secondEnd = { x: bounds.x + bounds.width * 0.52, y: bounds.y + bounds.height * 0.7 };
+  const midpoint = (start: { x: number; y: number }, end: { x: number; y: number }) => ({
+    x: (start.x + end.x) / 2,
+    y: (start.y + end.y) / 2,
+  });
+  const firstBody = midpoint(firstStart, firstEnd);
+  const secondBody = midpoint(secondStart, secondEnd);
+  const drawLine = async (
+    start: { x: number; y: number },
+    end: { x: number; y: number },
+  ): Promise<void> => {
+    await page.getByTestId('drawing-tool-trend-line').click();
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    await page.mouse.move(end.x, end.y);
+    await page.mouse.up();
+  };
+  const readSelectedPrices = async (): Promise<number[]> =>
+    JSON.parse(
+      (await canvas.getAttribute('data-selected-drawing-start-prices')) ?? '[]',
+    ) as number[];
+  const readSelectedTimestamps = async (): Promise<number[]> =>
+    JSON.parse(
+      (await canvas.getAttribute('data-selected-drawing-start-timestamps')) ?? '[]',
+    ) as number[];
+
+  await drawLine(firstStart, firstEnd);
+  await drawLine(secondStart, secondEnd);
+  await expect(canvas).toHaveAttribute('data-drawing-count', '2');
+
+  await page.getByTestId('drawing-tool-select').click();
+  await page.keyboard.down('Control');
+  await page.mouse.click(firstBody.x, firstBody.y);
+  await page.mouse.click(secondBody.x, secondBody.y);
+  await page.keyboard.up('Control');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-count', '2');
+
+  const tickSize = Number(await canvas.getAttribute('data-price-increment'));
+  const pricesBefore = await readSelectedPrices();
+  const timestampsBefore = await readSelectedTimestamps();
+  expect(pricesBefore).toHaveLength(2);
+  expect(timestampsBefore).toHaveLength(2);
+
+  await canvas.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect
+    .poll(readSelectedTimestamps)
+    .toEqual(timestampsBefore.map((value) => value + 60_000));
+  await expect.poll(readSelectedPrices).toEqual(pricesBefore);
+
+  const timestampsAfterRight = await readSelectedTimestamps();
+  await page.keyboard.press('ArrowUp');
+  await expect.poll(readSelectedPrices).toEqual(pricesBefore.map((value) => value + tickSize));
+  await expect.poll(readSelectedTimestamps).toEqual(timestampsAfterRight);
+  await expect(canvas).toHaveAttribute('data-selected-drawing-count', '2');
+  await expect(canvas).toHaveAttribute('data-drawing-undo-count', '4');
+});
+
+test('nudges every selected drawing by one bar and one provider tick', async ({ page }) => {
+  await page.goto('/');
+
+  const canvas = page.getByRole('img', {
+    name: /Gráfico interactivo de velas y volumen para BTC \/ USDT/,
+  });
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-price-increment')))
+    .toBeGreaterThan(0);
+
+  const bounds = await canvas.boundingBox();
+
+  if (bounds === null) {
+    throw new Error('The chart canvas must have a visible bounding box.');
+  }
+
+  const firstStart = { x: bounds.x + bounds.width * 0.29, y: bounds.y + bounds.height * 0.28 };
+  const firstEnd = { x: bounds.x + bounds.width * 0.52, y: bounds.y + bounds.height * 0.43 };
+  const secondStart = { x: bounds.x + bounds.width * 0.29, y: bounds.y + bounds.height * 0.55 };
+  const secondEnd = { x: bounds.x + bounds.width * 0.52, y: bounds.y + bounds.height * 0.7 };
+  const midpoint = (start: { x: number; y: number }, end: { x: number; y: number }) => ({
+    x: (start.x + end.x) / 2,
+    y: (start.y + end.y) / 2,
+  });
+  const drawLine = async (
+    start: { x: number; y: number },
+    end: { x: number; y: number },
+  ): Promise<void> => {
+    await page.getByTestId('drawing-tool-trend-line').click();
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    await page.mouse.move(end.x, end.y);
+    await page.mouse.up();
+  };
+  const readSelectedPrices = async (): Promise<number[]> =>
+    JSON.parse(
+      (await canvas.getAttribute('data-selected-drawing-start-prices')) ?? '[]',
+    ) as number[];
+  const readSelectedTimestamps = async (): Promise<number[]> =>
+    JSON.parse(
+      (await canvas.getAttribute('data-selected-drawing-start-timestamps')) ?? '[]',
+    ) as number[];
+
+  await drawLine(firstStart, firstEnd);
+  await drawLine(secondStart, secondEnd);
+  await expect(canvas).toHaveAttribute('data-drawing-count', '2');
+
+  await page.getByTestId('drawing-tool-select').click();
+  await page.keyboard.down('Control');
+  await page.mouse.click(midpoint(firstStart, firstEnd).x, midpoint(firstStart, firstEnd).y);
+  await page.mouse.click(midpoint(secondStart, secondEnd).x, midpoint(secondStart, secondEnd).y);
+  await page.keyboard.up('Control');
+  await expect(canvas).toHaveAttribute('data-selected-drawing-count', '2');
+
+  const priceIncrement = Number(await canvas.getAttribute('data-price-increment'));
+  const pricesBefore = await readSelectedPrices();
+  const timestampsBefore = await readSelectedTimestamps();
+  expect(pricesBefore).toHaveLength(2);
+  expect(timestampsBefore).toHaveLength(2);
+
+  await canvas.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect
+    .poll(readSelectedTimestamps)
+    .toEqual(timestampsBefore.map((timestamp) => timestamp + 60_000));
+  await expect.poll(readSelectedPrices).toEqual(pricesBefore);
+
+  const timestampsAfterRight = await readSelectedTimestamps();
+  await page.keyboard.press('ArrowUp');
+  await expect
+    .poll(readSelectedPrices)
+    .toEqual(pricesBefore.map((price) => price + priceIncrement));
+  await expect.poll(readSelectedTimestamps).toEqual(timestampsAfterRight);
+  await expect(canvas).toHaveAttribute('data-selected-drawing-count', '2');
+  await expect(canvas).toHaveAttribute('data-drawing-undo-count', '4');
 });
 
 test('selects, moves, edits and deletes a drawing individually', async ({ page }) => {

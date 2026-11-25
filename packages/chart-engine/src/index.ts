@@ -35,6 +35,7 @@ export {
   type CanvasDrawingEditGesture,
   type CanvasDrawingGroupEditGesture,
   type CanvasDrawingAreaSelection,
+  type CanvasDrawingNudgeDirection,
   type CanvasDrawingGesture,
   type CanvasDrawingTool,
 } from './canvas-pointer-adapter';

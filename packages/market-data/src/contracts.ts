@@ -42,6 +42,7 @@ export type MarketInstrument = Readonly<{
   symbol: string;
   baseAsset: string;
   quoteAsset: string;
+  priceIncrement?: number;
 }>;
 
 export type InstrumentDiscoveryFilter = Readonly<{

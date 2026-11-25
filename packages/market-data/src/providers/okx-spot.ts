@@ -14,7 +14,11 @@ import type {
   QuoteUpdate,
 } from '../contracts';
 import { MarketDataProviderError } from '../errors';
-import { normalizeMarketInstruments, tryCreateMarketInstrument } from '../instrument-catalog';
+import {
+  normalizeMarketInstruments,
+  parsePriceIncrement,
+  tryCreateMarketInstrument,
+} from '../instrument-catalog';
 import { MarketDataRequestScheduler, type RequestWaiter } from '../request-scheduler';
 import {
   createReconnectingWebSocketSubscription,
@@ -613,7 +617,8 @@ export class OkxSpotMarketDataProvider implements MarketDataProvider {
         throw new RangeError('OKX returned an instrument without base and quote currencies.');
       }
 
-      const instrument = tryCreateMarketInstrument(baseAsset, quoteAsset);
+      const priceIncrement = parsePriceIncrement(readProperty(item, 'tickSz'));
+      const instrument = tryCreateMarketInstrument(baseAsset, quoteAsset, priceIncrement);
 
       if (instrument !== null) {
         instruments.push(instrument);

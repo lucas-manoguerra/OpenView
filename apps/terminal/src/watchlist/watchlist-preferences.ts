@@ -5,6 +5,7 @@ export type WatchlistInstrument = Readonly<{
   symbol: string;
   name: string;
   chartSymbol: string;
+  priceIncrement?: number;
 }>;
 
 export type WatchlistPreferences = Readonly<{
@@ -129,7 +130,12 @@ export const createWatchlistInstrument = (instrument: MarketInstrument): Watchli
     throw new RangeError('Discovered market instrument identifiers are inconsistent.');
   }
 
-  return normalized;
+  return Object.freeze({
+    ...normalized,
+    ...(instrument.priceIncrement === undefined
+      ? {}
+      : { priceIncrement: instrument.priceIncrement }),
+  });
 };
 
 const restoreLegacyPreferences = (
