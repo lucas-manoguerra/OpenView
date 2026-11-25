@@ -16,13 +16,7 @@ export type TabsProps = {
   id?: string;
 };
 
-export function Tabs({
-  tabs,
-  defaultValue,
-  value,
-  onChange,
-  id = 'tradingview-tabs',
-}: TabsProps) {
+export function Tabs({ tabs, defaultValue, value, onChange, id = 'tradingview-tabs' }: TabsProps) {
   const [internalValue, setInternalValue] = useState(
     defaultValue ?? tabs.find((tab) => !tab.disabled)?.id ?? '',
   );
@@ -43,7 +37,8 @@ export function Tabs({
 
     let nextIndex = currentIndex;
     if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % enabledTabs.length;
-    else if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + enabledTabs.length) % enabledTabs.length;
+    else if (event.key === 'ArrowLeft')
+      nextIndex = (currentIndex - 1 + enabledTabs.length) % enabledTabs.length;
     else if (event.key === 'Home') nextIndex = 0;
     else if (event.key === 'End') nextIndex = enabledTabs.length - 1;
     else return;
