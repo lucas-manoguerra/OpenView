@@ -677,8 +677,7 @@ export function ChartCanvas({
           getAutoScalePriceRange: () =>
             getVisiblePriceRange(chartApi?.getInteractionSnapshot() ?? null, currentCandles),
           getDrawingTool: () => drawingToolRef.current,
-          getDrawingStyle: (type) =>
-            drawingToolPreferencesRef.current[type] as ChartDrawingStyle,
+          getDrawingStyle: (type) => drawingToolPreferencesRef.current[type] as ChartDrawingStyle,
           getDrawingMagnetMode: () => drawingMagnetModeRef.current,
           getSnapToIndicators: () => snapToIndicatorsRef.current,
           getKeepDrawing: () => keepDrawingRef.current,
