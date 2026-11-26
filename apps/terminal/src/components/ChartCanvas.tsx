@@ -269,9 +269,12 @@ const createFrame = (
 };
 
 const getVisiblePriceRange = (
-  interactionSnapshot: ChartInteractionSnapshot,
+  interactionSnapshot: ChartInteractionSnapshot | null,
   candles: readonly ChartRenderCandle[],
 ): NumericRange => {
+  if (interactionSnapshot === null) {
+    return getPriceRange(candles);
+  }
   const { from, to } = interactionSnapshot.frame.timeScale.visibleLogicalRange;
   let minimum = Number.POSITIVE_INFINITY;
   let maximum = Number.NEGATIVE_INFINITY;
@@ -781,11 +784,12 @@ export function ChartCanvas({
         const previousCandles = currentCandles;
         currentCandles = nextCandles;
 
-        if (controller === null || lastSize === null) {
+        const interactionSnapshot = chartApi?.getInteractionSnapshot() ?? null;
+        if (interactionSnapshot === null || lastSize === null) {
           return;
         }
 
-        const currentTimeScale = controller.snapshot.frame.timeScale;
+        const currentTimeScale = interactionSnapshot.frame.timeScale;
         const previousLastCandle = previousCandles[previousCandles.length - 1];
         const appendedBars = countAppendedBars(
           previousLastCandle?.timestamp ?? null,
@@ -797,7 +801,7 @@ export function ChartCanvas({
         );
         const frame = createFrame(
           lastSize,
-          controller,
+          interactionSnapshot,
           currentCandles,
           previousCandles,
           true,
@@ -808,27 +812,29 @@ export function ChartCanvas({
         scene = createChartRenderScene(
           frame,
           currentCandles,
-          controller.snapshot.crosshair,
+          interactionSnapshot.crosshair,
           chartTypeRef.current,
           indicatorsRef.current,
           drawingsRef.current,
           selectedDrawingIdRef.current,
           selectedDrawingIdsRef.current,
         );
-        controller.setFrame(frame);
+        chartApi?.setInteractionFrame(frame);
         if (autoScaleRef.current) {
-          controller.fitPriceScale(getVisiblePriceRange(controller, currentCandles));
+          chartApi?.fitPriceScale(
+            getVisiblePriceRange(chartApi?.getInteractionSnapshot() ?? null, currentCandles),
+          );
         }
-        publishScene(scene);
       },
       setPriceScaleMode: (nextMode: PriceScaleMode): void => {
-        if (controller === null || lastSize === null || currentCandles.length === 0) {
+        const interactionSnapshot = chartApi?.getInteractionSnapshot() ?? null;
+        if (interactionSnapshot === null || lastSize === null || currentCandles.length === 0) {
           return;
         }
 
         const frame = createFrame(
           lastSize,
-          controller,
+          interactionSnapshot,
           currentCandles,
           currentCandles,
           false,
@@ -837,15 +843,14 @@ export function ChartCanvas({
         scene = createChartRenderScene(
           frame,
           currentCandles,
-          controller.snapshot.crosshair,
+          interactionSnapshot.crosshair,
           chartTypeRef.current,
           indicatorsRef.current,
           drawingsRef.current,
           selectedDrawingIdRef.current,
           selectedDrawingIdsRef.current,
         );
-        controller.setFrame(frame);
-        publishScene(scene);
+        chartApi?.setInteractionFrame(frame);
       },
       setIndicators: (nextIndicators: readonly ChartIndicatorSeries[]): void => {
         if (scene === null) {
@@ -888,13 +893,14 @@ export function ChartCanvas({
         publishScene(scene);
       },
       fitContent: (mode: PriceScaleMode): void => {
-        if (controller === null || lastSize === null || currentCandles.length === 0) {
+        const interactionSnapshot = chartApi?.getInteractionSnapshot() ?? null;
+        if (interactionSnapshot === null || lastSize === null || currentCandles.length === 0) {
           return;
         }
 
         const frame = createFrame(
           lastSize,
-          controller,
+          interactionSnapshot,
           currentCandles,
           currentCandles,
           false,
@@ -911,33 +917,32 @@ export function ChartCanvas({
           selectedDrawingIdRef.current,
           selectedDrawingIdsRef.current,
         );
-        controller.setFrame(frame);
-        publishScene(scene);
+        chartApi?.setInteractionFrame(frame);
       },
       fitPriceScale: (): void => {
-        if (controller !== null && currentCandles.length > 0) {
-          controller.fitPriceScale(getVisiblePriceRange(controller, currentCandles));
+        if (currentCandles.length > 0) {
+          chartApi?.fitPriceScale(
+            getVisiblePriceRange(chartApi?.getInteractionSnapshot() ?? null, currentCandles),
+          );
         }
       },
       scrollTimeByBars: (bars: number): void => {
-        controller?.scrollTimeByBars(bars);
+        chartApi?.scrollTimeByBars(bars);
       },
       setRightOffset: (offset: number): void => {
-        controller?.setRightOffset(offset);
+        chartApi?.setRightOffset(offset);
       },
       scrollToRealtime: (): void => {
-        controller?.scrollToRealtime();
+        chartApi?.scrollToRealtime();
       },
       zoomTime: (factor: number): void => {
-        if (controller !== null) {
-          controller.zoomTime(factor);
-        }
+        chartApi?.zoomTime(factor);
       },
       setPriceScaleLocked: (locked: boolean): void => {
-        controller?.setPriceScaleLocked(locked);
+        chartApi?.setPriceScaleLocked(locked);
       },
       invertPriceScale: (): void => {
-        controller?.invertPriceScale();
+        chartApi?.invertPriceScale();
       },
       cancelDrawingCreation: (): void => {
         chartApi?.cancelDrawingCreation();
