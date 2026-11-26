@@ -1,3 +1,4 @@
+import type { ChartRenderDrawing } from '@openview/chart-engine';
 import {
   BinanceSpotMarketDataProvider,
   BybitSpotMarketDataProvider,
@@ -12,9 +13,10 @@ import {
   OkxSpotMarketDataProvider,
   type QuoteUpdate,
 } from '@openview/market-data';
-import type { ChartRenderDrawing } from '@openview/chart-engine';
 import { type Candle, createInstrumentId, type InstrumentId } from '@openview/market-domain';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
+import { createBrowserDrawingRepository } from '../drawings/drawing-repository';
+import { DrawingPersistenceCoordinator } from '../drawings/drawing-persistence-coordinator';
 import {
   createWatchlistInstrument,
   DEFAULT_WATCHLIST,
@@ -23,8 +25,6 @@ import {
   saveBrowserWatchlistPreferences,
   type WatchlistInstrument,
 } from '../watchlist/watchlist-preferences';
-import { createBrowserDrawingRepository } from '../drawings/drawing-repository';
-import { DrawingPersistenceCoordinator } from '../drawings/drawing-persistence-coordinator';
 import { ChartCanvas } from './ChartCanvas';
 import {
   MarketWatchlist,
