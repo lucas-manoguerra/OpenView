@@ -22,7 +22,10 @@ export function UserSession({ user }: UserSessionProps) {
   );
 }
 
-export async function getUserSession(context: APIContext, responseHeaders: Headers = new Headers()) {
+export async function getUserSession(
+  context: APIContext,
+  responseHeaders: Headers = new Headers(),
+) {
   const { pathname } = new URL(context.request.url);
   if (isPublicRoute(pathname)) {
     return null;
