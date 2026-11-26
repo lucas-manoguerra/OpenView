@@ -114,6 +114,58 @@ describe('chart public API', () => {
     chart.destroy();
   });
 
+  it('nudges selected drawings in chart-owned state, respecting locks and line orientation', () => {
+    const { surface } = createSurface();
+    const candles = [
+      { timestamp: 1, open: 2, high: 4, low: 1, close: 3, volume: 10, logicalIndex: 0 },
+      { timestamp: 2, open: 3, high: 5, low: 2, close: 4, volume: 12, logicalIndex: 1 },
+    ];
+    const frame = createChartFrame(320, 240, { min: 0, max: 10 }, 1);
+    const chart = createChart({
+      surface,
+      initialScene: createChartRenderScene(frame, candles),
+      renderer: { scheduler: { requestFrame: () => 1, cancelFrame: () => {} } },
+    });
+    const drawings = [
+      {
+        id: 'nudge-free',
+        type: 'trend-line' as const,
+        start: { timestamp: 1, price: 2 },
+        end: { timestamp: 2, price: 3 },
+        color: '#ffffff',
+      },
+      {
+        id: 'nudge-locked',
+        type: 'trend-line' as const,
+        start: { timestamp: 1, price: 4 },
+        end: { timestamp: 2, price: 5 },
+        color: '#ffffff',
+        locked: true,
+      },
+      {
+        id: 'nudge-horizontal',
+        type: 'horizontal-line' as const,
+        start: { timestamp: 1, price: 6 },
+        end: null,
+        color: '#ffffff',
+      },
+    ];
+    chart.execute({ type: 'set-drawings', drawings });
+    chart.execute({
+      type: 'nudge-drawings',
+      drawingIds: drawings.map((drawing) => drawing.id),
+      logicalDelta: 1,
+      priceDelta: 1,
+    });
+    const moved = chart.exportSnapshot().scene.drawings;
+    expect(moved[0]?.start.price).toBe(3);
+    expect(moved[1]?.start.price).toBe(4);
+    expect(moved[2]?.start.price).toBe(6);
+    chart.execute({ type: 'undo-drawings' });
+    expect(chart.exportSnapshot().scene.drawings[0]?.start.price).toBe(2);
+    chart.destroy();
+  });
+
   it('renders single and grouped drawing edit previews without mutating canonical state', () => {
     const { surface } = createSurface();
     const candles = [
