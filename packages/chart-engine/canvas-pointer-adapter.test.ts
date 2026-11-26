@@ -308,14 +308,22 @@ describe('canvas pointer event adapter', () => {
     dispatch('pointermove', createPointerEvent({ clientX: 100 + end.x, clientY: 50 + end.y }));
     expect(previews.at(-1)?.end).toEqual(chartCoordinateToDataPoint(end, frame));
 
-    dispatch('pointerdown', createPointerEvent({ clientX: 100 + end.x, clientY: 50 + end.y, pointerId: 8 }));
-    dispatch('pointerup', createPointerEvent({ clientX: 100 + end.x, clientY: 50 + end.y, pointerId: 8 }));
+    dispatch(
+      'pointerdown',
+      createPointerEvent({ clientX: 100 + end.x, clientY: 50 + end.y, pointerId: 8 }),
+    );
+    dispatch(
+      'pointerup',
+      createPointerEvent({ clientX: 100 + end.x, clientY: 50 + end.y, pointerId: 8 }),
+    );
 
-    expect(gestures).toEqual([{
-      type: 'rectangle',
-      start: chartCoordinateToDataPoint(start, frame),
-      end: chartCoordinateToDataPoint(end, frame),
-    }]);
+    expect(gestures).toEqual([
+      {
+        type: 'rectangle',
+        start: chartCoordinateToDataPoint(start, frame),
+        end: chartCoordinateToDataPoint(end, frame),
+      },
+    ]);
     expect(previews.at(-1)).toBeNull();
   });
 
