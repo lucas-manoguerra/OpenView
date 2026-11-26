@@ -741,7 +741,7 @@ export function ChartCanvas({
               return;
             }
             const preview: ChartRenderDrawing = Object.freeze({
-              id: 'chart-drawing-creation-preview',
+              id: crypto.randomUUID(),
               type: gesture.type,
               start: Object.freeze({ timestamp: startTimestamp, price: gesture.start.price }),
               end:
