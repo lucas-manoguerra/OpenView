@@ -22,7 +22,7 @@ export function hasSupabaseAuthCookie(cookieHeader: string | null): boolean {
     const separatorIndex = cookie.indexOf('=');
     const name = (separatorIndex === -1 ? cookie : cookie.slice(0, separatorIndex)).trim();
 
-    return /^sb-[a-z0-9-]+-auth-token(?:\\.\\d+)?$/i.test(name);
+    return /^sb-[a-z0-9-]+-auth-token(?:\.\d+)?$/i.test(name);
   });
 }
 
