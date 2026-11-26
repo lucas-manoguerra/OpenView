@@ -13,8 +13,8 @@ export function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
 }
 
-export async function getAuthenticatedUser(context: APIContext) {
-  const supabase = createServerClient(context);
+export async function getAuthenticatedUser(context: APIContext, responseHeaders: Headers) {
+  const supabase = createServerClient(context, responseHeaders);
 
   const { data: claims, error } = await supabase.auth.getClaims();
 
