@@ -2500,6 +2500,7 @@ export function ChartCanvas({
         {(drawingTool === 'cursor' || drawingTool === 'select') &&
           selectedDrawing !== null &&
           drawingPanelLayout.visible.appearance && (
+            <DrawingPropertiesPanel
           <DrawingPropertiesPanel
             selectedDrawing={selectedDrawing}
             selectedDrawingIds={selectedDrawingIds}
