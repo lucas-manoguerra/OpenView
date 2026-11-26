@@ -138,6 +138,50 @@ describe('chart public API', () => {
     chart.destroy();
   });
 
+  it('selects drawings within an area through a chart-owned command', () => {
+    const { surface } = createSurface();
+    const chart = createChart({
+      surface,
+      initialScene: createSceneWithCandles(),
+      renderer: { scheduler: { requestFrame: () => 1, cancelFrame: () => {} } },
+    });
+    const drawings = [
+      {
+        id: 'area-selection-first',
+        type: 'trend-line' as const,
+        start: { timestamp: 1_000, price: 2 },
+        end: { timestamp: 2_000, price: 3 },
+        color: '#ffffff',
+      },
+      {
+        id: 'area-selection-second',
+        type: 'trend-line' as const,
+        start: { timestamp: 1_000, price: 4 },
+        end: { timestamp: 2_000, price: 5 },
+        color: '#ffffff',
+      },
+    ];
+    chart.execute({ type: 'set-drawings', drawings });
+
+    chart.execute({
+      type: 'select-drawings-within-area',
+      area: { start: { x: 0, y: 0 }, end: { x: 320, y: 240 } },
+    });
+    expect(chart.exportSnapshot().scene.selectedDrawingIds).toEqual([
+      'area-selection-first',
+      'area-selection-second',
+    ]);
+
+    chart.execute({ type: 'set-drawings-visible', visible: false });
+    chart.execute({
+      type: 'select-drawings-within-area',
+      area: { start: { x: 0, y: 0 }, end: { x: 320, y: 240 } },
+    });
+    expect(chart.exportSnapshot().scene.selectedDrawingIds).toEqual([]);
+    expect(chart.exportSnapshot().scene.selectedDrawingId).toBeNull();
+    chart.destroy();
+  });
+
   it('nudges selected drawings in chart-owned state, respecting locks and line orientation', () => {
     const { surface } = createSurface();
     const candles = [
