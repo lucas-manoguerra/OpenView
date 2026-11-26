@@ -71,8 +71,9 @@ export function ResetPasswordForm() {
         <>
           <p>Ingresa tu nueva contraseña.</p>
           <div class="field">
-            <label>Nueva contraseña</label>
+            <label htmlFor="password">Nueva contraseña</label>
             <input
+              id="password"
               type="password"
               name="password"
               required
@@ -83,8 +84,9 @@ export function ResetPasswordForm() {
             />
           </div>
           <div class="field">
-            <label>Confirmar contraseña</label>
+            <label htmlFor="confirmPassword">Confirmar contraseña</label>
             <input
+              id="confirmPassword"
               type="password"
               name="confirmPassword"
               required
