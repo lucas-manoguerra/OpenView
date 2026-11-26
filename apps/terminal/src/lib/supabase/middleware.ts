@@ -1,15 +1,7 @@
 import type { APIContext } from 'astro';
 import { createServerClient } from './server';
 
-export const PUBLIC_ROUTES = [
-  '/login',
-  '/component-lab',
-  '/register',
-  '/auth/callback',
-  '/auth/signout',
-  '/forgot-password',
-  '/reset-password',
-];
+export const PUBLIC_ROUTES = ['/login', '/component-lab', '/auth/callback', '/auth/signout'];
 
 export function isPublicRoute(pathname: string): boolean {
   if (pathname === '/') {
