@@ -328,10 +328,10 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
       if (command.type === 'set-drawings-visible') {
         drawingsVisible = command.visible;
         if (!drawingsVisible) {
-        drawingPreview = null;
-        drawingCreationPreview = null;
-      }
-      if (!drawingsVisible && scene.hoveredDrawingHit !== null) {
+          drawingPreview = null;
+          drawingCreationPreview = null;
+        }
+        if (!drawingsVisible && scene.hoveredDrawingHit !== null) {
           scene = updateChartRenderScene(scene, { hoveredDrawingHit: null });
           emit(Object.freeze({ type: 'scene-changed', scene }));
         }
