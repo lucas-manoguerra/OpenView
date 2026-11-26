@@ -336,7 +336,11 @@ export const attachCanvasPointerEvents = (
         chartCoordinateToDataPoint(boundedPosition, controller.snapshot.frame),
         event,
       );
-      options.onDrawingCreationPreview?.({ type: activeDrawingTool, start: drawingStart, end: current });
+      options.onDrawingCreationPreview?.({
+        type: activeDrawingTool,
+        start: drawingStart,
+        end: current,
+      });
       event.preventDefault();
       return;
     }
@@ -458,10 +462,7 @@ export const attachCanvasPointerEvents = (
       const pointerDistance =
         drawingPointerOrigin === null
           ? 0
-          : Math.hypot(
-              position.x - drawingPointerOrigin.x,
-              position.y - drawingPointerOrigin.y,
-            );
+          : Math.hypot(position.x - drawingPointerOrigin.x, position.y - drawingPointerOrigin.y);
       if (!clickTool && !drawingAwaitingSecondPoint && pointerDistance < 4) {
         drawingAwaitingSecondPoint = true;
         drawingPointerOrigin = null;
