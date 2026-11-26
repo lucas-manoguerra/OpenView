@@ -52,11 +52,6 @@ type StorageAdapter = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
 type StoredDrawing = PersistedDrawing & Readonly<{ timeframeScope: string | null }>;
 
-type StoredCollection = Readonly<{
-  version: 1;
-  drawings: readonly StoredDrawing[];
-}>;
-
 const STORAGE_PREFIX = 'openview.terminal.drawings';
 const STORAGE_VERSION = 1;
 
