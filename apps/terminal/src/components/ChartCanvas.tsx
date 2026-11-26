@@ -763,7 +763,10 @@ export function ChartCanvas({
             });
             runtimeRef.current?.addDrawing(drawing);
             canvas.dataset['drawingCreationOutcome'] = 'add-drawing-dispatched';
-            canvas.dataset['drawingCreationTimestamps'] = [startTimestamp, endTimestamp ?? 'click'].join(',');
+            canvas.dataset['drawingCreationTimestamps'] = [
+              startTimestamp,
+              endTimestamp ?? 'click',
+            ].join(',');
           },
           onDrawingToolExit: (): void => {
             drawingToolRef.current = 'cursor';
