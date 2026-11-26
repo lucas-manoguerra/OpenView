@@ -21,7 +21,7 @@ create table if not exists public.chart_drawings (
   constraint chart_drawings_payload_object
     check (jsonb_typeof(payload) = 'object'),
   constraint chart_drawings_payload_type
-    check (payload ->> 'type' in (
+    check (payload ? 'type' and payload ->> 'type' in (
       'trend-line',
       'ray',
       'horizontal-line',
@@ -44,7 +44,7 @@ create table if not exists public.chart_drawings (
       )
     ),
   constraint chart_drawings_payload_color
-    check (jsonb_typeof(payload -> 'color') = 'string'),
+    check (payload ? 'color' and jsonb_typeof(payload -> 'color') = 'string'),
   constraint chart_drawings_z_order_nonnegative
     check (z_order >= 0),
   constraint chart_drawings_revision_positive
