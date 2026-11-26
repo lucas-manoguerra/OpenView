@@ -67,6 +67,7 @@ export type CanvasPointerAdapterOptions = Readonly<{
   hitTestDrawing?: (point: ChartCoordinate, tolerance: number) => ChartDrawingHit | null;
   onDrawingNudge?: (direction: CanvasDrawingNudgeDirection) => void;
   onDrawingComplete?: (drawing: CanvasDrawingGesture) => void;
+  onDrawingCreationPreview?: (drawing: CanvasDrawingGesture | null) => void;
   onDrawingToolExit?: () => void;
   onDrawingSelect?: (drawingId: string | null) => void;
   onDrawingSelectionChange?: (drawingIds: readonly string[]) => void;
@@ -106,6 +107,7 @@ export const attachCanvasPointerEvents = (
   let activePointerId: number | null = null;
   let activeDrawingTool: Exclude<CanvasDrawingTool, 'cursor' | 'select'> | null = null;
   let drawingStart: ChartDataPoint | null = null;
+  let drawingAwaitingSecondPoint = false;
   let activeDrawingEdit: CanvasDrawingEditGesture | null = null;
   let activeDrawingGroupEdit: CanvasDrawingGroupEditGesture | null = null;
   let activeDrawingAreaSelection: CanvasDrawingAreaSelection | null = null;
@@ -180,7 +182,15 @@ export const attachCanvasPointerEvents = (
       return;
     }
 
-    if (drawingTool === 'select') {
+    if (activeDrawingTool !== null && drawingStart !== null && drawingAwaitingSecondPoint) {
+      activePointerId = event.pointerId;
+      drawingAwaitingSecondPoint = false;
+      event.preventDefault();
+      canvas.setPointerCapture(event.pointerId);
+      return;
+    }
+
+    if (drawingTool === 'select' || drawingTool === 'cursor') {
       const hit =
         options.hitTestDrawing !== undefined
           ? options.hitTestDrawing(position, 8)
@@ -314,12 +324,28 @@ export const attachCanvasPointerEvents = (
       return;
     }
 
+    if (activeDrawingTool !== null && drawingStart !== null && drawingAwaitingSecondPoint) {
+      const position = getCanvasPosition(canvas, event);
+      const { plotArea } = controller.snapshot.frame.layout;
+      const boundedPosition = Object.freeze({
+        x: Math.max(plotArea.x, Math.min(plotArea.x + plotArea.width, position.x)),
+        y: Math.max(plotArea.y, Math.min(plotArea.y + plotArea.height, position.y)),
+      });
+      const current = snapDrawingPoint(
+        chartCoordinateToDataPoint(boundedPosition, controller.snapshot.frame),
+        event,
+      );
+      options.onDrawingCreationPreview?.({ type: activeDrawingTool, start: drawingStart, end: current });
+      event.preventDefault();
+      return;
+    }
+
     if (activeDrawingTool !== null) {
       return;
     }
 
     const position = getCanvasPosition(canvas, event);
-    if ((options.getDrawingTool?.() ?? 'cursor') === 'select') {
+    if (['cursor', 'select'].includes(options.getDrawingTool?.() ?? 'cursor')) {
       const hit =
         options.hitTestDrawing !== undefined
           ? options.hitTestDrawing(position, 8)
@@ -428,16 +454,28 @@ export const attachCanvasPointerEvents = (
 
       const clickTool =
         activeDrawingTool === 'horizontal-line' || activeDrawingTool === 'vertical-line';
+      if (!clickTool && !drawingAwaitingSecondPoint) {
+        drawingAwaitingSecondPoint = true;
+        options.onDrawingCreationPreview?.({
+          type: activeDrawingTool,
+          start: drawingStart,
+          end: end,
+        });
+        releaseActivePointer();
+        return;
+      }
       options.onDrawingComplete?.({
         type: activeDrawingTool,
         start: drawingStart,
         end: clickTool ? null : end,
       });
+      options.onDrawingCreationPreview?.(null);
       if (!(options.getKeepDrawing?.() ?? false)) {
         options.onDrawingToolExit?.();
       }
       drawingStart = null;
       activeDrawingTool = null;
+      drawingAwaitingSecondPoint = false;
       releaseActivePointer();
       return;
     }
@@ -471,6 +509,8 @@ export const attachCanvasPointerEvents = (
     if (activeDrawingTool !== null) {
       drawingStart = null;
       activeDrawingTool = null;
+      drawingAwaitingSecondPoint = false;
+      options.onDrawingCreationPreview?.(null);
       releaseActivePointer();
       return;
     }
@@ -535,6 +575,16 @@ export const attachCanvasPointerEvents = (
       return;
     }
 
+    if (event.key === 'Escape' && activeDrawingTool !== null) {
+      drawingStart = null;
+      activeDrawingTool = null;
+      drawingAwaitingSecondPoint = false;
+      options.onDrawingCreationPreview?.(null);
+      options.onDrawingToolExit?.();
+      event.preventDefault();
+      return;
+    }
+
     if (event.key === 'Escape' && selectedIds.length > 0) {
       emitDrawingSelection([]);
       event.preventDefault();
@@ -596,6 +646,8 @@ export const attachCanvasPointerEvents = (
       activeDrawingEdit = null;
       activeDrawingGroupEdit = null;
       activeDrawingTool = null;
+      drawingAwaitingSecondPoint = false;
+      options.onDrawingCreationPreview?.(null);
       releaseActivePointer();
       controller.pointerCancel();
     },
