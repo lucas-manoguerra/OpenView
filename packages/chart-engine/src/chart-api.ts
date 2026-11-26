@@ -313,9 +313,22 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
   };
 
   const setDrawingHover = (hit: ChartDrawingHit | null): void => {
-    scene = updateChartRenderScene(scene, { hoveredDrawingHit: hit });
+    const hitIsVisible =
+      hit !== null &&
+      drawingsVisible &&
+      scene.drawings.some(
+        (drawing) => drawing.id === hit.drawingId && drawing.visible !== false,
+      );
+    const nextHit = hitIsVisible ? hit : null;
+    if (
+      scene.hoveredDrawingHit?.drawingId === nextHit?.drawingId &&
+      scene.hoveredDrawingHit?.target === nextHit?.target
+    ) {
+      return;
+    }
+    scene = updateChartRenderScene(scene, { hoveredDrawingHit: nextHit });
     render();
-    emitDrawingState();
+    emit(Object.freeze({ type: 'scene-changed', scene }));
   };
 
   const setDrawingSelectionPreview = (
@@ -409,13 +422,7 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
       }
 
       if (command.type === 'create-drawing') {
-        const drawing = createDrawingFromGesture(
-          command.gesture,
-          command.style,
-          scene.candles,
-          crypto.randomUUID(),
-        );
-        if (drawing !== null) commitDrawing(drawing);
+        createDrawingFromPointerGesture(command.gesture, command.style);
         return;
       }
 
@@ -656,12 +663,7 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
       }
 
       if (command.type === 'select-drawings-within-area') {
-        const visibleDrawings = drawingsVisible
-          ? scene.drawings.filter((drawing) => drawing.visible !== false)
-          : [];
-        setDrawingSelection(
-          selectChartDrawingsWithinArea(command.area, visibleDrawings, scene.candles, scene.frame),
-        );
+        selectDrawingsWithinArea(command.area);
         return;
       }
 
@@ -673,17 +675,7 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
       }
 
       if (command.type === 'preview-drawing-creation') {
-        drawingCreationPreview =
-          command.gesture === null || command.style === null
-            ? null
-            : createDrawingFromGesture(
-                command.gesture,
-                command.style,
-                scene.candles,
-                'chart-drawing-creation-preview',
-              );
-        drawingPreview = null;
-        render();
+        previewDrawingCreation(command.gesture, command.style);
         return;
       }
 
@@ -780,55 +772,17 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
       }
 
       if (command.type === 'request-context-menu') {
-        const visibleDrawings = drawingsVisible
-          ? scene.drawings.filter((drawing) => drawing.visible !== false)
-          : [];
-        const drawingHit =
-          visibleDrawings.length === 0
-            ? null
-            : hitTestChartDrawing(
-                command.point,
-                visibleDrawings,
-                scene.candles,
-                scene.frame,
-                8,
-                scene.selectedDrawingIds,
-              );
-        emit(
-          Object.freeze({
-            type: 'context-menu-requested',
-            request: Object.freeze({
-              point: Object.freeze({ ...command.point }),
-              drawingHit,
-            }),
-          }),
-        );
+        requestContextMenu(command.point);
         return;
       }
 
       if (command.type === 'set-drawing-selection-preview') {
-        drawingSelectionPreview = command.preview;
-        render();
+        setDrawingSelectionPreview(command.preview);
         return;
       }
 
       if (command.type === 'set-drawing-hover') {
-        const hitIsVisible =
-          command.hit !== null &&
-          drawingsVisible &&
-          scene.drawings.some(
-            (drawing) => drawing.id === command.hit?.drawingId && drawing.visible !== false,
-          );
-        const nextHit = hitIsVisible ? command.hit : null;
-        if (
-          scene.hoveredDrawingHit?.drawingId === nextHit?.drawingId &&
-          scene.hoveredDrawingHit?.target === nextHit?.target
-        ) {
-          return;
-        }
-        scene = updateChartRenderScene(scene, { hoveredDrawingHit: nextHit });
-        render();
-        emit(Object.freeze({ type: 'scene-changed', scene }));
+        setDrawingHover(command.hit);
         return;
       }
 
