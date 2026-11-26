@@ -35,7 +35,7 @@ interface SupabaseDrawingQuery<Row> extends PromiseLike<SupabaseResult<readonly 
 }
 
 export interface SupabaseDrawingClient {
-  from(table: 'chart_drawings'): SupabaseDrawingQuery<DrawingRow>;
+  from(table: 'chart_drawings'): unknown;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -56,6 +56,9 @@ const isDrawingPayload = (value: unknown): value is DrawingPayload => {
     !types.includes(value['type']) ||
     !isPoint(value['start']) ||
     (value['end'] !== null && !isPoint(value['end'])) ||
+    (value['end'] === null &&
+      value['type'] !== 'horizontal-line' &&
+      value['type'] !== 'vertical-line') ||
     typeof value['color'] !== 'string' ||
     value['color'].length === 0
   ) {
@@ -144,9 +147,12 @@ const throwIfError = (error: SupabaseError | null): void => {
 export class SupabaseDrawingRepository implements DrawingRepository {
   constructor(private readonly client: SupabaseDrawingClient) {}
 
+  private table(): SupabaseDrawingQuery<DrawingRow> {
+    return this.client.from('chart_drawings') as SupabaseDrawingQuery<DrawingRow>;
+  }
+
   private identityQuery(scope: DrawingRepositoryScope, drawingId: string) {
-    let query = this.client
-      .from('chart_drawings')
+    let query = this.table()
       .select('*')
       .eq('user_id', scope.owner.id)
       .eq('instrument_id', scope.instrumentId)
@@ -171,8 +177,7 @@ export class SupabaseDrawingRepository implements DrawingRepository {
 
   async list(scope: DrawingRepositoryScope): Promise<readonly PersistedDrawing[]> {
     validateScope(scope);
-    const result = await this.client
-      .from('chart_drawings')
+    const result = await this.table()
       .select('*')
       .eq('user_id', scope.owner.id)
       .eq('instrument_id', scope.instrumentId)
@@ -206,8 +211,7 @@ export class SupabaseDrawingRepository implements DrawingRepository {
         payload: drawing.payload as unknown as Json,
         z_order: drawing.zOrder,
       };
-      const result = await this.client
-        .from('chart_drawings')
+      const result = await this.table()
         .insert(values)
         .select('*')
         .maybeSingle();
@@ -231,8 +235,7 @@ export class SupabaseDrawingRepository implements DrawingRepository {
       payload: drawing.payload as unknown as Json,
       z_order: drawing.zOrder,
     };
-    let query = this.client
-      .from('chart_drawings')
+    let query = this.table()
       .update(values)
       .eq('user_id', scope.owner.id)
       .eq('instrument_id', scope.instrumentId)
@@ -266,8 +269,7 @@ export class SupabaseDrawingRepository implements DrawingRepository {
       throw new RangeError('A drawing identifier and positive expected revision are required.');
     }
 
-    let query = this.client
-      .from('chart_drawings')
+    let query = this.table()
       .delete()
       .eq('user_id', scope.owner.id)
       .eq('instrument_id', scope.instrumentId)
