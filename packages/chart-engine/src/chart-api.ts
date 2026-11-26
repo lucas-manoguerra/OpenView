@@ -833,10 +833,7 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
         getCandles: pointerOptions.getCandles ?? (() => scene.candles),
         getDrawings:
           pointerOptions.getDrawings ??
-          (() =>
-            drawingsVisible
-              ? scene.drawings.filter((drawing) => drawing.visible !== false)
-              : []),
+          (() => (drawingsVisible ? scene.drawings.filter((drawing) => drawing.visible !== false) : [])),
         getSelectedDrawingId:
           pointerOptions.getSelectedDrawingId ?? (() => scene.selectedDrawingId),
         getSelectedDrawingIds:
