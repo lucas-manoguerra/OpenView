@@ -47,7 +47,8 @@ import {
   createChartRenderScene,
   createChart,
   type ChartApi,
-  getTimestampAtLogicalIndex,
+  type ChartDrawingCreationGesture,
+  type ChartDrawingStyle,
   calculateExponentialMovingAverage,
   calculateSimpleMovingAverage,
   countAppendedBars,
@@ -105,7 +106,6 @@ type ChartRuntime = Readonly<{
     updates: Partial<ChartRenderDrawing['start']>,
   ): void;
   nudgeDrawings(drawingIds: readonly string[], logicalDelta: number, priceDelta: number): void;
-  addDrawing(drawing: ChartRenderDrawing): void;
   deleteDrawings(drawingIds: readonly string[]): void;
   setDrawingsVisible(visible: boolean): void;
   undoDrawings(): void;
@@ -725,33 +725,14 @@ export function ChartCanvas({
             runtimeRef.current?.deleteDrawings([drawingId]);
           },
           onDrawingCreationPreview: (gesture: CanvasDrawingGesture | null): void => {
-            if (gesture === null) {
-              chartApi?.execute({ type: 'set-drawing-creation-preview', drawing: null });
-              return;
-            }
-            const startTimestamp = getTimestampAtLogicalIndex(
-              gesture.start.logicalIndex,
-              currentCandles,
-            );
-            const endTimestamp =
-              gesture.end === null
-                ? null
-                : getTimestampAtLogicalIndex(gesture.end.logicalIndex, currentCandles);
-            if (startTimestamp === null || (gesture.end !== null && endTimestamp === null)) {
-              chartApi?.execute({ type: 'set-drawing-creation-preview', drawing: null });
-              return;
-            }
-            const preview: ChartRenderDrawing = Object.freeze({
-              id: crypto.randomUUID(),
-              type: gesture.type,
-              start: Object.freeze({ timestamp: startTimestamp, price: gesture.start.price }),
-              end:
-                gesture.end === null || endTimestamp === null
+            chartApi?.execute({
+              type: 'preview-drawing-creation',
+              gesture: gesture as ChartDrawingCreationGesture | null,
+              style:
+                gesture === null
                   ? null
-                  : Object.freeze({ timestamp: endTimestamp, price: gesture.end.price }),
-              ...drawingToolPreferencesRef.current[gesture.type],
+                  : (drawingToolPreferencesRef.current[gesture.type] as ChartDrawingStyle),
             });
-            chartApi?.execute({ type: 'set-drawing-creation-preview', drawing: preview });
           },
           onDrawingComplete: (gesture: CanvasDrawingGesture): void => {
             canvas.dataset['drawingGestureReceived'] = gesture.type;
@@ -759,46 +740,12 @@ export function ChartCanvas({
               gesture.start.logicalIndex,
               gesture.end?.logicalIndex ?? 'click',
             ].join(',');
-            const startTimestamp = getTimestampAtLogicalIndex(
-              gesture.start.logicalIndex,
-              currentCandles,
-            );
-            const endTimestamp =
-              gesture.end === null
-                ? null
-                : getTimestampAtLogicalIndex(gesture.end.logicalIndex, currentCandles);
-
-            if (startTimestamp === null || (gesture.end !== null && endTimestamp === null)) {
-              canvas.dataset['drawingCreationOutcome'] = 'timestamp-conversion-rejected';
-              canvas.dataset['drawingCreationTimestamps'] = [
-                startTimestamp ?? 'null',
-                endTimestamp ?? 'null',
-              ].join(',');
-              return;
-            }
-
-            const drawing: ChartRenderDrawing = Object.freeze({
-              id: crypto.randomUUID(),
-              type: gesture.type,
-              start: Object.freeze({
-                timestamp: startTimestamp,
-                price: gesture.start.price,
-              }),
-              end:
-                gesture.end === null || endTimestamp === null
-                  ? null
-                  : Object.freeze({
-                      timestamp: endTimestamp,
-                      price: gesture.end.price,
-                    }),
-              ...drawingToolPreferencesRef.current[gesture.type],
+            chartApi?.execute({
+              type: 'create-drawing',
+              gesture: gesture as ChartDrawingCreationGesture,
+              style: drawingToolPreferencesRef.current[gesture.type] as ChartDrawingStyle,
             });
-            runtimeRef.current?.addDrawing(drawing);
-            canvas.dataset['drawingCreationOutcome'] = 'add-drawing-dispatched';
-            canvas.dataset['drawingCreationTimestamps'] = [
-              startTimestamp,
-              endTimestamp ?? 'click',
-            ].join(',');
+            canvas.dataset['drawingCreationOutcome'] = 'create-drawing-dispatched';
           },
           onDrawingToolExit: (): void => {
             drawingToolRef.current = 'cursor';
@@ -915,9 +862,6 @@ export function ChartCanvas({
       },
       nudgeDrawings: (drawingIds, logicalDelta, priceDelta): void => {
         chartApi?.execute({ type: 'nudge-drawings', drawingIds, logicalDelta, priceDelta });
-      },
-      addDrawing: (drawing: ChartRenderDrawing): void => {
-        chartApi?.execute({ type: 'add-drawing', drawing });
       },
       deleteDrawings: (drawingIds: readonly string[]): void => {
         chartApi?.execute({ type: 'delete-drawings', drawingIds });
