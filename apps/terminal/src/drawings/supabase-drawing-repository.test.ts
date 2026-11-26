@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Database } from '../lib/supabase/database.types';
 import {
   SupabaseDrawingRepository,
-  type SupabaseDrawingClient,
+  type SupabaseDrawingClient,\n  type SupabaseDrawingQuery,\n  type SupabaseResult,
 } from './supabase-drawing-repository';
 import {
   DrawingRevisionConflictError,
@@ -79,7 +79,7 @@ class MemorySupabase {
         return { data: result, error: null };
       };
 
-      const builder = {
+      const builder: SupabaseDrawingQuery<Row> = {
         select: (_columns?: string) => builder,
         insert: (input: Insert) => {
           operation = 'insert';
@@ -111,14 +111,11 @@ class MemorySupabase {
           const result = execute();
           return { data: result.data[0] ?? null, error: result.error };
         },
-        then: <TResult1 = { data: readonly Row[]; error: null }, TResult2 = never>(
-          onfulfilled?: ((value: { data: readonly Row[]; error: null }) => TResult1 | PromiseLike<TResult1>) | null,
+        then: <TResult1 = SupabaseResult<readonly Row[]>, TResult2 = never>(
+          onfulfilled?: ((value: SupabaseResult<readonly Row[]>) => TResult1 | PromiseLike<TResult1>) | null,
           onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
         ): PromiseLike<TResult1 | TResult2> =>
-          Promise.resolve(execute() as { data: readonly Row[]; error: null }).then(
-            onfulfilled,
-            onrejected,
-          ),
+          Promise.resolve(execute()).then(onfulfilled, onrejected),
       };
       return builder;
     },
