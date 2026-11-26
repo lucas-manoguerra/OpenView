@@ -1,5 +1,4 @@
 import type { APIContext } from 'astro';
-import { createServerClient } from '../../lib/supabase/server';
 import { isPublicRoute, getAuthenticatedUser } from '../../lib/supabase/middleware';
 
 export interface UserSessionProps {
