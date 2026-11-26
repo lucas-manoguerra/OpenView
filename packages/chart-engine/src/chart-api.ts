@@ -215,7 +215,10 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
   let drawingCreationPreview: ChartRenderDrawing | null = null;
   let drawingSelectionPreview: ChartDrawingSelectionPreview | null = null;
   let pointerAdapter: CanvasPointerAdapter | null = null;
-  const interactionController = createChartInteractionController(scene.frame, options.interactionOptions);
+  const interactionController = createChartInteractionController(
+    scene.frame,
+    options.interactionOptions,
+  );
   const drawingUndoStack: (readonly ChartRenderDrawing[])[] = [];
   const drawingRedoStack: (readonly ChartRenderDrawing[])[] = [];
   let destroyed = false;
