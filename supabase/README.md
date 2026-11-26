@@ -2,9 +2,9 @@
 
 ## Chart drawings migration
 
-Apply migrations in `supabase/migrations` to the Supabase project before enabling a remote Terminal drawing repository.
+The hosted OpenView Supabase project has migration version `20261126111503` applied. Keep the migration filename aligned with that recorded version so `supabase db push` does not replay an already-applied schema change.
 
-`20261126120000_create_chart_drawings.sql` creates `public.chart_drawings` with:
+`20261126111503_create_chart_drawings.sql` creates `public.chart_drawings` with:
 
 - One durable row per authenticated user, canonical instrument ID and drawing UUID.
 - `timeframe_scope = NULL` for drawings visible on every timeframe; a concrete value limits visibility to that timeframe.
@@ -12,7 +12,7 @@ Apply migrations in `supabase/migrations` to the Supabase project before enablin
 - Server-managed creation/update timestamps and optimistic revision numbers.
 - Row Level Security for authenticated users, restricted to rows whose `user_id` matches `auth.uid()`.
 
-The migration deliberately does not create a client-facing service-role path. Terminal clients must use the authenticated Supabase session and the publishable/anon key; never ship a service-role key to the browser.
+The table is granted to `authenticated` only. Anonymous access is revoked. Terminal clients must use the authenticated Supabase session and the publishable key; never ship a service-role key to the browser.
 
 ## Repository write contract
 
@@ -26,15 +26,14 @@ The migration deliberately does not create a client-facing service-role path. Te
 
 This is the database foundation only. It does not add Supabase SDK dependencies, authentication UI, session management, remote repository wiring, offline synchronization, or local-to-account migration. Those remain Terminal responsibilities and must be implemented behind the existing `DrawingRepository` interface. The Chart package must not import Supabase or know this schema exists.
 
-## Verification before production
+## Verification status
 
-Apply the migration to a disposable Supabase project and verify at minimum:
+- [x] Migration applied to the connected Supabase project.
+- [x] Table, columns, primary key and foreign key verified.
+- [x] RLS and FORCE RLS enabled; four ownership policies verified.
+- [x] Anonymous table privileges revoked; authenticated CRUD granted.
+- [ ] Verify authenticated CRUD and cross-user isolation with two real test accounts.
+- [ ] Verify revision conflict behavior through the Terminal repository adapter.
+- [ ] Run application CI and integration tests before enabling remote persistence.
 
-1. An authenticated user can insert, list, update and delete their own drawing.
-2. A second authenticated user cannot select, update or delete the first user's row, even when they know its UUID.
-3. An insert with a different `user_id` is rejected.
-4. An update filtered by a stale revision affects zero rows; a successful update increments revision exactly once.
-5. Anonymous requests cannot read or write the table.
-6. Global and timeframe-specific rows can be queried together without modifying their stored scope.
-
-Do not enable remote persistence in the application until these checks pass.
+The remote repository must not be enabled in the application until the remaining account-level tests pass.
