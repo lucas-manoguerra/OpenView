@@ -147,7 +147,9 @@ export class LocalStorageDrawingRepository implements DrawingRepository {
   async list(scope: DrawingRepositoryScope): Promise<readonly PersistedDrawing[]> {
     validateScope(scope);
     const drawings = restoreCollection(this.storage.getItem(createStorageKey(scope)))
-      .filter((drawing) => drawing.timeframeScope === null || drawing.timeframeScope === scope.timeframe)
+      .filter(
+        (drawing) => drawing.timeframeScope === null || drawing.timeframeScope === scope.timeframe,
+      )
       .map(({ timeframeScope: _timeframeScope, ...drawing }) => drawing)
       .sort((first, second) => first.zOrder - second.zOrder);
     return Object.freeze(drawings);
