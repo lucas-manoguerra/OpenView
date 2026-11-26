@@ -313,6 +313,7 @@ export function ChartCanvas({
   error,
   onRetry,
   onNeedMoreHistory,
+  onContextMenuRequest,
 }: ChartCanvasProps) {
   const runtimeRef = useRef<ChartRuntime | null>(null);
   const onContextMenuRequestRef = useRef(onContextMenuRequest);
