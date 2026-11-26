@@ -5,64 +5,42 @@ import { createClient } from '../../lib/supabase/client';
 
 export function LoginForm() {
   const supabase: SupabaseClient<Database> = useMemo(() => createClient(), []);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(event: Event) {
-    event.preventDefault();
+  async function handleGoogleSignIn() {
     setError(null);
     setLoading(true);
+
     try {
-      const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
-      if (authError) throw authError;
-      window.location.href = '/dashboard';
+      const { error: authError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+        },
+      });
+
+      if (authError) {
+        throw authError;
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error de inicio de sesión');
-    } finally {
+      setError(err instanceof Error ? err.message : 'No se pudo iniciar sesión con Google');
       setLoading(false);
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} class="login-form">
-      <h2>Iniciar sesión</h2>
+    <section class="login-form" aria-labelledby="login-title">
+      <h2 id="login-title">Iniciar sesión en OpenView</h2>
+      <p>Accede de forma segura con tu cuenta de Google.</p>
       {error && (
         <div class="error-message" role="alert">
           {error}
         </div>
       )}
-      <div class="field">
-        <label htmlFor="email">Correo electrónico</label>
-        <input
-          id="email"
-          type="email"
-          name="email"
-          required
-          autoComplete="email"
-          value={email}
-          onInput={(event) => setEmail((event.currentTarget as HTMLInputElement).value)}
-        />
-      </div>
-      <div class="field">
-        <label htmlFor="password">Contraseña</label>
-        <input
-          id="password"
-          type="password"
-          name="password"
-          required
-          autoComplete="current-password"
-          value={password}
-          onInput={(event) => setPassword((event.currentTarget as HTMLInputElement).value)}
-        />
-      </div>
-      <button type="submit" disabled={loading}>
-        {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
+      <button type="button" onClick={handleGoogleSignIn} disabled={loading}>
+        {loading ? 'Redirigiendo a Google…' : 'Continuar con Google'}
       </button>
-      <p class="footer">
-        ¿No tienes cuenta? <a href="/register">Regístrate</a>
-      </p>
-    </form>
+    </section>
   );
 }
