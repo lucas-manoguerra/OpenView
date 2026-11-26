@@ -1,4 +1,5 @@
 import type { ChartRenderDrawing } from '@openview/chart-engine';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   BinanceSpotMarketDataProvider,
   BybitSpotMarketDataProvider,
@@ -15,8 +16,13 @@ import {
 } from '@openview/market-data';
 import { type Candle, createInstrumentId, type InstrumentId } from '@openview/market-domain';
 import { useCallback, useLayoutEffect, useRef, useState } from 'preact/hooks';
-import { createBrowserDrawingRepository } from '../drawings/drawing-repository';
+import { createClient } from '../lib/supabase/client';
+import type { Database } from '../lib/supabase/database.types';
 import { DrawingPersistenceCoordinator } from '../drawings/drawing-persistence-coordinator';
+import {
+  selectDrawingRepository,
+  createRepositoryScope,
+} from '../drawings/drawing-repository-selector';
 import {
   createWatchlistInstrument,
   DEFAULT_WATCHLIST,
@@ -187,19 +193,55 @@ export function MarketChart() {
   const hasMoreHistoryRef = useRef(true);
   const candlesRef = useRef(candles);
   candlesRef.current = candles;
-  const drawingCoordinatorRef = useRef<DrawingPersistenceCoordinator | null>(null);
-  if (drawingCoordinatorRef.current === null) {
-    const repository = createBrowserDrawingRepository();
-    if (repository !== null) {
-      drawingCoordinatorRef.current = new DrawingPersistenceCoordinator(repository);
+  const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null);
+  if (supabaseRef.current === null) {
+    try {
+      supabaseRef.current = createClient();
+    } catch {
+      supabaseRef.current = null;
     }
   }
+  const supabase: SupabaseClient<Database> | null = supabaseRef.current;
+
+  const [userId, setUserId] = useState<string | null>(null);
   const [restoredDrawings, setRestoredDrawings] = useState<readonly ChartRenderDrawing[]>([]);
   const [drawingPersistenceError, setDrawingPersistenceError] = useState<string | null>(null);
   const [drawingWorkspaceToken, setDrawingWorkspaceToken] = useState<number | null>(null);
   const drawingWorkspaceTokenRef = useRef<number | null>(null);
   const drawingLoadRequestRef = useRef(0);
+  const drawingCoordinatorRef = useRef<DrawingPersistenceCoordinator | null>(null);
   drawingWorkspaceTokenRef.current = drawingWorkspaceToken;
+
+  useLayoutEffect(() => {
+    let active = true;
+
+    const initAuth = async (): Promise<void> => {
+      if (supabase === null) {
+        if (active) setUserId(null);
+        return;
+      }
+      const { data } = await supabase.auth.getUser();
+      if (active) {
+        setUserId(data?.user?.id ?? null);
+      }
+    };
+    void initAuth();
+
+    let subscription: { unsubscribe: () => void } | null = null;
+    if (supabase !== null) {
+      const authState = supabase.auth.onAuthStateChange((_event, session) => {
+        if (active) {
+          setUserId(session?.user?.id ?? null);
+        }
+      });
+      subscription = authState.data?.subscription ?? null;
+    }
+
+    return () => {
+      active = false;
+      subscription?.unsubscribe();
+    };
+  }, [supabase]);
 
   useLayoutEffect(() => {
     const requestId = drawingLoadRequestRef.current + 1;
@@ -209,14 +251,15 @@ export function MarketChart() {
     setRestoredDrawings([]);
     setDrawingPersistenceError(null);
 
-    const coordinator = drawingCoordinatorRef.current;
-    if (coordinator === null) return;
+    const selection = selectDrawingRepository(supabase as SupabaseClient<Database>, userId);
+    const coordinator = new DrawingPersistenceCoordinator(selection.repository);
+    drawingCoordinatorRef.current = coordinator;
 
-    const scope = {
-      owner: { kind: 'anonymous' as const, id: 'local-browser' },
-      instrumentId: `${providerId}:${selectedInstrumentId}`,
-      timeframe: interval,
-    };
+    const scope = createRepositoryScope(
+      selection.owner,
+      `${providerId}:${selectedInstrumentId}`,
+      interval,
+    );
 
     let active = true;
     void coordinator
@@ -230,14 +273,14 @@ export function MarketChart() {
       .catch((cause: unknown) => {
         if (!active || requestId !== drawingLoadRequestRef.current) return;
         setDrawingPersistenceError(
-          cause instanceof Error ? cause.message : 'No se pudieron restaurar los dibujos locales.',
+          cause instanceof Error ? cause.message : 'No se pudieron restaurar los dibujos.',
         );
       });
 
     return () => {
       active = false;
     };
-  }, [interval, providerId, selectedInstrumentId]);
+  }, [userId, supabase, interval, providerId, selectedInstrumentId]);
 
   const handleDrawingsChange = useCallback((drawings: readonly ChartRenderDrawing[]): void => {
     const coordinator = drawingCoordinatorRef.current;
