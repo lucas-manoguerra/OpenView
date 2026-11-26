@@ -142,13 +142,13 @@ class MemorySupabase {
 }
 
 const scope: DrawingRepositoryScope = {
-  owner: { kind: 'account', id: 'user-1' },
+  owner: { kind: 'account', id: '00000000-0000-4000-8000-000000000001' },
   instrumentId: 'binance-spot:BTC-USDT',
   timeframe: '1h',
 };
 
 const drawing: SaveDrawingInput = {
-  drawingId: 'drawing-uuid-1',
+  drawingId: '00000000-0000-4000-8000-000000000010',
   payload: {
     type: 'trend-line',
     start: { timestamp: 10, price: 100 },
@@ -183,11 +183,11 @@ describe('Supabase drawing repository', () => {
     const database = new MemorySupabase();
     const repository = new SupabaseDrawingRepository(database.client);
 
-    await repository.save({ ...scope, timeframe: null }, { ...drawing, drawingId: 'global' }, null);
-    await repository.save(scope, { ...drawing, drawingId: 'hourly' }, null);
+    await repository.save({ ...scope, timeframe: null }, { ...drawing, drawingId: '00000000-0000-4000-8000-000000000011' }, null);
+    await repository.save(scope, { ...drawing, drawingId: '00000000-0000-4000-8000-000000000012' }, null);
     await repository.save(
       { ...scope, timeframe: '4h' },
-      { ...drawing, drawingId: 'four-hour' },
+      { ...drawing, drawingId: '00000000-0000-4000-8000-000000000013' },
       null,
     );
 
@@ -224,6 +224,9 @@ describe('Supabase drawing repository', () => {
     await expect(repository.save(scope, { ...drawing, zOrder: -1 }, null)).rejects.toThrow(
       'z-order',
     );
+    await expect(
+      repository.save(scope, { ...drawing, drawingId: 'not-a-uuid' }, null),
+    ).rejects.toThrow('UUID');
   });
 
   it('keeps account and instrument identity in every database query', async () => {
@@ -234,7 +237,7 @@ describe('Supabase drawing repository', () => {
     expect(
       await repository.list({
         ...scope,
-        owner: { kind: 'account', id: 'user-2' },
+        owner: { kind: 'account', id: '00000000-0000-4000-8000-000000000002' },
       }),
     ).toEqual([]);
     expect(await repository.list({ ...scope, instrumentId: 'okx-spot:BTC-USDT' })).toEqual([]);
