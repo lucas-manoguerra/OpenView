@@ -66,8 +66,6 @@ export class DrawingPersistenceCoordinator {
 
     const snapshot = Object.freeze([...drawings]);
     const operation = this.writes.then(async () => {
-      // A queued snapshot is scoped to the workspace that accepted it. It may
-      // finish after a switch, but can never write into the newly active scope.
       const current = new Map(workspace.persisted);
       const nextIds = new Set(snapshot.map((drawing) => drawing.id));
 
@@ -86,14 +84,11 @@ export class DrawingPersistenceCoordinator {
         const existing = current.get(drawing.id);
         if (existing !== undefined && sameDrawing(existing, input)) continue;
 
-        const saveScope = existing === undefined
-          ? workspace.scope
-          : { ...workspace.scope, timeframe: existing.timeframeScope };
-        const saved = await this.repository.save(
-          saveScope,
-          input,
-          existing?.revision ?? null,
-        );
+        const saveScope =
+          existing === undefined
+            ? workspace.scope
+            : { ...workspace.scope, timeframe: existing.timeframeScope };
+        const saved = await this.repository.save(saveScope, input, existing?.revision ?? null);
         workspace.persisted.set(saved.drawingId, saved);
       }
     });
