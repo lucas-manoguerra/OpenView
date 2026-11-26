@@ -1746,11 +1746,11 @@ test('selects multiple drawings with Ctrl click and marquee, then moves them tog
   await page.mouse.down();
   await expect(canvas).toHaveAttribute('data-last-pointer-control', 'true');
   await page.mouse.move(marqueeEnd.x, marqueeEnd.y);
-  await expect(page.getByTestId('drawing-selection-marquee')).toBeVisible();
+  await expect(canvas).toHaveAttribute('data-drawing-selection-preview', 'true');
   await page.mouse.up();
   await page.keyboard.up('Control');
 
-  await expect(page.getByTestId('drawing-selection-marquee')).toHaveCount(0);
+  await expect(canvas).toHaveAttribute('data-drawing-selection-preview', 'false');
   await expect(canvas).toHaveAttribute('data-selected-drawing-count', '2');
   await expect(canvas).toHaveAttribute('data-selected-drawing-indexes', '1,2');
 

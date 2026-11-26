@@ -56,6 +56,11 @@ export type ChartRenderDrawing = Readonly<{
   visible?: boolean;
 }>;
 
+export type ChartDrawingSelectionPreview = Readonly<{
+  start: ChartCoordinate;
+  current: ChartCoordinate;
+}>;
+
 export type ChartRenderDrawingHit = Readonly<{
   drawingId: string;
   target: 'body' | 'start' | 'end';
@@ -72,6 +77,7 @@ export type ChartRenderScene = Readonly<{
   selectedDrawingId: string | null;
   selectedDrawingIds: readonly string[];
   hoveredDrawingHit: ChartRenderDrawingHit | null;
+  drawingSelectionPreview: ChartDrawingSelectionPreview | null;
   objectOrder: readonly ChartObjectOrderItem[];
 }>;
 
@@ -311,6 +317,7 @@ export const createChartRenderScene = (
       frozenDrawings.some((drawing) => drawing.id === hoveredDrawingHit.drawingId)
         ? Object.freeze({ ...hoveredDrawingHit })
         : null,
+    drawingSelectionPreview: null,
     objectOrder: frozenObjectOrder,
   });
 };
@@ -324,6 +331,7 @@ export type ChartRenderSceneUpdate = Readonly<{
   selectedDrawingId?: string | null;
   selectedDrawingIds?: readonly string[];
   hoveredDrawingHit?: ChartRenderDrawingHit | null;
+  drawingSelectionPreview?: ChartDrawingSelectionPreview | null;
   objectOrder?: readonly ChartObjectOrderItem[];
 }>;
 
@@ -356,6 +364,26 @@ export const updateChartRenderScene = (
       ? scene.selectedDrawingIds
       : normalizeSelectedDrawingIds(requestedSelectedDrawingIds, drawings);
   const selectedDrawingId = selectedDrawingIds[selectedDrawingIds.length - 1] ?? null;
+  const drawingSelectionPreview =
+    update.drawingSelectionPreview === undefined
+      ? scene.drawingSelectionPreview
+      : update.drawingSelectionPreview === null
+        ? null
+        : Object.freeze({
+            start: Object.freeze({ ...update.drawingSelectionPreview.start }),
+            current: Object.freeze({ ...update.drawingSelectionPreview.current }),
+          });
+  if (
+    drawingSelectionPreview !== null &&
+    ![
+      drawingSelectionPreview.start.x,
+      drawingSelectionPreview.start.y,
+      drawingSelectionPreview.current.x,
+      drawingSelectionPreview.current.y,
+    ].every(Number.isFinite)
+  ) {
+    throw new RangeError('Drawing selection preview coordinates must be finite numbers.');
+  }
   const hoveredDrawingHit =
     update.hoveredDrawingHit === undefined
       ? scene.hoveredDrawingHit
@@ -395,6 +423,10 @@ export const updateChartRenderScene = (
     selectedDrawingIds === scene.selectedDrawingIds &&
     hoveredDrawingHit?.drawingId === scene.hoveredDrawingHit?.drawingId &&
     hoveredDrawingHit?.target === scene.hoveredDrawingHit?.target &&
+    drawingSelectionPreview?.start.x === scene.drawingSelectionPreview?.start.x &&
+    drawingSelectionPreview?.start.y === scene.drawingSelectionPreview?.start.y &&
+    drawingSelectionPreview?.current.x === scene.drawingSelectionPreview?.current.x &&
+    drawingSelectionPreview?.current.y === scene.drawingSelectionPreview?.current.y &&
     objectOrder === scene.objectOrder
   ) {
     return scene;
@@ -411,6 +443,7 @@ export const updateChartRenderScene = (
     selectedDrawingId,
     selectedDrawingIds,
     hoveredDrawingHit,
+    drawingSelectionPreview,
     objectOrder,
   });
 };
@@ -1130,6 +1163,39 @@ const drawCrosshair = (
   context.restore();
 };
 
+const drawDrawingSelectionPreview = (
+  context: CanvasRenderingContext2D,
+  scene: ChartRenderScene,
+): void => {
+  const selection = scene.drawingSelectionPreview;
+  if (selection === null) return;
+
+  const { plotArea } = scene.frame.layout;
+  const left = Math.max(plotArea.x, Math.min(selection.start.x, selection.current.x));
+  const top = Math.max(plotArea.y, Math.min(selection.start.y, selection.current.y));
+  const right = Math.min(
+    plotArea.x + plotArea.width,
+    Math.max(selection.start.x, selection.current.x),
+  );
+  const bottom = Math.min(
+    plotArea.y + plotArea.height,
+    Math.max(selection.start.y, selection.current.y),
+  );
+  if (right < left || bottom < top) return;
+
+  context.save();
+  context.fillStyle = '#60a5fa';
+  context.globalAlpha = 0.12;
+  context.fillRect(left, top, right - left, bottom - top);
+  context.globalAlpha = 1;
+  context.strokeStyle = '#60a5fa';
+  context.lineWidth = 1;
+  context.setLineDash([4, 3]);
+  context.strokeRect(left, top, right - left, bottom - top);
+  context.setLineDash([]);
+  context.restore();
+};
+
 export const drawChartScene = (
   context: CanvasRenderingContext2D,
   scene: ChartRenderScene,
@@ -1174,5 +1240,6 @@ export const drawChartScene = (
     }
   }
   drawCrosshair(context, scene, theme);
+  drawDrawingSelectionPreview(context, scene);
   context.restore();
 };
