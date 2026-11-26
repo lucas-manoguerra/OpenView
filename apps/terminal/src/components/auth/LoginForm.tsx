@@ -28,19 +28,41 @@ export function LoginForm() {
   return (
     <form onSubmit={handleSubmit} class="login-form">
       <h2>Iniciar sesión</h2>
-      {error && <div class="error-message" role="alert">{error}</div>}
+      {error && (
+        <div class="error-message" role="alert">
+          {error}
+        </div>
+      )}
       <div class="field">
         <label htmlFor="email">Correo electrónico</label>
-        <input id="email" type="email" name="email" required autoComplete="email" value={email} onInput={(event) => setEmail((event.currentTarget as HTMLInputElement).value)} />
+        <input
+          id="email"
+          type="email"
+          name="email"
+          required
+          autoComplete="email"
+          value={email}
+          onInput={(event) => setEmail((event.currentTarget as HTMLInputElement).value)}
+        />
       </div>
       <div class="field">
         <label htmlFor="password">Contraseña</label>
-        <input id="password" type="password" name="password" required autoComplete="current-password" value={password} onInput={(event) => setPassword((event.currentTarget as HTMLInputElement).value)} />
+        <input
+          id="password"
+          type="password"
+          name="password"
+          required
+          autoComplete="current-password"
+          value={password}
+          onInput={(event) => setPassword((event.currentTarget as HTMLInputElement).value)}
+        />
       </div>
       <button type="submit" disabled={loading}>
         {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
       </button>
-      <p class="footer">¿No tienes cuenta? <a href="/register">Regístrate</a></p>
+      <p class="footer">
+        ¿No tienes cuenta? <a href="/register">Regístrate</a>
+      </p>
     </form>
   );
 }
