@@ -134,6 +134,8 @@ export {
   type ChartApi,
   type ChartCommand,
   type ChartDrawingEditPreview,
+  type ChartDrawingCreationGesture,
+  type ChartDrawingStyle,
   type ChartEvent,
   type ChartSnapshot,
   type CreateChartOptions,

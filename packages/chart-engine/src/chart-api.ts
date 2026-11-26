@@ -7,6 +7,7 @@ import {
 } from './chart-object-order';
 import type { ChartCoordinate, ChartDataPoint } from './chart-frame';
 import {
+  getTimestampAtLogicalIndex,
   hitTestChartDrawing,
   selectChartDrawingsWithinArea,
   updateChartDrawing,
@@ -40,6 +41,15 @@ export type ChartDrawingEditPreview =
       current: ChartDataPoint;
     }>;
 
+export type ChartDrawingCreationGesture = Readonly<{
+  type: ChartRenderDrawing['type'];
+  start: ChartDataPoint;
+  end: ChartDataPoint | null;
+}>;
+
+export type ChartDrawingStyle = Pick<ChartRenderDrawing, 'color'> &
+  Partial<Omit<ChartRenderDrawing, 'id' | 'type' | 'start' | 'end' | 'color'>>;
+
 export type ChartCommand =
   | Readonly<{ type: 'set-scene'; scene: ChartRenderScene }>
   | Readonly<{ type: 'set-drawings'; drawings: readonly ChartRenderDrawing[] }>
@@ -61,12 +71,22 @@ export type ChartCommand =
       updates: Partial<ChartRenderDrawing['start']>;
     }>
   | Readonly<{ type: 'add-drawing'; drawing: ChartRenderDrawing }>
+  | Readonly<{
+      type: 'create-drawing';
+      gesture: ChartDrawingCreationGesture;
+      style: ChartDrawingStyle;
+    }>
   | Readonly<{ type: 'delete-drawings'; drawingIds: readonly string[] }>
   | Readonly<{ type: 'set-drawings-visible'; visible: boolean }>
   | Readonly<{ type: 'set-drawing-selection'; drawingIds: readonly string[] }>
   | Readonly<{ type: 'set-drawing-hover'; hit: ChartDrawingHit | null }>
   | Readonly<{ type: 'set-drawing-edit-preview'; gesture: ChartDrawingEditPreview | null }>
   | Readonly<{ type: 'set-drawing-creation-preview'; drawing: ChartRenderDrawing | null }>
+  | Readonly<{
+      type: 'preview-drawing-creation';
+      gesture: ChartDrawingCreationGesture | null;
+      style: ChartDrawingStyle | null;
+    }>
   | Readonly<{ type: 'commit-drawing-edit'; gesture: ChartDrawingEditPreview }>
   | Readonly<{ type: 'undo-drawings' }>
   | Readonly<{ type: 'redo-drawings' }>
@@ -116,6 +136,39 @@ const getAvailableObjects = (scene: ChartRenderScene): readonly ChartObjectOrder
     ...scene.indicators.map((item) => Object.freeze({ kind: 'indicator' as const, id: item.id })),
     ...scene.drawings.map((item) => Object.freeze({ kind: 'drawing' as const, id: item.id })),
   ]);
+
+const createDrawingFromGesture = (
+  gesture: ChartDrawingCreationGesture,
+  style: ChartDrawingStyle,
+  candles: ChartRenderScene['candles'],
+  id: string,
+): ChartRenderDrawing | null => {
+  const startTimestamp = getTimestampAtLogicalIndex(gesture.start.logicalIndex, candles);
+  const endTimestamp =
+    gesture.end === null ? null : getTimestampAtLogicalIndex(gesture.end.logicalIndex, candles);
+
+  if (
+    startTimestamp === null ||
+    (gesture.end !== null && endTimestamp === null) ||
+    (gesture.end === null &&
+      gesture.type !== 'horizontal-line' &&
+      gesture.type !== 'vertical-line') ||
+    style.color.length === 0
+  ) {
+    return null;
+  }
+
+  return Object.freeze({
+    ...style,
+    id,
+    type: gesture.type,
+    start: Object.freeze({ timestamp: startTimestamp, price: gesture.start.price }),
+    end:
+      gesture.end === null || endTimestamp === null
+        ? null
+        : Object.freeze({ timestamp: endTimestamp, price: gesture.end.price }),
+  });
+};
 
 export const createChart = (options: CreateChartOptions): ChartApi => {
   const renderer: CanvasRenderer = createCanvasRenderer(options.surface, options.renderer);
@@ -178,6 +231,28 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
     );
   };
 
+  const commitDrawing = (drawing: ChartRenderDrawing): void => {
+    if (scene.drawings.some((item) => item.id === drawing.id)) {
+      throw new RangeError('A drawing with this id already exists.');
+    }
+    drawingPreview = null;
+    drawingCreationPreview = null;
+    drawingUndoStack.push(scene.drawings);
+    if (drawingUndoStack.length > 50) drawingUndoStack.shift();
+    drawingRedoStack.length = 0;
+    scene = updateChartRenderScene(scene, {
+      drawings: [...scene.drawings, drawing],
+      selectedDrawingId: drawing.id,
+      selectedDrawingIds: [drawing.id],
+      hoveredDrawingHit: null,
+    });
+    objectOrder = reconcileChartObjectOrder(objectOrder, getAvailableObjects(scene));
+    render();
+    emitDrawingState();
+    emit(Object.freeze({ type: 'object-order-changed', order: objectOrder }));
+    emitHistoryState();
+  };
+
   renderer.resize(scene.frame.layout.bounds.width, scene.frame.layout.bounds.height);
   render();
 
@@ -200,26 +275,19 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
         return;
       }
 
+      if (command.type === 'create-drawing') {
+        const drawing = createDrawingFromGesture(
+          command.gesture,
+          command.style,
+          scene.candles,
+          crypto.randomUUID(),
+        );
+        if (drawing !== null) commitDrawing(drawing);
+        return;
+      }
+
       if (command.type === 'add-drawing') {
-        if (scene.drawings.some((drawing) => drawing.id === command.drawing.id)) {
-          throw new RangeError('A drawing with this id already exists.');
-        }
-        drawingPreview = null;
-        drawingCreationPreview = null;
-        drawingUndoStack.push(scene.drawings);
-        if (drawingUndoStack.length > 50) drawingUndoStack.shift();
-        drawingRedoStack.length = 0;
-        scene = updateChartRenderScene(scene, {
-          drawings: [...scene.drawings, command.drawing],
-          selectedDrawingId: command.drawing.id,
-          selectedDrawingIds: [command.drawing.id],
-          hoveredDrawingHit: null,
-        });
-        objectOrder = reconcileChartObjectOrder(objectOrder, getAvailableObjects(scene));
-        render();
-        emitDrawingState();
-        emit(Object.freeze({ type: 'object-order-changed', order: objectOrder }));
-        emitHistoryState();
+        commitDrawing(command.drawing);
         return;
       }
 
@@ -462,6 +530,21 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
 
       if (command.type === 'set-drawing-creation-preview') {
         drawingCreationPreview = command.drawing;
+        drawingPreview = null;
+        render();
+        return;
+      }
+
+      if (command.type === 'preview-drawing-creation') {
+        drawingCreationPreview =
+          command.gesture === null || command.style === null
+            ? null
+            : createDrawingFromGesture(
+                command.gesture,
+                command.style,
+                scene.candles,
+                'chart-drawing-creation-preview',
+              );
         drawingPreview = null;
         render();
         return;
