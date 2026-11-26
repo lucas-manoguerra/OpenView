@@ -1053,6 +1053,45 @@ describe('canvas pointer event adapter', () => {
     expect(preventDefault).not.toHaveBeenCalled();
   });
 
+  it('cancels the two-click drawing preview on Escape after the first click', () => {
+    const { canvas, dispatch } = createCanvasTarget();
+    const previews: (CanvasDrawingGesture | null)[] = [];
+    const exits: string[] = [];
+    let drawingTool: CanvasDrawingTool = 'rectangle';
+    attachCanvasPointerEvents(
+      canvas,
+      createChartInteractionController(createChartFrame(900, 500, { min: 90, max: 120 }, 2)),
+      {
+        getDrawingTool: () => drawingTool,
+        onDrawingCreationPreview: (preview) => previews.push(preview),
+        onDrawingToolExit: () => {
+          exits.push('cursor');
+          drawingTool = 'cursor';
+        },
+      },
+    );
+
+    dispatch('pointerdown', {
+      button: 0,
+      clientX: 300,
+      clientY: 200,
+      pointerId: 1,
+      preventDefault: vi.fn(),
+    } as unknown as PointerEvent);
+    dispatch('pointerup', {
+      button: 0,
+      clientX: 300,
+      clientY: 200,
+      pointerId: 1,
+      preventDefault: vi.fn(),
+    } as unknown as PointerEvent);
+    dispatch('keydown', { key: 'Escape', preventDefault: vi.fn() } as unknown as KeyboardEvent);
+
+    expect(previews.at(-1)).toBeNull();
+    expect(drawingTool).toBe('cursor');
+    expect(exits).toEqual(['cursor']);
+  });
+
   it('deletes the selected drawing on Delete and deselects on Escape', () => {
     const { canvas, dispatch } = createCanvasTarget();
     const deleted: string[] = [];
