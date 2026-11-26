@@ -587,11 +587,19 @@ export const attachCanvasPointerEvents = (
       return;
     }
 
-    if (event.key === 'Escape' && activeDrawingTool !== null) {
+    if (
+      event.key === 'Escape' &&
+      (activeDrawingTool !== null ||
+        (options.getDrawingTool?.() !== undefined &&
+          options.getDrawingTool?.() !== 'cursor' &&
+          options.getDrawingTool?.() !== 'select'))
+    ) {
       drawingStart = null;
       activeDrawingTool = null;
       drawingAwaitingSecondPoint = false;
+      drawingPointerOrigin = null;
       options.onDrawingCreationPreview?.(null);
+      releaseActivePointer();
       options.onDrawingToolExit?.();
       event.preventDefault();
       return;
