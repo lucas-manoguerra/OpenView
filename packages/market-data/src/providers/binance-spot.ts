@@ -1,4 +1,4 @@
-import { createCandle, type Candle, type InstrumentId } from '@openview/market-domain';
+import { type Candle, createCandle, type InstrumentId } from '@openview/market-domain';
 import type {
   CandleInterval,
   CandleStreamHandlers,
@@ -6,10 +6,10 @@ import type {
   CandleUpdate,
   HistoricalCandleRequest,
   InstrumentDiscoveryFilter,
-  MarketInstrument,
   MarketDataCapabilities,
   MarketDataProvider,
   MarketDataSubscription,
+  MarketInstrument,
   QuoteStreamHandlers,
   QuoteUpdate,
 } from '../contracts';

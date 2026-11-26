@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { createChartFrame } from './src/chart-frame';
 import {
+  type ChartRenderCandle,
   createChartRenderScene,
   updateChartRenderScene,
-  type ChartRenderCandle,
 } from './src/canvas-painter';
+import { createChartFrame } from './src/chart-frame';
 
 const candles: readonly ChartRenderCandle[] = Object.freeze([
   Object.freeze({

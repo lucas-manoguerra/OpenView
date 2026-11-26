@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'preact/hooks';
-import { Icon, iconRegistry, type IconName } from '../ui/Icon';
+import { Icon, type IconName, iconRegistry } from '../ui/Icon';
 
 const iconNames = Object.keys(iconRegistry) as IconName[];
 

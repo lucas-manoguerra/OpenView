@@ -1,7 +1,7 @@
 import type { ChartRenderDrawing } from '@openview/chart-engine';
+import type { DrawingPanelPosition } from '../../drawings/drawing-panel-layout';
 import type { DrawingStyleTemplate } from '../../drawings/drawing-style-templates';
 import type { DrawingToolType } from '../../drawings/drawing-tool-preferences';
-import type { DrawingPanelPosition } from '../../drawings/drawing-panel-layout';
 
 type DrawingStyleUpdates = Partial<
   Pick<

@@ -1,96 +1,88 @@
-# Configuración de autenticación de Supabase para Terminal
+# Configuración de autenticación Google para OpenView Terminal
 
-Terminal utiliza Supabase SSR (renderizado del lado del servidor) con el flujo PKCE. Antes de habilitar el acceso por correo electrónico en un entorno publicado, configura el proyecto de Supabase siguiendo estos pasos.
+OpenView Terminal utiliza exclusivamente **Google OAuth** a través de Supabase Auth. El flujo web usa PKCE y una ruta de retorno en el servidor para intercambiar el código por una sesión y guardar las cookies seguras.
 
-## 1. Configurar las variables del entorno local
+## 1. Variables locales
 
-1. Copia el archivo `apps/terminal/.env.example` y crea `apps/terminal/.env`.
-2. Abre `apps/terminal/.env` y reemplaza los valores de ejemplo por la URL y la clave publicable de tu proyecto de Supabase.
-3. Comprueba que estén definidas estas dos variables:
+1. Copia `apps/terminal/.env.example` como `apps/terminal/.env`.
+2. Completa la URL y la clave publicable del proyecto Supabase:
 
 ```dotenv
 PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
 PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_reemplazar_por_tu_clave
 ```
 
-La aplicación utiliza estas variables tanto en el navegador como en el servidor. Son datos de configuración públicos. **Nunca** coloques una clave `service_role` ni una clave secreta de Supabase en este archivo. El archivo `.env` debe permanecer fuera de Git; solamente se versiona `.env.example`.
+Estas dos variables son configuración pública. Nunca uses una clave `service_role` ni una clave secreta en el navegador o en variables `PUBLIC_*`. El archivo `.env` no debe subirse a Git.
 
-## 2. Configurar las direcciones permitidas en Supabase
+## 2. Crear credenciales OAuth en Google
 
-1. Entra al [panel de Supabase](https://supabase.com/dashboard).
-2. Selecciona el proyecto de OpenView.
-3. En el menú lateral, entra en **Autenticación (Authentication)**.
-4. Abre **Configuración de URL (URL Configuration)**.
-5. En **URL del sitio (Site URL)**, coloca exactamente esta dirección:
+1. Abre [Google Cloud Console](https://console.cloud.google.com/).
+2. Crea o selecciona un proyecto para OpenView.
+3. En **Google Auth Platform**, configura la pantalla de consentimiento y los datos de la aplicación.
+4. Configura el público permitido según quién podrá iniciar sesión. Para una aplicación en pruebas, agrega las cuentas de prueba necesarias.
+5. En **Clientes**, crea un cliente OAuth de tipo **Aplicación web**.
+6. En **URI de redireccionamiento autorizados**, agrega exactamente la URL de callback que muestra Supabase en **Authentication → Sign In / Providers → Google**. Tiene este formato:
+
+```text
+https://TU_PROJECT_REF.supabase.co/auth/v1/callback
+```
+
+7. Guarda el cliente y copia su **Client ID** y **Client Secret**.
+
+No uses la URL `/auth/callback` de OpenView como callback de Google. Google devuelve primero el control a Supabase; Supabase luego redirige a OpenView.
+
+## 3. Habilitar Google en Supabase
+
+1. Abre el [panel de Supabase](https://supabase.com/dashboard) y selecciona el proyecto de OpenView.
+2. Entra en **Authentication → Sign In / Providers → Google**.
+3. Activa Google.
+4. Pega el **Client ID** y el **Client Secret** obtenidos de Google Cloud.
+5. Guarda los cambios.
+
+El secreto OAuth se almacena solamente en Supabase. No lo agregues al repositorio, a Astro ni a Cloudflare Workers.
+
+## 4. Configurar las URL permitidas en Supabase
+
+En **Authentication → URL Configuration**:
+
+- **Site URL**:
 
 ```text
 https://openview-terminal.developer-spoonacular-004.workers.dev/
 ```
 
-6. En **Direcciones de redirección (Redirect URLs)**, agrega estas cuatro direcciones, una por una:
+- Agrega estas direcciones exactas en **Redirect URLs**. Incluyen el parámetro `next` que Terminal envía durante el inicio de sesión:
 
 ```text
-https://openview-terminal.developer-spoonacular-004.workers.dev/auth/callback
-https://openview-terminal.developer-spoonacular-004.workers.dev/reset-password
-http://localhost:4321/auth/callback
-http://localhost:4321/reset-password
+https://openview-terminal.developer-spoonacular-004.workers.dev/auth/callback?next=/dashboard
+http://localhost:4321/auth/callback?next=/dashboard
 ```
 
-7. Guarda los cambios.
+Guarda los cambios. Si cambias el destino de retorno que envía Terminal, actualiza también la URL permitida correspondiente en Supabase.
 
-**Importante:** conserva la URL del sitio con el dominio principal de Terminal. No agregues comodines ni direcciones demasiado amplias si no son necesarios.
+## 5. Flujo de inicio de sesión
 
-La pantalla de registro envía al usuario a `/auth/callback?next=/dashboard` después de confirmar el correo. Esa ruta recibe el código de autorización, intercambia el código por una sesión en el servidor y guarda las cookies de sesión. El formulario de recuperación utiliza la dirección absoluta `/reset-password`.
+1. La persona pulsa **Continuar con Google** en `/login`.
+2. Supabase inicia OAuth con Google usando PKCE.
+3. Google devuelve el usuario al callback de Supabase.
+4. Supabase redirige a `/auth/callback?next=/dashboard`.
+5. El servidor de OpenView intercambia el código por una sesión y persiste las cookies.
+6. La persona termina en `/dashboard`.
 
-## 3. Revisar el correo de confirmación de registro
+## 6. Alcance de autenticación
 
-1. En el panel de Supabase, entra en **Autenticación (Authentication) → Plantillas de correo (Email Templates)**.
-2. Abre la plantilla **Confirmación de registro (Confirm signup)**.
-3. Comprueba que el enlace de confirmación utilice esta variable de Supabase:
+La interfaz y las rutas de Terminal admiten únicamente inicio de sesión con Google. No se ofrecen registro por correo/contraseña, inicio por contraseña ni recuperación de contraseña. El alta de una cuenta nueva se realiza durante el primer acceso OAuth con Google.
 
-```text
-{{ .ConfirmationURL }}
-```
+La restricción de proveedores debe mantenerse también en Supabase: deja Google habilitado y deshabilita los demás proveedores que no se utilicen. No deshabilites mecanismos internos necesarios para la sesión o la renovación de tokens.
 
-4. Guarda la plantilla si hiciste algún cambio.
+## 7. Lista de verificación
 
-La aplicación indica la dirección de retorno al registrar al usuario. Esa dirección debe coincidir con una de las direcciones permitidas del paso 2.
-
-## 4. Configurar el correo para recuperar la contraseña
-
-1. En **Autenticación (Authentication) → Plantillas de correo (Email Templates)**, abre **Restablecer contraseña (Reset Password)**.
-2. Reemplaza el contenido de la plantilla por este texto:
-
-```html
-<h2>Restablecer contraseña</h2>
-<p>Recibimos una solicitud para restablecer la contraseña de tu cuenta.</p>
-<p>
-  <a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=recovery">
-    Elegir una nueva contraseña
-  </a>
-</p>
-<p>Si no solicitaste este cambio, puedes ignorar este correo.</p>
-```
-
-3. Guarda la plantilla.
-
-**No reemplaces ese enlace por `{{ .ConfirmationURL }}`.** El formulario de recuperación de OpenView necesita recibir los parámetros `token_hash` y `type=recovery` en la dirección web. Luego verifica ese código de un solo uso con `verifyOtp` antes de permitir el cambio de contraseña mediante `updateUser`.
-
-## 5. Comprobar que todo funciona
-
-Cuando hayas guardado la configuración anterior, realiza estas pruebas:
-
-- [ ] Las cuatro direcciones de retorno (dos de producción y dos locales) aparecen en la lista de direcciones permitidas.
-- [ ] Al registrar una cuenta, llega el correo de confirmación.
-- [ ] Al abrir el enlace de confirmación, el navegador vuelve a `/auth/callback` y termina en el panel con la sesión iniciada.
-- [ ] Al solicitar recuperar la contraseña, llega el correo correspondiente.
-- [ ] El enlace del correo abre una dirección con este formato: `/reset-password?token_hash=...&type=recovery`.
-- [ ] La aplicación permite establecer una contraseña nueva con un enlace válido.
-- [ ] Los enlaces vencidos o utilizados anteriormente son rechazados.
-- [ ] Al cerrar sesión, se eliminan las cookies de sesión del servidor.
-
-Si alguna prueba falla, no habilites todavía el flujo para usuarios reales: revisa primero las direcciones permitidas y las plantillas de correo.
-
-## Seguridad
-
-Nunca coloques claves secretas ni claves `service_role` en variables que comiencen con `PUBLIC_`, en el navegador ni en archivos versionados. La clave publicable puede utilizarse en el cliente; el acceso a los datos debe seguir protegido por las políticas RLS de la base de datos.
+- [ ] Google OAuth Client creado como aplicación web.
+- [ ] Callback de Supabase agregado en Google Cloud.
+- [ ] Google habilitado en Supabase con Client ID y Client Secret.
+- [ ] Site URL de producción configurada.
+- [ ] Redirect URLs exactas de producción y desarrollo agregadas.
+- [ ] Inicio con Google funciona en producción.
+- [ ] Inicio con Google funciona en desarrollo local.
+- [ ] Un usuario sin sesión no puede acceder a rutas privadas.
+- [ ] El cierre de sesión invalida la sesión y vuelve a `/login`.

@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
 import { createInstrumentId } from '@openview/market-domain';
+import { describe, expect, it, vi } from 'vitest';
 import {
   BinanceSpotMarketDataProvider,
   type BinanceSpotProviderOptions,

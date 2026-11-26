@@ -1,20 +1,20 @@
+import type { ChartIndicatorSeries, ChartRenderCandle, ChartRenderDrawing } from './canvas-painter';
 import {
-  chartCoordinateToDataPoint,
   type ChartCoordinate,
   type ChartDataPoint,
+  chartCoordinateToDataPoint,
 } from './chart-frame';
+import type { ChartInteractionController } from './chart-interaction';
 import {
-  hitTestChartDrawing,
   type ChartDrawingHit,
   type ChartDrawingSelectionArea,
+  hitTestChartDrawing,
 } from './drawing-geometry';
 import {
+  type ChartDrawingMagnetMode,
   resolveChartDrawingMagnetMode,
   snapChartDrawingPointToOhlc,
-  type ChartDrawingMagnetMode,
 } from './drawing-magnet';
-import type { ChartIndicatorSeries, ChartRenderCandle, ChartRenderDrawing } from './canvas-painter';
-import type { ChartInteractionController } from './chart-interaction';
 import type { NumericRange } from './viewport';
 
 export type CanvasDrawingTool =

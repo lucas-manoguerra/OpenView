@@ -1,9 +1,9 @@
 import { useCallback, useState } from 'preact/hooks';
 import {
+  type ChartControlOption,
   ChartTypeSelector,
   PriceScaleSelector,
   TimeframeSelector,
-  type ChartControlOption,
 } from '../ui';
 
 const timeframeOptions: readonly ChartControlOption[] = [

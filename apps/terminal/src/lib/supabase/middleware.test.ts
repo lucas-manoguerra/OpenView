@@ -1,7 +1,33 @@
-import { describe, expect, it } from 'vitest';
-import { hasSupabaseAuthCookie, isPublicRoute } from './middleware';
+import type { APIContext } from 'astro';
+import { describe, expect, it, vi } from 'vitest';
+import { getAuthenticatedUser, hasSupabaseAuthCookie, isPublicRoute } from './middleware';
+import { createServerClient } from './server';
+
+vi.mock('./server', () => ({
+  createServerClient: vi.fn(),
+}));
 
 describe('Supabase middleware helpers', () => {
+  it('returns the verified claims nested in the Supabase response data', async () => {
+    const claims = { sub: 'user-123', email: 'trader@example.com' };
+    const getClaims = vi.fn().mockResolvedValue({ data: { claims }, error: null });
+    vi.mocked(createServerClient).mockReturnValue({
+      auth: { getClaims },
+    } as unknown as ReturnType<typeof createServerClient>);
+
+    const context = {
+      request: new Request('https://terminal.example/dashboard', {
+        headers: { Cookie: 'sb-projectref-auth-token=valid-token' },
+      }),
+    } as APIContext;
+
+    const result = await getAuthenticatedUser(context, new Headers());
+
+    expect(result.user).toEqual(claims);
+    expect(result.error).toBeNull();
+    expect(getClaims).toHaveBeenCalledOnce();
+  });
+
   it('does not require remote auth validation when no Supabase session cookie exists', () => {
     expect(hasSupabaseAuthCookie(null)).toBe(false);
     expect(hasSupabaseAuthCookie('')).toBe(false);
@@ -24,8 +50,13 @@ describe('Supabase middleware helpers', () => {
     expect(isPublicRoute('/login')).toBe(true);
     expect(isPublicRoute('/component-lab')).toBe(true);
     expect(isPublicRoute('/component-lab/chart/controls')).toBe(true);
-    expect(isPublicRoute('/auth/callback/provider')).toBe(true);
+    expect(isPublicRoute('/auth/callback')).toBe(true);
+    expect(isPublicRoute('/auth/callback/provider')).toBe(false);
     expect(isPublicRoute('/dashboard')).toBe(false);
     expect(isPublicRoute('/login-extra')).toBe(false);
+    expect(isPublicRoute('/auth/signout')).toBe(false);
+    expect(isPublicRoute('/register')).toBe(false);
+    expect(isPublicRoute('/forgot-password')).toBe(false);
+    expect(isPublicRoute('/reset-password')).toBe(false);
   });
 });

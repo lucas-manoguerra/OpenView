@@ -1,45 +1,37 @@
 export {
-  chartCoordinateToDataPoint,
-  createChartFrame,
-  dataPointToChartCoordinate,
-  type ChartCoordinate,
-  type ChartDataPoint,
-  type ChartFrame,
-  type ChartFrameOptions,
-} from './chart-frame';
-export {
+  type ChartDrawingLineStyle,
+  type ChartDrawingPoint,
+  type ChartDrawingSelectionPreview,
+  type ChartIndicatorSeries,
+  type ChartRenderCandle,
+  type ChartRenderDrawing,
+  type ChartRenderScene,
+  type ChartRenderSceneUpdate,
+  type ChartRenderTheme,
+  type ChartType,
   createChartRenderScene,
   DEFAULT_CHART_THEME,
   drawChartScene,
   updateChartRenderScene,
-  type ChartRenderCandle,
-  type ChartRenderScene,
-  type ChartDrawingSelectionPreview,
-  type ChartType,
-  type ChartRenderSceneUpdate,
-  type ChartRenderTheme,
-  type ChartIndicatorSeries,
-  type ChartDrawingPoint,
-  type ChartDrawingLineStyle,
-  type ChartRenderDrawing,
 } from './canvas-painter';
 export {
-  createChartInteractionController,
-  ChartInteractionController,
-  type ChartInteractionOptions,
-  type ChartInteractionSnapshot,
-  type PointerPosition,
-} from './chart-interaction';
-export {
   attachCanvasPointerEvents,
-  type CanvasPointerAdapter,
-  type CanvasDrawingEditGesture,
-  type CanvasDrawingGroupEditGesture,
   type CanvasDrawingAreaSelection,
-  type CanvasDrawingNudgeDirection,
+  type CanvasDrawingEditGesture,
   type CanvasDrawingGesture,
+  type CanvasDrawingGroupEditGesture,
+  type CanvasDrawingNudgeDirection,
   type CanvasDrawingTool,
+  type CanvasPointerAdapter,
 } from './canvas-pointer-adapter';
+export {
+  type CanvasFrameScheduler,
+  CanvasRenderer,
+  type CanvasRendererOptions,
+  type CanvasRendererSize,
+  type CanvasSurface,
+  createCanvasRenderer,
+} from './canvas-renderer';
 export {
   attachCanvasResizeObserver,
   type CanvasResize,
@@ -48,55 +40,81 @@ export {
   type CanvasResizeObserverHandle,
 } from './canvas-resize-adapter';
 export {
-  CanvasRenderer,
-  createCanvasRenderer,
-  type CanvasFrameScheduler,
-  type CanvasRendererOptions,
-  type CanvasRendererSize,
-  type CanvasSurface,
-} from './canvas-renderer';
+  type ChartApi,
+  type ChartCommand,
+  type ChartContextMenuRequest,
+  type ChartDrawingCreationGesture,
+  type ChartDrawingEditPreview,
+  type ChartDrawingStyle,
+  type ChartEvent,
+  type ChartPointerAdapterOptions,
+  type ChartSnapshot,
+  type CreateChartOptions,
+  createChart,
+} from './chart-api';
+export {
+  type ChartCoordinate,
+  type ChartDataPoint,
+  type ChartFrame,
+  type ChartFrameOptions,
+  chartCoordinateToDataPoint,
+  createChartFrame,
+  dataPointToChartCoordinate,
+} from './chart-frame';
+export {
+  ChartInteractionController,
+  type ChartInteractionOptions,
+  type ChartInteractionSnapshot,
+  createChartInteractionController,
+  type PointerPosition,
+} from './chart-interaction';
+export {
+  type ChartObjectKind,
+  type ChartObjectOrderAction,
+  type ChartObjectOrderItem,
+  createChartObjectOrder,
+  moveChartObjectInOrder,
+  reconcileChartObjectOrder,
+} from './chart-object-order';
+export {
+  type ChartDrawingHit,
+  type ChartDrawingSelectionArea,
+  getLogicalIndexAtTimestamp,
+  getTimestampAtLogicalIndex,
+  hitTestChartDrawing,
+  selectChartDrawingsWithinArea,
+  updateChartDrawing,
+} from './drawing-geometry';
+export {
+  type ChartDrawingMagnetMode,
+  resolveChartDrawingMagnetMode,
+  snapChartDrawingPointToOhlc,
+} from './drawing-magnet';
+export {
+  calculateExponentialMovingAverage,
+  calculateSimpleMovingAverage,
+  type MovingAverageInput,
+  type MovingAveragePoint,
+} from './indicators';
+export {
+  type ChartLayout,
+  type ChartLayoutOptions,
+  createChartLayout,
+  type LayoutRect,
+} from './layout';
 export {
   coordinateToPrice,
   createPriceScale,
   generatePriceTicks,
-  panPriceScale,
   type PriceScale,
   type PriceScaleMode,
   type PriceScaleOptions,
-  type PriceTickFormatOptions,
   type PriceScaleTick,
+  type PriceTickFormatOptions,
+  panPriceScale,
   priceToCoordinate,
   zoomPriceScale,
 } from './price-scale';
-export {
-  coordinateToLogicalIndex,
-  countAppendedBars,
-  createTimeScale,
-  generateTimeTicks,
-  getRightOffsetAfterDataUpdate,
-  logicalIndexToCoordinate,
-  panTimeScale,
-  resizeTimeScale,
-  type LogicalRange,
-  type TimeScale,
-  type TimeScaleOptions,
-  type TimeScaleTick,
-  zoomTimeScale,
-} from './time-scale';
-export {
-  createChartLayout,
-  type ChartLayout,
-  type ChartLayoutOptions,
-  type LayoutRect,
-} from './layout';
-export {
-  type ChartViewport,
-  createChartViewport,
-  type NumericRange,
-  priceToVerticalCoordinate,
-  timeToHorizontalCoordinate,
-} from './viewport';
-
 export {
   createTimeAxisData,
   formatTimeAxisLabel,
@@ -107,48 +125,25 @@ export {
   type TimeAxisPoint,
   type TimeAxisTick,
 } from './time-axis';
-
 export {
-  calculateExponentialMovingAverage,
-  calculateSimpleMovingAverage,
-  type MovingAverageInput,
-  type MovingAveragePoint,
-} from './indicators';
-
+  coordinateToLogicalIndex,
+  countAppendedBars,
+  createTimeScale,
+  generateTimeTicks,
+  getRightOffsetAfterDataUpdate,
+  type LogicalRange,
+  logicalIndexToCoordinate,
+  panTimeScale,
+  resizeTimeScale,
+  type TimeScale,
+  type TimeScaleOptions,
+  type TimeScaleTick,
+  zoomTimeScale,
+} from './time-scale';
 export {
-  getLogicalIndexAtTimestamp,
-  getTimestampAtLogicalIndex,
-  hitTestChartDrawing,
-  selectChartDrawingsWithinArea,
-  updateChartDrawing,
-  type ChartDrawingHit,
-  type ChartDrawingSelectionArea,
-} from './drawing-geometry';
-export {
-  resolveChartDrawingMagnetMode,
-  snapChartDrawingPointToOhlc,
-  type ChartDrawingMagnetMode,
-} from './drawing-magnet';
-
-export {
-  createChart,
-  type ChartApi,
-  type ChartContextMenuRequest,
-  type ChartCommand,
-  type ChartPointerAdapterOptions,
-  type ChartDrawingEditPreview,
-  type ChartDrawingCreationGesture,
-  type ChartDrawingStyle,
-  type ChartEvent,
-  type ChartSnapshot,
-  type CreateChartOptions,
-} from './chart-api';
-
-export {
-  createChartObjectOrder,
-  moveChartObjectInOrder,
-  reconcileChartObjectOrder,
-  type ChartObjectKind,
-  type ChartObjectOrderAction,
-  type ChartObjectOrderItem,
-} from './chart-object-order';
+  type ChartViewport,
+  createChartViewport,
+  type NumericRange,
+  priceToVerticalCoordinate,
+  timeToHorizontalCoordinate,
+} from './viewport';

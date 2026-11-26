@@ -1,22 +1,22 @@
+import type { ChartDrawingLineStyle } from '@openview/chart-engine';
 import { useCallback, useMemo, useRef, useState } from 'preact/hooks';
-import { DrawingToolCatalogMenu } from '../DrawingToolCatalogMenu';
-import {
-  DEFAULT_DRAWING_TOOL_PREFERENCES,
-  loadBrowserDrawingToolPreferences,
-  saveBrowserDrawingToolPreferences,
-  type DrawingToolPreferences,
-  type DrawingToolType,
-} from '../../drawings/drawing-tool-preferences';
 import {
   createDrawingStyleTemplate,
+  type DrawingStyleTemplate,
   loadBrowserDrawingStyleTemplates,
   saveBrowserDrawingStyleTemplates,
-  type DrawingStyleTemplate,
 } from '../../drawings/drawing-style-templates';
-import type { ChartDrawingLineStyle } from '@openview/chart-engine';
+import {
+  DEFAULT_DRAWING_TOOL_PREFERENCES,
+  type DrawingToolPreferences,
+  type DrawingToolType,
+  loadBrowserDrawingToolPreferences,
+  saveBrowserDrawingToolPreferences,
+} from '../../drawings/drawing-tool-preferences';
+import { DrawingToolCatalogMenu } from '../DrawingToolCatalogMenu';
 
 const isDrawingTool = (tool: string): tool is DrawingToolType =>
-  Object.prototype.hasOwnProperty.call(DEFAULT_DRAWING_TOOL_PREFERENCES, tool);
+  Object.hasOwn(DEFAULT_DRAWING_TOOL_PREFERENCES, tool);
 
 export function DrawingPlayground() {
   const [activeTool, setActiveTool] = useState<DrawingToolType>('trend-line');

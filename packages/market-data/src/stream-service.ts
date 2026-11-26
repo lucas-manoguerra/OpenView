@@ -7,7 +7,7 @@ import type {
   QuoteStreamHandlers,
 } from './contracts';
 import { MarketDataProviderError } from './errors';
-import { MarketDataProviderRegistry } from './registry';
+import type { MarketDataProviderRegistry } from './registry';
 
 export class MarketDataStreamService {
   private readonly registry: MarketDataProviderRegistry;

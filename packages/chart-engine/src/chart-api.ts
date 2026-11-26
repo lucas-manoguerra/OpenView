@@ -1,41 +1,41 @@
 import {
-  createChartObjectOrder,
-  moveChartObjectInOrder,
-  reconcileChartObjectOrder,
-  type ChartObjectOrderAction,
-  type ChartObjectOrderItem,
-} from './chart-object-order';
-import type { ChartCoordinate, ChartDataPoint } from './chart-frame';
+  type ChartDrawingSelectionPreview,
+  type ChartRenderDrawing,
+  type ChartRenderScene,
+  updateChartRenderScene,
+} from './canvas-painter';
 import {
   attachCanvasPointerEvents,
   type CanvasPointerAdapter,
   type CanvasPointerAdapterOptions,
 } from './canvas-pointer-adapter';
 import {
-  createChartInteractionController,
+  type CanvasRenderer,
+  type CanvasRendererOptions,
+  type CanvasSurface,
+  createCanvasRenderer,
+} from './canvas-renderer';
+import type { ChartCoordinate, ChartDataPoint } from './chart-frame';
+import {
   type ChartInteractionOptions,
   type ChartInteractionSnapshot,
+  createChartInteractionController,
 } from './chart-interaction';
 import {
+  type ChartObjectOrderAction,
+  type ChartObjectOrderItem,
+  createChartObjectOrder,
+  moveChartObjectInOrder,
+  reconcileChartObjectOrder,
+} from './chart-object-order';
+import {
+  type ChartDrawingHit,
+  type ChartDrawingSelectionArea,
   getTimestampAtLogicalIndex,
   hitTestChartDrawing,
   selectChartDrawingsWithinArea,
   updateChartDrawing,
-  type ChartDrawingHit,
-  type ChartDrawingSelectionArea,
 } from './drawing-geometry';
-import {
-  updateChartRenderScene,
-  type ChartDrawingSelectionPreview,
-  type ChartRenderDrawing,
-  type ChartRenderScene,
-} from './canvas-painter';
-import {
-  createCanvasRenderer,
-  type CanvasRenderer,
-  type CanvasRendererOptions,
-  type CanvasSurface,
-} from './canvas-renderer';
 
 export type ChartContextMenuRequest = Readonly<{
   point: ChartCoordinate;

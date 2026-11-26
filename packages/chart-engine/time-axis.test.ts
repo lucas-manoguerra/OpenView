@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { createTimeScale } from './src/time-scale';
 import {
   createTimeAxisData,
   formatTimeAxisLabel,
@@ -8,6 +7,7 @@ import {
   type TimeAxisPoint,
   type TimeAxisTick,
 } from './src/time-axis';
+import { createTimeScale } from './src/time-scale';
 
 const MINUTE = 60_000;
 const createPoints = (

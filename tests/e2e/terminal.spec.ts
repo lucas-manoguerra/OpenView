@@ -1,4 +1,4 @@
-import { expect, test, type Page, type WebSocketRoute } from '@playwright/test';
+import { expect, type Page, test, type WebSocketRoute } from '@playwright/test';
 
 const BINANCE_KLINES_URL = 'https://data-api.binance.vision/api/v3/klines**';
 
@@ -2509,6 +2509,13 @@ test('selects drawings with Control and moves and deletes the group together', a
 });
 
 test('saves and reapplies custom drawing style templates across reloads', async ({ page }) => {
+  await page.addInitScript(() => {
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith('openview.terminal.drawings')) {
+        localStorage.removeItem(key);
+      }
+    }
+  });
   await page.goto('/');
   await expect
     .poll(async () =>
@@ -2834,4 +2841,10 @@ test('opens the terminal context menu on right-click and closes it with Escape',
 
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('chart-context-menu')).toHaveCount(0);
+});
+
+test('redirects unauthenticated visitors away from the private dashboard', async ({ page }) => {
+  await page.goto('/dashboard');
+
+  await expect(page).toHaveURL(/\/login$/);
 });

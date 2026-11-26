@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import { createInstrumentId } from '@openview/market-domain';
+import { describe, expect, it } from 'vitest';
 import {
   createMarketInstrument,
   normalizeMarketInstruments,

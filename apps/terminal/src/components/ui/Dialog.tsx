@@ -1,5 +1,5 @@
-import { useId, useRef, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
+import { useId, useRef, useState } from 'preact/hooks';
 
 export type DialogProps = {
   triggerLabel: string;

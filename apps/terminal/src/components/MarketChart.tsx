@@ -1,33 +1,36 @@
-import { useCallback, useRef, useState } from 'preact/hooks';
-import { createInstrumentId, type Candle, type InstrumentId } from '@openview/market-domain';
+import type { ChartRenderDrawing } from '@openview/chart-engine';
 import {
   BinanceSpotMarketDataProvider,
   BybitSpotMarketDataProvider,
+  type CandleInterval,
+  getNextCandleTimestamp,
   HistoricalCandleService,
   MarketDataProviderRegistry,
   MarketDataStreamService,
-  MarketInstrumentDiscoveryService,
-  getNextCandleTimestamp,
-  OkxSpotMarketDataProvider,
-  type CandleInterval,
   type MarketDataStreamState,
   type MarketDataSubscription,
+  MarketInstrumentDiscoveryService,
+  OkxSpotMarketDataProvider,
   type QuoteUpdate,
 } from '@openview/market-data';
+import { type Candle, createInstrumentId, type InstrumentId } from '@openview/market-domain';
+import { useCallback, useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { createBrowserDrawingRepository } from '../drawings/drawing-repository';
+import { DrawingPersistenceCoordinator } from '../drawings/drawing-persistence-coordinator';
+import {
+  createWatchlistInstrument,
+  DEFAULT_WATCHLIST,
+  loadBrowserWatchlistPreferences,
+  MAX_WATCHLIST_INSTRUMENTS,
+  saveBrowserWatchlistPreferences,
+  type WatchlistInstrument,
+} from '../watchlist/watchlist-preferences';
+import { ChartCanvas } from './ChartCanvas';
 import {
   MarketWatchlist,
   type ProviderInstrumentSearchResult,
   type SearchCatalogFailure,
 } from './MarketWatchlist';
-import {
-  DEFAULT_WATCHLIST,
-  MAX_WATCHLIST_INSTRUMENTS,
-  createWatchlistInstrument,
-  loadBrowserWatchlistPreferences,
-  saveBrowserWatchlistPreferences,
-  type WatchlistInstrument,
-} from '../watchlist/watchlist-preferences';
-import { ChartCanvas } from './ChartCanvas';
 import { TimeframeSelector } from './ui';
 
 const DEFAULT_PROVIDER_ID = 'binance-spot';
@@ -184,6 +187,70 @@ export function MarketChart() {
   const hasMoreHistoryRef = useRef(true);
   const candlesRef = useRef(candles);
   candlesRef.current = candles;
+  const drawingCoordinatorRef = useRef<DrawingPersistenceCoordinator | null>(null);
+  if (drawingCoordinatorRef.current === null) {
+    const repository = createBrowserDrawingRepository();
+    if (repository !== null) {
+      drawingCoordinatorRef.current = new DrawingPersistenceCoordinator(repository);
+    }
+  }
+  const [restoredDrawings, setRestoredDrawings] = useState<readonly ChartRenderDrawing[]>([]);
+  const [drawingPersistenceError, setDrawingPersistenceError] = useState<string | null>(null);
+  const [drawingWorkspaceToken, setDrawingWorkspaceToken] = useState<number | null>(null);
+  const drawingWorkspaceTokenRef = useRef<number | null>(null);
+  const drawingLoadRequestRef = useRef(0);
+  drawingWorkspaceTokenRef.current = drawingWorkspaceToken;
+
+  useLayoutEffect(() => {
+    const requestId = drawingLoadRequestRef.current + 1;
+    drawingLoadRequestRef.current = requestId;
+    drawingWorkspaceTokenRef.current = null;
+    setDrawingWorkspaceToken(null);
+    setRestoredDrawings([]);
+    setDrawingPersistenceError(null);
+
+    const coordinator = drawingCoordinatorRef.current;
+    if (coordinator === null) return;
+
+    const scope = {
+      owner: { kind: 'anonymous' as const, id: 'local-browser' },
+      instrumentId: `${providerId}:${selectedInstrumentId}`,
+      timeframe: interval,
+    };
+
+    let active = true;
+    void coordinator
+      .activate(scope)
+      .then((workspace) => {
+        if (!active || requestId !== drawingLoadRequestRef.current) return;
+        drawingWorkspaceTokenRef.current = workspace.token;
+        setDrawingWorkspaceToken(workspace.token);
+        setRestoredDrawings(workspace.drawings);
+      })
+      .catch((cause: unknown) => {
+        if (!active || requestId !== drawingLoadRequestRef.current) return;
+        setDrawingPersistenceError(
+          cause instanceof Error ? cause.message : 'No se pudieron restaurar los dibujos locales.',
+        );
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [interval, providerId, selectedInstrumentId]);
+
+  const handleDrawingsChange = useCallback((drawings: readonly ChartRenderDrawing[]): void => {
+    const coordinator = drawingCoordinatorRef.current;
+    const token = drawingWorkspaceTokenRef.current;
+    if (coordinator === null || token === null) return;
+    void coordinator.persist(token, drawings).then(
+      () => setDrawingPersistenceError(null),
+      (cause: unknown) =>
+        setDrawingPersistenceError(
+          cause instanceof Error ? cause.message : 'No se pudieron guardar los dibujos localmente.',
+        ),
+    );
+  }, []);
 
   const recoverHistoricalRange = async (
     requestId: number,
@@ -1143,6 +1210,9 @@ export function MarketChart() {
             </div>
           </section>
           <ChartCanvas
+            drawingContextKey={`${providerId}:${selectedInstrumentId}:${interval}`}
+            restoredDrawings={restoredDrawings}
+            onDrawingsChange={handleDrawingsChange}
             candles={candles}
             priceIncrement={selectedMarketInstrument?.priceIncrement ?? null}
             symbol={selectedInstrument.chartSymbol}
@@ -1152,6 +1222,15 @@ export function MarketChart() {
             onRetry={() => void loadCandles(providerId, interval, selectedInstrumentId)}
             onNeedMoreHistory={() => void loadOlderCandles()}
           />
+          {drawingPersistenceError !== null && (
+            <div
+              role="status"
+              data-testid="drawing-persistence-error"
+              class="rounded-lg border border-rose-400/20 bg-rose-400/5 px-3 py-2 text-[11px] text-rose-200"
+            >
+              No se pudo guardar un cambio de dibujo: {drawingPersistenceError}
+            </div>
+          )}
           {(olderLoading || olderError !== null) && (
             <div
               class="flex items-center justify-end gap-2 px-1 text-[11px] text-slate-500"

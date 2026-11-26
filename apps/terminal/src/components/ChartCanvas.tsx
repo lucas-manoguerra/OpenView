@@ -1,69 +1,69 @@
-import { useCallback, useMemo, useRef, useState } from 'preact/hooks';
-import type { Candle } from '@openview/market-domain';
+import {
+  attachCanvasResizeObserver,
+  type CanvasDrawingEditGesture,
+  type CanvasDrawingGesture,
+  type CanvasDrawingGroupEditGesture,
+  type CanvasDrawingNudgeDirection,
+  type CanvasDrawingTool,
+  type CanvasResize,
+  type CanvasResizeAdapter,
+  type ChartApi,
+  type ChartContextMenuRequest,
+  type ChartDrawingHit,
+  type ChartDrawingMagnetMode,
+  type ChartDrawingStyle,
+  type ChartIndicatorSeries,
+  type ChartInteractionSnapshot,
+  type ChartRenderCandle,
+  type ChartRenderDrawing,
+  type ChartRenderScene,
+  type ChartType,
+  calculateExponentialMovingAverage,
+  calculateSimpleMovingAverage,
+  countAppendedBars,
+  createChart,
+  createChartFrame,
+  createChartRenderScene,
+  getRightOffsetAfterDataUpdate,
+  type NumericRange,
+  type PriceScaleMode,
+  updateChartRenderScene,
+} from '@openview/chart-engine';
 import type { CandleInterval } from '@openview/market-data';
-import { ChartTypeSelector, PriceScaleSelector, type ChartControlOption } from './ui';
-import { DrawingToolCatalogMenu } from './DrawingToolCatalogMenu';
-import { DrawingPropertiesPanel } from './drawings/DrawingPropertiesPanel';
-import { DrawingCoordinatesPanel } from './drawings/DrawingCoordinatesPanel';
+import type { Candle } from '@openview/market-domain';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import {
   DEFAULT_DRAWING_INTERACTION_PREFERENCES,
   loadBrowserDrawingInteractionPreferences,
   saveBrowserDrawingInteractionPreferences,
 } from '../drawings/drawing-interaction-preferences';
 import {
-  MAX_CUSTOM_DRAWING_TEMPLATES,
-  createDrawingStyleTemplate,
-  loadBrowserDrawingStyleTemplates,
-  saveBrowserDrawingStyleTemplates,
-  type DrawingStyleTemplate,
-} from '../drawings/drawing-style-templates';
-import {
-  DEFAULT_DRAWING_TOOL_PREFERENCES,
-  loadBrowserDrawingToolPreferences,
-  saveBrowserDrawingToolPreferences,
-  type DrawingToolPreferences,
-  type DrawingToolType,
-} from '../drawings/drawing-tool-preferences';
-import {
   DEFAULT_DRAWING_PANEL_LAYOUT,
-  loadBrowserDrawingPanelLayout,
-  saveBrowserDrawingPanelLayout,
-  startDrawingPanelDrag,
   type DrawingPanelId,
   type DrawingPanelLayout,
   type DrawingPanelPosition,
+  loadBrowserDrawingPanelLayout,
+  saveBrowserDrawingPanelLayout,
+  startDrawingPanelDrag,
 } from '../drawings/drawing-panel-layout';
 import {
-  type CanvasDrawingEditGesture,
-  type ChartDrawingHit,
-  type CanvasDrawingGroupEditGesture,
-  type CanvasDrawingGesture,
-  type CanvasDrawingTool,
-  attachCanvasResizeObserver,
-  createChartFrame,
-  createChartRenderScene,
-  createChart,
-  type ChartApi,
-  type ChartContextMenuRequest,
-  type ChartDrawingStyle,
-  calculateExponentialMovingAverage,
-  calculateSimpleMovingAverage,
-  countAppendedBars,
-  getRightOffsetAfterDataUpdate,
-  updateChartRenderScene,
-  type CanvasResize,
-  type CanvasResizeAdapter,
-  type ChartInteractionSnapshot,
-  type ChartRenderCandle,
-  type ChartRenderScene,
-  type ChartType,
-  type ChartIndicatorSeries,
-  type ChartRenderDrawing,
-  type ChartDrawingMagnetMode,
-  type CanvasDrawingNudgeDirection,
-  type NumericRange,
-  type PriceScaleMode,
-} from '@openview/chart-engine';
+  createDrawingStyleTemplate,
+  type DrawingStyleTemplate,
+  loadBrowserDrawingStyleTemplates,
+  MAX_CUSTOM_DRAWING_TEMPLATES,
+  saveBrowserDrawingStyleTemplates,
+} from '../drawings/drawing-style-templates';
+import {
+  DEFAULT_DRAWING_TOOL_PREFERENCES,
+  type DrawingToolPreferences,
+  type DrawingToolType,
+  loadBrowserDrawingToolPreferences,
+  saveBrowserDrawingToolPreferences,
+} from '../drawings/drawing-tool-preferences';
+import { DrawingToolCatalogMenu } from './DrawingToolCatalogMenu';
+import { DrawingCoordinatesPanel } from './drawings/DrawingCoordinatesPanel';
+import { DrawingPropertiesPanel } from './drawings/DrawingPropertiesPanel';
+import { type ChartControlOption, ChartTypeSelector, PriceScaleSelector } from './ui';
 
 type ChartCanvasProps = Readonly<{
   candles: readonly Candle[];
@@ -75,6 +75,9 @@ type ChartCanvasProps = Readonly<{
   onRetry: () => void;
   onNeedMoreHistory: () => void;
   onContextMenuRequest?: (request: ChartContextMenuRequest) => void;
+  onDrawingsChange?: (drawings: readonly ChartRenderDrawing[]) => void;
+  drawingContextKey: string;
+  restoredDrawings: readonly ChartRenderDrawing[];
 }>;
 
 type ChartRuntime = Readonly<{
@@ -312,14 +315,19 @@ export function ChartCanvas({
   onRetry,
   onNeedMoreHistory,
   onContextMenuRequest,
+  onDrawingsChange,
+  drawingContextKey,
+  restoredDrawings,
 }: ChartCanvasProps) {
   const runtimeRef = useRef<ChartRuntime | null>(null);
   const onContextMenuRequestRef = useRef(onContextMenuRequest);
+  const onDrawingsChangeRef = useRef(onDrawingsChange);
   const rightOffsetInputRef = useRef<HTMLInputElement | null>(null);
   const [priceScaleMode, setPriceScaleMode] = useState<PriceScaleMode>('linear');
   const [chartType, setChartType] = useState<ChartType>('candles');
   const [activeIndicators, setActiveIndicators] = useState<readonly string[]>([]);
   onContextMenuRequestRef.current = onContextMenuRequest;
+  onDrawingsChangeRef.current = onDrawingsChange;
   const [drawingTool, setDrawingTool] = useState<CanvasDrawingTool>('cursor');
   const [controlKeyPressed, setControlKeyPressed] = useState(false);
 
@@ -386,7 +394,7 @@ export function ChartCanvas({
   const drawingPropertiesPanelRef = useRef<HTMLDivElement | null>(null);
   const drawingCoordinatesPanelRef = useRef<HTMLElement | null>(null);
   const drawingPanelDragCleanupRef = useRef<(() => void) | null>(null);
-  const drawingSymbolRef = useRef(symbol);
+  const drawingSymbolRef = useRef(drawingContextKey);
   const autoScaleRef = useRef(autoScale);
   const priceScaleLockedRef = useRef(priceScaleLocked);
   priceScaleModeRef.current = priceScaleMode;
@@ -584,6 +592,7 @@ export function ChartCanvas({
           selectedDrawingIdRef.current = event.selectedDrawingId;
           selectedDrawingIdsRef.current = event.selectedDrawingIds;
           setDrawings(event.drawings);
+          onDrawingsChangeRef.current?.(event.drawings);
           setSelectedDrawingId(event.selectedDrawingId);
           setSelectedDrawingIds(event.selectedDrawingIds);
         });
@@ -941,13 +950,16 @@ export function ChartCanvas({
   const bindDataUpdate = useCallback(
     (element: HTMLSpanElement | null): void => {
       if (element !== null) {
-        if (drawingSymbolRef.current !== symbol) {
-          drawingSymbolRef.current = symbol;
+        if (drawingSymbolRef.current !== drawingContextKey) {
+          drawingSymbolRef.current = drawingContextKey;
           selectedDrawingIdRef.current = null;
           setSelectedDrawingId(null);
           selectedDrawingIdsRef.current = Object.freeze([]);
           setSelectedDrawingIds(selectedDrawingIdsRef.current);
           drawingsRef.current = Object.freeze([]);
+          renderableDrawingsRef.current = drawingsVisibleRef.current
+            ? drawingsRef.current.filter((drawing) => drawing.visible !== false)
+            : [];
           setDrawings(drawingsRef.current);
           setDrawingUndoCount(0);
           setDrawingRedoCount(0);
@@ -958,8 +970,22 @@ export function ChartCanvas({
         runtimeRef.current?.updateCandles(renderDataRef.current.candles, priceScaleMode);
       }
     },
-    [renderCandles, priceScaleMode, symbol],
+    [renderCandles, priceScaleMode, drawingContextKey],
   );
+
+  useLayoutEffect(() => {
+    drawingsRef.current = restoredDrawings;
+    renderableDrawingsRef.current = drawingsVisibleRef.current
+      ? restoredDrawings.filter((drawing) => drawing.visible !== false)
+      : [];
+    selectedDrawingIdRef.current = null;
+    selectedDrawingIdsRef.current = Object.freeze([]);
+    setSelectedDrawingId(null);
+    setSelectedDrawingIds(selectedDrawingIdsRef.current);
+    setDrawings(restoredDrawings);
+    runtimeRef.current?.setDrawings(restoredDrawings);
+    runtimeRef.current?.clearDrawingHistory();
+  }, [restoredDrawings]);
 
   const bindIndicatorsUpdate = useCallback(
     (element: HTMLSpanElement | null): void => {

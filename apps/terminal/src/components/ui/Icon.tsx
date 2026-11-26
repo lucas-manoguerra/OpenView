@@ -17,6 +17,8 @@ import {
   LayoutGrid,
   List,
   Lock,
+  type LucideIcon,
+  type LucideProps,
   Maximize,
   Minus,
   MoreHorizontal,
@@ -37,8 +39,6 @@ import {
   X,
   ZoomIn,
   ZoomOut,
-  type LucideIcon,
-  type LucideProps,
 } from 'lucide-preact';
 
 export const iconRegistry = {

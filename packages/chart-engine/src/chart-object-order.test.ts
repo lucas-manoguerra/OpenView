@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  type ChartObjectOrderItem,
   createChartObjectOrder,
   moveChartObjectInOrder,
   reconcileChartObjectOrder,
-  type ChartObjectOrderItem,
 } from './chart-object-order';
 
 const objects = [

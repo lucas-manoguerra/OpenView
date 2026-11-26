@@ -1,6 +1,6 @@
 import type { APIContext } from 'astro';
-import { createServerClient } from '../../lib/supabase/server';
 import { getSafeRedirectPath } from '../../lib/supabase/safe-redirect';
+import { createServerClient } from '../../lib/supabase/server';
 
 export async function GET(context: APIContext) {
   const requestUrl = new URL(context.request.url);

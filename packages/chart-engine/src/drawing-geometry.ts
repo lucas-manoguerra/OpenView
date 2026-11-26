@@ -1,5 +1,5 @@
-import type { ChartCoordinate, ChartDataPoint, ChartFrame } from './chart-frame';
 import type { ChartRenderCandle, ChartRenderDrawing } from './canvas-painter';
+import type { ChartCoordinate, ChartDataPoint, ChartFrame } from './chart-frame';
 import { priceToCoordinate } from './price-scale';
 import { logicalIndexToCoordinate } from './time-scale';
 

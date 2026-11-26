@@ -1,10 +1,10 @@
-import { useState } from 'preact/hooks';
 import type { ChartRenderDrawing } from '@openview/chart-engine';
-import { DrawingPropertiesPanel } from '../drawings/DrawingPropertiesPanel';
+import { useState } from 'preact/hooks';
 import {
   createDrawingStyleTemplate,
   type DrawingStyleTemplate,
 } from '../../drawings/drawing-style-templates';
+import { DrawingPropertiesPanel } from '../drawings/DrawingPropertiesPanel';
 
 const DEFAULT_DRAWING: ChartRenderDrawing = {
   id: 'component-lab-trend-line',

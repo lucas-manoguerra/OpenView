@@ -1,5 +1,5 @@
 import type { APIContext } from 'astro';
-import { isPublicRoute, getAuthenticatedUser } from '../../lib/supabase/middleware';
+import { getAuthenticatedUser, isPublicRoute } from '../../lib/supabase/middleware';
 
 export interface UserSessionProps {
   user: { sub: string; email?: string } | null;

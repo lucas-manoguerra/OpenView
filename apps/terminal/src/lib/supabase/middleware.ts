@@ -1,22 +1,18 @@
 import type { APIContext } from 'astro';
 import { createServerClient } from './server';
 
-export const PUBLIC_ROUTES = [
-  '/login',
-  '/component-lab',
-  '/register',
-  '/auth/callback',
-  '/auth/signout',
-  '/forgot-password',
-  '/reset-password',
-];
+export const PUBLIC_ROUTES = ['/login', '/component-lab', '/auth/callback'];
 
 export function isPublicRoute(pathname: string): boolean {
   if (pathname === '/') {
     return true;
   }
 
-  return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+  return PUBLIC_ROUTES.some((route) =>
+    route === '/auth/callback'
+      ? pathname === route
+      : pathname === route || pathname.startsWith(`${route}/`),
+  );
 }
 
 export function hasSupabaseAuthCookie(cookieHeader: string | null): boolean {
@@ -38,7 +34,8 @@ export async function getAuthenticatedUser(context: APIContext, responseHeaders:
   }
 
   const supabase = createServerClient(context, responseHeaders);
-  const { data: claims, error } = await supabase.auth.getClaims();
+  const { data, error } = await supabase.auth.getClaims();
+  const claims = data?.claims;
 
   if (error || !claims) {
     return { supabase, user: null, error };
