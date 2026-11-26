@@ -89,15 +89,17 @@ describe('chart public API', () => {
   it('owns pointer adapter attachment, cancellation, and cleanup', () => {
     const { surface } = createSurface();
     const listeners = new Map<string, EventListener>();
+    const addEventListener = vi.fn((type: string, listener: EventListener) => {
+      listeners.set(type, listener);
+    });
+    const removeEventListener = vi.fn((type: string) => {
+      listeners.delete(type);
+    });
     const canvas = {
       dataset: {},
       style: {},
-      addEventListener: vi.fn((type: string, listener: EventListener) => {
-        listeners.set(type, listener);
-      }),
-      removeEventListener: vi.fn((type: string) => {
-        listeners.delete(type);
-      }),
+      addEventListener,
+      removeEventListener,
       getBoundingClientRect: () =>
         ({
           left: 0,
@@ -122,11 +124,11 @@ describe('chart public API', () => {
     const controller = createChartInteractionController(createScene().frame);
 
     chart.attachPointerEvents(canvas, controller);
-    expect(canvas.addEventListener).toHaveBeenCalledTimes(9);
+    expect(addEventListener).toHaveBeenCalledTimes(9);
     chart.cancelDrawingCreation();
     chart.destroy();
 
-    expect(canvas.removeEventListener).toHaveBeenCalledTimes(9);
+    expect(removeEventListener).toHaveBeenCalledTimes(9);
     expect(listeners.size).toBe(0);
   });
 
