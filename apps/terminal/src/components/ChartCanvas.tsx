@@ -805,6 +805,7 @@ export function ChartCanvas({
             setDrawingTool('cursor');
           },
         });
+        pointerAdapterRef.current = pointerAdapter;
       } else {
         controller.setFrame(frame);
         if (autoScaleRef.current) {
