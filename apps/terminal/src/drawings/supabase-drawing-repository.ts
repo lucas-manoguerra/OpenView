@@ -13,17 +13,17 @@ type DrawingRow = Database['public']['Tables']['chart_drawings']['Row'];
 type DrawingInsert = Database['public']['Tables']['chart_drawings']['Insert'];
 type DrawingUpdate = Database['public']['Tables']['chart_drawings']['Update'];
 
-type SupabaseError = Readonly<{
+export type SupabaseError = Readonly<{
   code?: string;
   message: string;
 }>;
 
-type SupabaseResult<T> = Readonly<{
+export type SupabaseResult<T> = Readonly<{
   data: T | null;
   error: SupabaseError | null;
 }>;
 
-interface SupabaseDrawingQuery<Row> extends PromiseLike<SupabaseResult<readonly Row[]>> {
+export interface SupabaseDrawingQuery<Row> extends PromiseLike<SupabaseResult<readonly Row[]>> {
   select(columns?: string): SupabaseDrawingQuery<Row>;
   insert(values: DrawingInsert): SupabaseDrawingQuery<Row>;
   update(values: DrawingUpdate): SupabaseDrawingQuery<Row>;
