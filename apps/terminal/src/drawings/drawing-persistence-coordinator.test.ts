@@ -105,9 +105,7 @@ describe('drawing persistence coordinator', () => {
     await coordinator.persist(workspace.token, [chartDrawing('drawing-2')]);
 
     expect([...repository.rows.values()].map((row) => row.drawingId)).toEqual(['drawing-2']);
-    expect(repository.operations).toContain(
-      'delete:' + scope.instrumentId + ':drawing-1',
-    );
+    expect(repository.operations).toContain('delete:' + scope.instrumentId + ':drawing-1');
   });
 
   it('waits for queued writes before reloading a workspace', async () => {
@@ -163,9 +161,7 @@ describe('drawing persistence coordinator', () => {
     await coordinator.persist(second.token, [chartDrawing('current')]);
 
     expect([...repository.rows.values()].map((row) => row.drawingId)).toEqual(['current']);
-    expect(repository.operations).toEqual([
-      'save:' + secondScope.instrumentId + ':current',
-    ]);
+    expect(repository.operations).toEqual(['save:' + secondScope.instrumentId + ':current']);
   });
 
   it('ignores an older asynchronous load that resolves after a newer workspace', async () => {
@@ -193,6 +189,8 @@ describe('drawing persistence coordinator', () => {
     const first = await firstLoad;
     expect(first.drawings).toEqual([]);
     expect(secondLoad.drawings).toEqual([]);
-    await expect(coordinator.persist(first.token, [chartDrawing('stale')])).resolves.toBeUndefined();
+    await expect(
+      coordinator.persist(first.token, [chartDrawing('stale')]),
+    ).resolves.toBeUndefined();
   });
 });
