@@ -145,9 +145,7 @@ const createDrawingFromGesture = (
 ): ChartRenderDrawing | null => {
   const startTimestamp = getTimestampAtLogicalIndex(gesture.start.logicalIndex, candles);
   const endTimestamp =
-    gesture.end === null
-      ? null
-      : getTimestampAtLogicalIndex(gesture.end.logicalIndex, candles);
+    gesture.end === null ? null : getTimestampAtLogicalIndex(gesture.end.logicalIndex, candles);
 
   if (
     startTimestamp === null ||
