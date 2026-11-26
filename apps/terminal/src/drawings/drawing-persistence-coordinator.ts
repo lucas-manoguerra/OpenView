@@ -72,7 +72,11 @@ export class DrawingPersistenceCoordinator {
 
       for (const [drawingId, existing] of current) {
         if (nextIds.has(drawingId)) continue;
-        await this.repository.delete(workspace.scope, drawingId, existing.revision);
+        await this.repository.delete(
+          { ...workspace.scope, timeframe: existing.timeframeScope },
+          drawingId,
+          existing.revision,
+        );
         workspace.persisted.delete(drawingId);
       }
 
@@ -81,8 +85,11 @@ export class DrawingPersistenceCoordinator {
         const existing = current.get(drawing.id);
         if (existing !== undefined && sameDrawing(existing, input)) continue;
 
+        const saveScope = existing === undefined
+          ? workspace.scope
+          : { ...workspace.scope, timeframe: existing.timeframeScope };
         const saved = await this.repository.save(
-          workspace.scope,
+          saveScope,
           input,
           existing?.revision ?? null,
         );
