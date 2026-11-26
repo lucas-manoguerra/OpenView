@@ -2835,3 +2835,11 @@ test('opens the terminal context menu on right-click and closes it with Escape',
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('chart-context-menu')).toHaveCount(0);
 });
+
+
+test('redirects unauthenticated visitors away from the private dashboard', async ({ page }) => {
+  await page.goto('/dashboard');
+
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByRole('heading', { name: 'Iniciar sesión en OpenView' })).toBeVisible();
+});
