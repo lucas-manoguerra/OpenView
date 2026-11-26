@@ -1,3 +1,4 @@
+export { getNextCandleTimestamp } from './candle-continuity';
 export type {
   CandleInterval,
   CandleStreamHandlers,
@@ -6,38 +7,33 @@ export type {
   DataRedistribution,
   HistoricalCandleRequest,
   InstrumentDiscoveryFilter,
-  MarketInstrument,
   MarketDataCapabilities,
   MarketDataProvider,
   MarketDataStreamState,
   MarketDataSubscription,
+  MarketInstrument,
   QuoteStreamHandlers,
   QuoteUpdate,
 } from './contracts';
-
 export { MarketDataProviderError } from './errors';
-export { getNextCandleTimestamp } from './candle-continuity';
-export { MarketDataProviderRegistry } from './registry';
-export {
-  DEFAULT_INSTRUMENT_CATALOG_CACHE_TTL_MS,
-  MarketInstrumentDiscoveryService,
-  type MarketInstrumentDiscoveryBatch,
-  type MarketInstrumentDiscoveryServiceOptions,
-  type MarketInstrumentProviderCatalog,
-  type MarketInstrumentProviderFailure,
-} from './instrument-service';
-export { MarketDataStreamService } from './stream-service';
 export {
   HistoricalCandleService,
   type HistoricalDataSource,
 } from './history-service';
+export {
+  DEFAULT_INSTRUMENT_CATALOG_CACHE_TTL_MS,
+  type MarketInstrumentDiscoveryBatch,
+  MarketInstrumentDiscoveryService,
+  type MarketInstrumentDiscoveryServiceOptions,
+  type MarketInstrumentProviderCatalog,
+  type MarketInstrumentProviderFailure,
+} from './instrument-service';
 export {
   BinanceSpotMarketDataProvider,
   type BinanceSpotProviderOptions,
   type BinanceWebSocketConnection,
   type BinanceWebSocketFactory,
 } from './providers/binance-spot';
-
 export {
   BybitSpotMarketDataProvider,
   type BybitSpotProviderOptions,
@@ -50,3 +46,5 @@ export {
   type OkxWebSocketConnection,
   type OkxWebSocketFactory,
 } from './providers/okx-spot';
+export { MarketDataProviderRegistry } from './registry';
+export { MarketDataStreamService } from './stream-service';

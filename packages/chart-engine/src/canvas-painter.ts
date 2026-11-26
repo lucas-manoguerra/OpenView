@@ -1,20 +1,20 @@
-import { createCandle, type Candle } from '@openview/market-domain';
+import { type Candle, createCandle } from '@openview/market-domain';
+import type { ChartCoordinate, ChartFrame } from './chart-frame';
+import {
+  type ChartObjectOrderItem,
+  createChartObjectOrder,
+  reconcileChartObjectOrder,
+} from './chart-object-order';
+import { getLogicalIndexAtTimestamp } from './drawing-geometry';
+import type { MovingAveragePoint } from './indicators';
 import { generatePriceTicks, priceToCoordinate } from './price-scale';
-import { logicalIndexToCoordinate } from './time-scale';
 import {
   createTimeAxisData,
   generateTimeAxisTicks,
   selectNonOverlappingTimeAxisTicks,
   type TimeAxisData,
 } from './time-axis';
-import type { ChartCoordinate, ChartFrame } from './chart-frame';
-import type { MovingAveragePoint } from './indicators';
-import { getLogicalIndexAtTimestamp } from './drawing-geometry';
-import {
-  createChartObjectOrder,
-  reconcileChartObjectOrder,
-  type ChartObjectOrderItem,
-} from './chart-object-order';
+import { logicalIndexToCoordinate } from './time-scale';
 
 export type ChartRenderCandle = Candle &
   Readonly<{

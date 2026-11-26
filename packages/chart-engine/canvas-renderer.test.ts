@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { createChartFrame } from './src/chart-frame';
-import { createChartRenderScene, type ChartRenderCandle } from './src/canvas-painter';
+import { type ChartRenderCandle, createChartRenderScene } from './src/canvas-painter';
 import {
-  createCanvasRenderer,
   type CanvasFrameScheduler,
   type CanvasSurface,
+  createCanvasRenderer,
 } from './src/canvas-renderer';
+import { createChartFrame } from './src/chart-frame';
 
 type RecordedCall = Readonly<{
   name: string;

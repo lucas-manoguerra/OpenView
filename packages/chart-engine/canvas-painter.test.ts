@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { createChartFrame, dataPointToChartCoordinate } from './src/chart-frame';
 import {
-  createChartRenderScene,
-  updateChartRenderScene,
-  DEFAULT_CHART_THEME,
-  drawChartScene,
   type ChartRenderCandle,
   type ChartRenderDrawing,
+  createChartRenderScene,
+  DEFAULT_CHART_THEME,
+  drawChartScene,
+  updateChartRenderScene,
 } from './src/canvas-painter';
+import { createChartFrame, dataPointToChartCoordinate } from './src/chart-frame';
 
 type RecordedCall = Readonly<{
   name: string;

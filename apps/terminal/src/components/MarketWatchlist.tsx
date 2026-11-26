@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useRef, useState } from 'preact/hooks';
 import type { QuoteUpdate } from '@openview/market-data';
+import { useCallback, useMemo, useRef, useState } from 'preact/hooks';
 import {
   MAX_WATCHLIST_INSTRUMENTS,
   type WatchlistInstrument,

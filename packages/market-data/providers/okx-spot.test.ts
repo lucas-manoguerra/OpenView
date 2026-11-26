@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createInstrumentId } from '@openview/market-domain';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { OkxSpotMarketDataProvider, type OkxWebSocketConnection } from '../src/providers/okx-spot';
 
 const MINUTE = 60_000;

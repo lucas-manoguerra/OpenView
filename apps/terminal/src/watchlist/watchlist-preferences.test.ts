@@ -1,12 +1,12 @@
-import { describe, expect, it } from 'vitest';
 import { createInstrumentId } from '@openview/market-domain';
+import { describe, expect, it } from 'vitest';
 import {
-  DEFAULT_WATCHLIST,
-  WATCHLIST_CATALOG,
   createWatchlistInstrument,
+  DEFAULT_WATCHLIST,
   loadWatchlistPreferences,
   restoreWatchlistPreferences,
   saveWatchlistPreferences,
+  WATCHLIST_CATALOG,
   type WatchlistPreferences,
 } from './watchlist-preferences';
 

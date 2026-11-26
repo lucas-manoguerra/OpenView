@@ -1,33 +1,33 @@
-import { useCallback, useRef, useState } from 'preact/hooks';
-import { createInstrumentId, type Candle, type InstrumentId } from '@openview/market-domain';
 import {
   BinanceSpotMarketDataProvider,
   BybitSpotMarketDataProvider,
+  type CandleInterval,
+  getNextCandleTimestamp,
   HistoricalCandleService,
   MarketDataProviderRegistry,
   MarketDataStreamService,
-  MarketInstrumentDiscoveryService,
-  getNextCandleTimestamp,
-  OkxSpotMarketDataProvider,
-  type CandleInterval,
   type MarketDataStreamState,
   type MarketDataSubscription,
+  MarketInstrumentDiscoveryService,
+  OkxSpotMarketDataProvider,
   type QuoteUpdate,
 } from '@openview/market-data';
+import { type Candle, createInstrumentId, type InstrumentId } from '@openview/market-domain';
+import { useCallback, useRef, useState } from 'preact/hooks';
+import {
+  createWatchlistInstrument,
+  DEFAULT_WATCHLIST,
+  loadBrowserWatchlistPreferences,
+  MAX_WATCHLIST_INSTRUMENTS,
+  saveBrowserWatchlistPreferences,
+  type WatchlistInstrument,
+} from '../watchlist/watchlist-preferences';
+import { ChartCanvas } from './ChartCanvas';
 import {
   MarketWatchlist,
   type ProviderInstrumentSearchResult,
   type SearchCatalogFailure,
 } from './MarketWatchlist';
-import {
-  DEFAULT_WATCHLIST,
-  MAX_WATCHLIST_INSTRUMENTS,
-  createWatchlistInstrument,
-  loadBrowserWatchlistPreferences,
-  saveBrowserWatchlistPreferences,
-  type WatchlistInstrument,
-} from '../watchlist/watchlist-preferences';
-import { ChartCanvas } from './ChartCanvas';
 import { TimeframeSelector } from './ui';
 
 const DEFAULT_PROVIDER_ID = 'binance-spot';

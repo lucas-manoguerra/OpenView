@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { ChartRenderCandle, ChartRenderDrawing } from './src/canvas-painter';
 import { createChartFrame, dataPointToChartCoordinate } from './src/chart-frame';
 import {
   getLogicalIndexAtTimestamp,
@@ -7,7 +8,6 @@ import {
   selectChartDrawingsWithinArea,
   updateChartDrawing,
 } from './src/drawing-geometry';
-import type { ChartRenderCandle, ChartRenderDrawing } from './src/canvas-painter';
 
 const createCandles = (): readonly ChartRenderCandle[] =>
   Object.freeze([

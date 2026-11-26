@@ -1,10 +1,4 @@
 import { describe, expect, it, vi } from 'vitest';
-import {
-  chartCoordinateToDataPoint,
-  createChartFrame,
-  dataPointToChartCoordinate,
-} from './src/chart-frame';
-import { createChartInteractionController } from './src/chart-interaction';
 import type { ChartRenderCandle, ChartRenderDrawing } from './src/canvas-painter';
 import {
   attachCanvasPointerEvents,
@@ -13,6 +7,12 @@ import {
   type CanvasDrawingGroupEditGesture,
   type CanvasDrawingTool,
 } from './src/canvas-pointer-adapter';
+import {
+  chartCoordinateToDataPoint,
+  createChartFrame,
+  dataPointToChartCoordinate,
+} from './src/chart-frame';
+import { createChartInteractionController } from './src/chart-interaction';
 
 type Listener = EventListenerOrEventListenerObject;
 

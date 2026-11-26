@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  type DrawingRepositoryScope,
   DrawingRevisionConflictError,
   LocalStorageDrawingRepository,
-  type DrawingRepositoryScope,
 } from './drawing-repository';
 
 class MemoryStorage {

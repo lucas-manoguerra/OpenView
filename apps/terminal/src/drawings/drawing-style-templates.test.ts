@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { DRAWING_TOOL_TYPES } from './drawing-tool-preferences';
 import {
-  DEFAULT_DRAWING_STYLE_TEMPLATES,
-  MAX_CUSTOM_DRAWING_TEMPLATES,
   createDrawingStyleTemplate,
+  DEFAULT_DRAWING_STYLE_TEMPLATES,
   loadDrawingStyleTemplates,
+  MAX_CUSTOM_DRAWING_TEMPLATES,
   restoreDrawingStyleTemplates,
   saveDrawingStyleTemplates,
 } from './drawing-style-templates';
+import { DRAWING_TOOL_TYPES } from './drawing-tool-preferences';
 
 class MemoryStorage {
   readonly values = new Map<string, string>();

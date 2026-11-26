@@ -2,8 +2,8 @@ import { useMemo, useState } from 'preact/hooks';
 import {
   DRAWING_TOOL_CATALOG,
   DRAWING_TOOL_GROUPS,
-  getDrawingToolsByGroup,
   type DrawingToolGroup,
+  getDrawingToolsByGroup,
 } from '../drawings/drawing-tool-catalog';
 
 export type ImplementedDrawingToolId =

@@ -1,8 +1,8 @@
 import {
-  DEFAULT_CHART_THEME,
-  drawChartScene,
   type ChartRenderScene,
   type ChartRenderTheme,
+  DEFAULT_CHART_THEME,
+  drawChartScene,
 } from './canvas-painter';
 
 export type CanvasSurface = Readonly<{

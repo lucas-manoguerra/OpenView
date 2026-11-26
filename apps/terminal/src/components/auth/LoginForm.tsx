@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'preact/hooks';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from '../../lib/supabase/database.types';
+import { useMemo, useState } from 'preact/hooks';
 import { createClient } from '../../lib/supabase/client';
+import type { Database } from '../../lib/supabase/database.types';
 
 export function LoginForm() {
   const supabase: SupabaseClient<Database> = useMemo(() => createClient(), []);

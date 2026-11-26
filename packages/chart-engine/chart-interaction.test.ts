@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createChartFrame } from './src/chart-frame';
+import { createChartInteractionController } from './src/chart-interaction';
 import { priceToCoordinate } from './src/price-scale';
 import { coordinateToLogicalIndex, logicalIndexToCoordinate } from './src/time-scale';
-import { createChartInteractionController } from './src/chart-interaction';
 
 const createFrame = () =>
   createChartFrame(900, 500, { min: 90, max: 120 }, 99, {

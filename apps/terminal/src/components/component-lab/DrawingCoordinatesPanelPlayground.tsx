@@ -1,5 +1,5 @@
-import { useState } from 'preact/hooks';
 import type { ChartRenderDrawing } from '@openview/chart-engine';
+import { useState } from 'preact/hooks';
 import { DrawingCoordinatesPanel } from '../drawings/DrawingCoordinatesPanel';
 
 const INITIAL_DRAWING: ChartRenderDrawing = {

@@ -1,7 +1,7 @@
 import type { ChartCoordinate, ChartFrame } from './chart-frame';
 import { createPriceScale, panPriceScale, zoomPriceScale } from './price-scale';
-import type { NumericRange } from './viewport';
 import { createTimeScale, panTimeScale, zoomTimeScale } from './time-scale';
+import type { NumericRange } from './viewport';
 
 export type PointerPosition = Readonly<{
   x: number;

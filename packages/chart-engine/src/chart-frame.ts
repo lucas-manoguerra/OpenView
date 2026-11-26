@@ -1,9 +1,10 @@
+import { type ChartLayout, type ChartLayoutOptions, createChartLayout } from './layout';
 import {
   coordinateToPrice,
   createPriceScale,
-  priceToCoordinate,
   type PriceScale,
   type PriceScaleOptions,
+  priceToCoordinate,
 } from './price-scale';
 import {
   coordinateToLogicalIndex,
@@ -12,7 +13,6 @@ import {
   type TimeScale,
   type TimeScaleOptions,
 } from './time-scale';
-import { createChartLayout, type ChartLayout, type ChartLayoutOptions } from './layout';
 import type { NumericRange } from './viewport';
 
 export type ChartFrameOptions = Readonly<{

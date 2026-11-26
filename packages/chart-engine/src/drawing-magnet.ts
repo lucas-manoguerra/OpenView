@@ -1,5 +1,5 @@
-import type { ChartDataPoint, ChartFrame } from './chart-frame';
 import type { ChartIndicatorSeries, ChartRenderCandle } from './canvas-painter';
+import type { ChartDataPoint, ChartFrame } from './chart-frame';
 import { priceToCoordinate } from './price-scale';
 
 export type ChartDrawingMagnetMode = 'off' | 'weak' | 'strong';
@@ -180,9 +180,7 @@ export const snapChartDrawingPointToOhlc = (
         nearestCandidate = candidate;
         nearestDistance = candidateDistance;
       }
-    } catch {
-      continue;
-    }
+    } catch {}
   }
 
   if (nearestCandidate === null || (mode === 'weak' && nearestDistance > weakTolerance)) {

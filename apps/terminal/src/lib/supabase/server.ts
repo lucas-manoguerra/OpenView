@@ -1,6 +1,6 @@
-import type { APIContext } from 'astro';
-import type { SupabaseClient as SupabaseJsClient } from '@supabase/supabase-js';
 import { createServerClient as createSupabaseServerClient, parseCookieHeader } from '@supabase/ssr';
+import type { SupabaseClient as SupabaseJsClient } from '@supabase/supabase-js';
+import type { APIContext } from 'astro';
 import type { Database } from './database.types';
 
 export type ServerSupabaseClient = SupabaseJsClient<Database>;

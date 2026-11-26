@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import type { ChartIndicatorSeries, ChartRenderCandle } from './src/canvas-painter';
 import { createChartFrame } from './src/chart-frame';
 import { resolveChartDrawingMagnetMode, snapChartDrawingPointToOhlc } from './src/drawing-magnet';
-import type { ChartIndicatorSeries, ChartRenderCandle } from './src/canvas-painter';
 
 const candles: readonly ChartRenderCandle[] = Object.freeze([
   Object.freeze({

@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
 import { createInstrumentId } from '@openview/market-domain';
+import { describe, expect, it, vi } from 'vitest';
 import type { MarketDataProvider, MarketInstrument } from './src/contracts';
 import { MarketDataProviderError } from './src/errors';
 import { MarketInstrumentDiscoveryService } from './src/instrument-service';

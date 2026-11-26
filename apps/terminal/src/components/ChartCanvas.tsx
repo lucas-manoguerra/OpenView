@@ -1,69 +1,69 @@
-import { useCallback, useMemo, useRef, useState } from 'preact/hooks';
-import type { Candle } from '@openview/market-domain';
+import {
+  attachCanvasResizeObserver,
+  type CanvasDrawingEditGesture,
+  type CanvasDrawingGesture,
+  type CanvasDrawingGroupEditGesture,
+  type CanvasDrawingNudgeDirection,
+  type CanvasDrawingTool,
+  type CanvasResize,
+  type CanvasResizeAdapter,
+  type ChartApi,
+  type ChartContextMenuRequest,
+  type ChartDrawingHit,
+  type ChartDrawingMagnetMode,
+  type ChartDrawingStyle,
+  type ChartIndicatorSeries,
+  type ChartInteractionSnapshot,
+  type ChartRenderCandle,
+  type ChartRenderDrawing,
+  type ChartRenderScene,
+  type ChartType,
+  calculateExponentialMovingAverage,
+  calculateSimpleMovingAverage,
+  countAppendedBars,
+  createChart,
+  createChartFrame,
+  createChartRenderScene,
+  getRightOffsetAfterDataUpdate,
+  type NumericRange,
+  type PriceScaleMode,
+  updateChartRenderScene,
+} from '@openview/chart-engine';
 import type { CandleInterval } from '@openview/market-data';
-import { ChartTypeSelector, PriceScaleSelector, type ChartControlOption } from './ui';
-import { DrawingToolCatalogMenu } from './DrawingToolCatalogMenu';
-import { DrawingPropertiesPanel } from './drawings/DrawingPropertiesPanel';
-import { DrawingCoordinatesPanel } from './drawings/DrawingCoordinatesPanel';
+import type { Candle } from '@openview/market-domain';
+import { useCallback, useMemo, useRef, useState } from 'preact/hooks';
 import {
   DEFAULT_DRAWING_INTERACTION_PREFERENCES,
   loadBrowserDrawingInteractionPreferences,
   saveBrowserDrawingInteractionPreferences,
 } from '../drawings/drawing-interaction-preferences';
 import {
-  MAX_CUSTOM_DRAWING_TEMPLATES,
-  createDrawingStyleTemplate,
-  loadBrowserDrawingStyleTemplates,
-  saveBrowserDrawingStyleTemplates,
-  type DrawingStyleTemplate,
-} from '../drawings/drawing-style-templates';
-import {
-  DEFAULT_DRAWING_TOOL_PREFERENCES,
-  loadBrowserDrawingToolPreferences,
-  saveBrowserDrawingToolPreferences,
-  type DrawingToolPreferences,
-  type DrawingToolType,
-} from '../drawings/drawing-tool-preferences';
-import {
   DEFAULT_DRAWING_PANEL_LAYOUT,
-  loadBrowserDrawingPanelLayout,
-  saveBrowserDrawingPanelLayout,
-  startDrawingPanelDrag,
   type DrawingPanelId,
   type DrawingPanelLayout,
   type DrawingPanelPosition,
+  loadBrowserDrawingPanelLayout,
+  saveBrowserDrawingPanelLayout,
+  startDrawingPanelDrag,
 } from '../drawings/drawing-panel-layout';
 import {
-  type CanvasDrawingEditGesture,
-  type ChartDrawingHit,
-  type CanvasDrawingGroupEditGesture,
-  type CanvasDrawingGesture,
-  type CanvasDrawingTool,
-  attachCanvasResizeObserver,
-  createChartFrame,
-  createChartRenderScene,
-  createChart,
-  type ChartApi,
-  type ChartContextMenuRequest,
-  type ChartDrawingStyle,
-  calculateExponentialMovingAverage,
-  calculateSimpleMovingAverage,
-  countAppendedBars,
-  getRightOffsetAfterDataUpdate,
-  updateChartRenderScene,
-  type CanvasResize,
-  type CanvasResizeAdapter,
-  type ChartInteractionSnapshot,
-  type ChartRenderCandle,
-  type ChartRenderScene,
-  type ChartType,
-  type ChartIndicatorSeries,
-  type ChartRenderDrawing,
-  type ChartDrawingMagnetMode,
-  type CanvasDrawingNudgeDirection,
-  type NumericRange,
-  type PriceScaleMode,
-} from '@openview/chart-engine';
+  createDrawingStyleTemplate,
+  type DrawingStyleTemplate,
+  loadBrowserDrawingStyleTemplates,
+  MAX_CUSTOM_DRAWING_TEMPLATES,
+  saveBrowserDrawingStyleTemplates,
+} from '../drawings/drawing-style-templates';
+import {
+  DEFAULT_DRAWING_TOOL_PREFERENCES,
+  type DrawingToolPreferences,
+  type DrawingToolType,
+  loadBrowserDrawingToolPreferences,
+  saveBrowserDrawingToolPreferences,
+} from '../drawings/drawing-tool-preferences';
+import { DrawingToolCatalogMenu } from './DrawingToolCatalogMenu';
+import { DrawingCoordinatesPanel } from './drawings/DrawingCoordinatesPanel';
+import { DrawingPropertiesPanel } from './drawings/DrawingPropertiesPanel';
+import { type ChartControlOption, ChartTypeSelector, PriceScaleSelector } from './ui';
 
 type ChartCanvasProps = Readonly<{
   candles: readonly Candle[];

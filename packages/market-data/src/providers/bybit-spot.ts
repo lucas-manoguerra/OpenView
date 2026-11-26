@@ -1,4 +1,4 @@
-import { createCandle, type Candle, type InstrumentId } from '@openview/market-domain';
+import { type Candle, createCandle, type InstrumentId } from '@openview/market-domain';
 import type {
   CandleInterval,
   CandleStreamHandlers,
@@ -6,10 +6,10 @@ import type {
   CandleUpdate,
   HistoricalCandleRequest,
   InstrumentDiscoveryFilter,
-  MarketInstrument,
   MarketDataCapabilities,
   MarketDataProvider,
   MarketDataSubscription,
+  MarketInstrument,
   QuoteStreamHandlers,
   QuoteUpdate,
 } from '../contracts';
@@ -19,12 +19,12 @@ import {
   parsePriceIncrement,
   tryCreateMarketInstrument,
 } from '../instrument-catalog';
-import { MarketDataRequestScheduler, type RequestWaiter } from '../request-scheduler';
 import {
   createReconnectingWebSocketSubscription,
   type MarketDataWebSocketConnection,
   type MarketDataWebSocketFactory,
 } from '../reconnecting-websocket';
+import { MarketDataRequestScheduler, type RequestWaiter } from '../request-scheduler';
 
 const PROVIDER_ID = 'bybit-spot';
 const DEFAULT_BASE_URL = 'https://api.bybit.com';

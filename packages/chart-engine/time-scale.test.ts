@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   coordinateToLogicalIndex,
   countAppendedBars,
+  createTimeScale,
   generateTimeTicks,
   getRightOffsetAfterDataUpdate,
-  createTimeScale,
   logicalIndexToCoordinate,
   panTimeScale,
   resizeTimeScale,

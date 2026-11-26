@@ -1,4 +1,4 @@
-import { expect, test, type Page, type WebSocketRoute } from '@playwright/test';
+import { expect, type Page, test, type WebSocketRoute } from '@playwright/test';
 
 const BINANCE_KLINES_URL = 'https://data-api.binance.vision/api/v3/klines**';
 

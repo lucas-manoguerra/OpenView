@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createChart, type ChartSnapshot } from './chart-api';
-import { createChartFrame } from './chart-frame';
-import { logicalIndexToCoordinate } from './time-scale';
-import { priceToCoordinate } from './price-scale';
 import { createChartRenderScene } from './canvas-painter';
+import { type ChartSnapshot, createChart } from './chart-api';
+import { createChartFrame } from './chart-frame';
+import { priceToCoordinate } from './price-scale';
+import { logicalIndexToCoordinate } from './time-scale';
 
 const createScene = () => {
   const frame = createChartFrame(320, 240, { min: 0, max: 10 }, 0);
