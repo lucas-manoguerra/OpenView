@@ -1136,12 +1136,10 @@ export function ChartCanvas({
     setDrawingTemplatesLoaded(true);
   };
 
-  const handleDrawingToolChange = (nextTool: CanvasDrawingTool): void => {
+  const handleDrawingToolChange = (requestedTool: CanvasDrawingTool): void => {
+    const nextTool = requestedTool === 'select' ? 'cursor' : requestedTool;
     if (nextTool !== 'cursor') {
       ensureDrawingInteractionPreferencesLoaded();
-    }
-
-    if (nextTool !== 'cursor' && nextTool !== 'select') {
       ensureDrawingToolPreferencesLoaded();
     }
 
@@ -1430,8 +1428,8 @@ export function ChartCanvas({
       runtimeRef.current?.setDrawings(currentDrawings);
     }
 
-    drawingToolRef.current = 'select';
-    setDrawingTool('select');
+    drawingToolRef.current = 'cursor';
+    setDrawingTool('cursor');
     updateDrawingSelection([drawingId]);
   };
 
@@ -1605,6 +1603,14 @@ export function ChartCanvas({
       class="grid h-[390px] min-h-[340px] w-full grid-cols-[38px_minmax(0,1fr)] bg-[#0b0f17]"
       onKeyDownCapture={(event) => {
         if (event.key === 'Control' || event.key === 'Meta') setControlKeyPressed(true);
+        if (event.key === 'Escape' && drawingToolRef.current !== 'cursor') {
+          event.preventDefault();
+          event.stopPropagation();
+          const canvas = event.currentTarget.querySelector('canvas');
+          canvas?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+          drawingToolRef.current = 'cursor';
+          setDrawingTool('cursor');
+        }
       }}
       onKeyUpCapture={(event) => {
         if (event.key === 'Control' || event.key === 'Meta') setControlKeyPressed(false);
@@ -1626,22 +1632,6 @@ export function ChartCanvas({
           }
         >
           ↖
-        </button>
-        <button
-          type="button"
-          aria-label="Seleccionar y editar dibujos"
-          aria-pressed={drawingTool === 'select'}
-          data-testid="drawing-tool-select"
-          title="Seleccionar y editar dibujos"
-          onClick={() => handleDrawingToolChange('select')}
-          class={
-            'grid size-8 place-items-center rounded text-sm transition-colors ' +
-            (drawingTool === 'select'
-              ? 'bg-blue-500/20 text-blue-200'
-              : 'text-slate-400 hover:bg-white/5 hover:text-slate-100')
-          }
-        >
-          ◉
         </button>
         <DrawingToolCatalogMenu
           activeTool={drawingTool}
