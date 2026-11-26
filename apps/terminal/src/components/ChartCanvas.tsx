@@ -34,7 +34,6 @@ import {
   type DrawingPanelPosition,
 } from '../drawings/drawing-panel-layout';
 import {
-  attachCanvasPointerEvents,
   type CanvasDrawingEditGesture,
   type ChartDrawingHit,
   type CanvasDrawingGroupEditGesture,
@@ -54,7 +53,6 @@ import {
   countAppendedBars,
   getRightOffsetAfterDataUpdate,
   updateChartRenderScene,
-  type CanvasPointerAdapter,
   type CanvasResize,
   type CanvasResizeAdapter,
   type ChartInteractionController,
@@ -113,6 +111,7 @@ type ChartRuntime = Readonly<{
   redoDrawings(): void;
   clearDrawingHistory(): void;
   setSelectedDrawingIds(drawingIds: readonly string[]): void;
+  cancelDrawingCreation(): void;
   destroy(): void;
 }>;
 
@@ -317,7 +316,6 @@ export function ChartCanvas({
 }: ChartCanvasProps) {
   const runtimeRef = useRef<ChartRuntime | null>(null);
   const onContextMenuRequestRef = useRef(onContextMenuRequest);
-  const pointerAdapterRef = useRef<CanvasPointerAdapter | null>(null);
   const rightOffsetInputRef = useRef<HTMLInputElement | null>(null);
   const [priceScaleMode, setPriceScaleMode] = useState<PriceScaleMode>('linear');
   const [chartType, setChartType] = useState<ChartType>('candles');
@@ -540,7 +538,6 @@ export function ChartCanvas({
     let currentCandles = renderDataRef.current.candles;
     let controller: ChartInteractionController | null = null;
     let scene: ChartRenderScene | null = null;
-    let pointerAdapter: CanvasPointerAdapter | null = null;
     let lastSize: CanvasResize | null = null;
 
     const publishScene = (nextScene: ChartRenderScene): void => {
@@ -673,7 +670,7 @@ export function ChartCanvas({
         canvas.dataset['followLatest'] = String(frame.timeScale.rightOffset >= 0);
         canvas.dataset['navigationMode'] =
           frame.timeScale.rightOffset >= 0 ? 'realtime' : 'historical';
-        pointerAdapter = attachCanvasPointerEvents(canvas, interactionController, {
+        chartApi?.attachPointerEvents(canvas, interactionController, {
           getAutoScalePriceRange: () => getVisiblePriceRange(interactionController, currentCandles),
           getDrawingTool: () => drawingToolRef.current,
           getDrawingMagnetMode: () => drawingMagnetModeRef.current,
@@ -765,7 +762,6 @@ export function ChartCanvas({
             setDrawingTool('cursor');
           },
         });
-        pointerAdapterRef.current = pointerAdapter;
       } else {
         controller.setFrame(frame);
         if (autoScaleRef.current) {
@@ -948,9 +944,10 @@ export function ChartCanvas({
       invertPriceScale: (): void => {
         controller?.invertPriceScale();
       },
+      cancelDrawingCreation: (): void => {
+        chartApi?.cancelDrawingCreation();
+      },
       destroy: (): void => {
-        pointerAdapter?.destroy();
-        pointerAdapterRef.current = null;
         resizeAdapter.destroy();
         chartApi?.destroy();
         chartApi = null;
@@ -1483,7 +1480,7 @@ export function ChartCanvas({
         if (event.key === 'Escape' && drawingToolRef.current !== 'cursor') {
           event.preventDefault();
           event.stopPropagation();
-          pointerAdapterRef.current?.cancelDrawingCreation();
+          runtimeRef.current?.cancelDrawingCreation();
           drawingToolRef.current = 'cursor';
           setDrawingTool('cursor');
         }
