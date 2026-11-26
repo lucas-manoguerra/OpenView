@@ -92,12 +92,15 @@ const isDrawingPayload = (value: unknown): value is DrawingPayload => {
   );
 };
 
+const isUuid = (value: string): boolean =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
 const validateScope = (scope: DrawingRepositoryScope): void => {
   if (scope.owner.kind !== 'account') {
     throw new RangeError('Remote drawing persistence requires an authenticated account owner.');
   }
-  if (!scope.owner.id.trim() || !scope.instrumentId.trim()) {
-    throw new RangeError('Drawing owner and instrument identifiers are required.');
+  if (!isUuid(scope.owner.id) || !scope.instrumentId.trim()) {
+    throw new RangeError('A valid account UUID and instrument identifier are required.');
   }
   if (scope.timeframe !== null && !scope.timeframe.trim()) {
     throw new RangeError('Drawing timeframe cannot be empty.');
@@ -105,8 +108,8 @@ const validateScope = (scope: DrawingRepositoryScope): void => {
 };
 
 const validateDrawing = (drawing: SaveDrawingInput): void => {
-  if (!drawing.drawingId.trim() || !isDrawingPayload(drawing.payload)) {
-    throw new RangeError('A valid drawing identifier and payload are required.');
+  if (!isUuid(drawing.drawingId) || !isDrawingPayload(drawing.payload)) {
+    throw new RangeError('A valid drawing UUID and payload are required.');
   }
   if (!Number.isSafeInteger(drawing.zOrder) || drawing.zOrder < 0) {
     throw new RangeError('Drawing z-order must be a non-negative integer.');
@@ -256,8 +259,8 @@ export class SupabaseDrawingRepository implements DrawingRepository {
     expectedRevision: number,
   ): Promise<void> {
     validateScope(scope);
-    if (!drawingId.trim() || !Number.isSafeInteger(expectedRevision) || expectedRevision < 1) {
-      throw new RangeError('A drawing identifier and positive expected revision are required.');
+    if (!isUuid(drawingId) || !Number.isSafeInteger(expectedRevision) || expectedRevision < 1) {
+      throw new RangeError('A drawing UUID and positive expected revision are required.');
     }
 
     let query = this.table()
