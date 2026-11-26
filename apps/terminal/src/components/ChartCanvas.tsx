@@ -75,6 +75,7 @@ type ChartCanvasProps = Readonly<{
   onRetry: () => void;
   onNeedMoreHistory: () => void;
   onContextMenuRequest?: (request: ChartContextMenuRequest) => void;
+  onDrawingsChange?: (drawings: readonly ChartRenderDrawing[]) => void;
 }>;
 
 type ChartRuntime = Readonly<{
@@ -312,14 +313,17 @@ export function ChartCanvas({
   onRetry,
   onNeedMoreHistory,
   onContextMenuRequest,
+  onDrawingsChange,
 }: ChartCanvasProps) {
   const runtimeRef = useRef<ChartRuntime | null>(null);
   const onContextMenuRequestRef = useRef(onContextMenuRequest);
+  const onDrawingsChangeRef = useRef(onDrawingsChange);
   const rightOffsetInputRef = useRef<HTMLInputElement | null>(null);
   const [priceScaleMode, setPriceScaleMode] = useState<PriceScaleMode>('linear');
   const [chartType, setChartType] = useState<ChartType>('candles');
   const [activeIndicators, setActiveIndicators] = useState<readonly string[]>([]);
   onContextMenuRequestRef.current = onContextMenuRequest;
+  onDrawingsChangeRef.current = onDrawingsChange;
   const [drawingTool, setDrawingTool] = useState<CanvasDrawingTool>('cursor');
   const [controlKeyPressed, setControlKeyPressed] = useState(false);
 
@@ -584,6 +588,7 @@ export function ChartCanvas({
           selectedDrawingIdRef.current = event.selectedDrawingId;
           selectedDrawingIdsRef.current = event.selectedDrawingIds;
           setDrawings(event.drawings);
+          onDrawingsChangeRef.current?.(event.drawings);
           setSelectedDrawingId(event.selectedDrawingId);
           setSelectedDrawingIds(event.selectedDrawingIds);
         });
