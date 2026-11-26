@@ -281,6 +281,44 @@ describe('canvas pointer event adapter', () => {
     expect(gestures.map((gesture) => gesture.type)).toEqual(['trend-line', 'ray']);
   });
 
+  it('previews a two-point drawing after the first click and completes it on the second click', () => {
+    const { canvas, dispatch } = createCanvasTarget();
+    const frame = createChartFrame(900, 500, { min: 90, max: 120 }, 99);
+    const controller = createChartInteractionController(frame);
+    const gestures: CanvasDrawingGesture[] = [];
+    const previews: (CanvasDrawingGesture | null)[] = [];
+    attachCanvasPointerEvents(canvas, controller, {
+      getDrawingTool: () => 'rectangle',
+      onDrawingComplete: (gesture) => gestures.push(gesture),
+      onDrawingCreationPreview: (gesture) => previews.push(gesture),
+    });
+    const start = { x: frame.layout.plotArea.x + 70, y: frame.layout.plotArea.y + 55 };
+    const end = { x: frame.layout.plotArea.x + 190, y: frame.layout.plotArea.y + 155 };
+
+    dispatch('pointerdown', createPointerEvent({ clientX: 100 + start.x, clientY: 50 + start.y }));
+    dispatch('pointerup', createPointerEvent({ clientX: 100 + start.x, clientY: 50 + start.y }));
+
+    expect(gestures).toHaveLength(0);
+    expect(previews.at(-1)).toEqual({
+      type: 'rectangle',
+      start: chartCoordinateToDataPoint(start, frame),
+      end: chartCoordinateToDataPoint(start, frame),
+    });
+
+    dispatch('pointermove', createPointerEvent({ clientX: 100 + end.x, clientY: 50 + end.y }));
+    expect(previews.at(-1)?.end).toEqual(chartCoordinateToDataPoint(end, frame));
+
+    dispatch('pointerdown', createPointerEvent({ clientX: 100 + end.x, clientY: 50 + end.y, pointerId: 8 }));
+    dispatch('pointerup', createPointerEvent({ clientX: 100 + end.x, clientY: 50 + end.y, pointerId: 8 }));
+
+    expect(gestures).toEqual([{
+      type: 'rectangle',
+      start: chartCoordinateToDataPoint(start, frame),
+      end: chartCoordinateToDataPoint(end, frame),
+    }]);
+    expect(previews.at(-1)).toBeNull();
+  });
+
   it('creates a horizontal line on click without requiring a drag', () => {
     const { canvas, dispatch } = createCanvasTarget();
     const frame = createChartFrame(900, 500, { min: 90, max: 120 }, 99);
