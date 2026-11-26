@@ -7,6 +7,12 @@ import {
 } from './chart-object-order';
 import type { ChartCoordinate, ChartDataPoint } from './chart-frame';
 import {
+  attachCanvasPointerEvents,
+  type CanvasPointerAdapter,
+  type CanvasPointerAdapterOptions,
+} from './canvas-pointer-adapter';
+import type { ChartInteractionController } from './chart-interaction';
+import {
   getTimestampAtLogicalIndex,
   hitTestChartDrawing,
   selectChartDrawingsWithinArea,
@@ -133,6 +139,12 @@ export type ChartApi = Readonly<{
   importSnapshot(snapshot: ChartSnapshot): void;
   hitTestDrawing(point: ChartCoordinate, tolerance?: number): ChartDrawingHit | null;
   selectDrawingsWithinArea(area: ChartDrawingSelectionArea): readonly string[];
+  attachPointerEvents(
+    canvas: HTMLCanvasElement,
+    controller: ChartInteractionController,
+    options?: CanvasPointerAdapterOptions,
+  ): void;
+  cancelDrawingCreation(): void;
   destroy(): void;
 }>;
 
@@ -192,6 +204,7 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
   let drawingPreview: readonly ChartRenderDrawing[] | null = null;
   let drawingCreationPreview: ChartRenderDrawing | null = null;
   let drawingSelectionPreview: ChartDrawingSelectionPreview | null = null;
+  let pointerAdapter: CanvasPointerAdapter | null = null;
   const drawingUndoStack: (readonly ChartRenderDrawing[])[] = [];
   const drawingRedoStack: (readonly ChartRenderDrawing[])[] = [];
   let destroyed = false;
@@ -807,11 +820,38 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
       emitHistoryState();
     },
 
+    attachPointerEvents(
+      canvas: HTMLCanvasElement,
+      controller: ChartInteractionController,
+      pointerOptions: CanvasPointerAdapterOptions = {},
+    ): void {
+      assertActive();
+      pointerAdapter?.destroy();
+      pointerAdapter = attachCanvasPointerEvents(canvas, controller, {
+        ...pointerOptions,
+        getDrawings: pointerOptions.getDrawings ?? (() => scene.drawings),
+        getSelectedDrawingId:
+          pointerOptions.getSelectedDrawingId ?? (() => scene.selectedDrawingId),
+        getSelectedDrawingIds:
+          pointerOptions.getSelectedDrawingIds ?? (() => scene.selectedDrawingIds),
+        hitTestDrawing:
+          pointerOptions.hitTestDrawing ??
+          ((point, tolerance) => hitTestDrawing(point, tolerance)),
+      });
+    },
+
+    cancelDrawingCreation(): void {
+      assertActive();
+      pointerAdapter?.cancelDrawingCreation();
+    },
+
     destroy(): void {
       if (destroyed) {
         return;
       }
       destroyed = true;
+      pointerAdapter?.destroy();
+      pointerAdapter = null;
       renderer.destroy();
       emit(Object.freeze({ type: 'destroyed' }));
       listeners.clear();
