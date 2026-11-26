@@ -1077,6 +1077,31 @@ describe('canvas pointer event adapter', () => {
     expect(selections).toEqual([null]);
   });
 
+  it('exits an active drawing tool on Escape and clears an unfinished preview', () => {
+    const { canvas, dispatch } = createCanvasTarget();
+    const previews: (CanvasDrawingGesture | null)[] = [];
+    const exits: string[] = [];
+    let drawingTool: CanvasDrawingTool = 'rectangle';
+    attachCanvasPointerEvents(
+      canvas,
+      createChartInteractionController(createChartFrame(900, 500, { min: 90, max: 120 }, 2)),
+      {
+        getDrawingTool: () => drawingTool,
+        onDrawingCreationPreview: (preview) => previews.push(preview),
+        onDrawingToolExit: () => {
+          exits.push('cursor');
+          drawingTool = 'cursor';
+        },
+      },
+    );
+
+    dispatch('keydown', { key: 'Escape', preventDefault: vi.fn() } as unknown as KeyboardEvent);
+
+    expect(drawingTool).toBe('cursor');
+    expect(exits).toEqual(['cursor']);
+    expect(previews).toEqual([null]);
+  });
+
   it('pans during captured pointer movement and releases capture on pointer up', () => {
     const { canvas, dispatch, capturedPointers } = createCanvasTarget();
     const frame = createChartFrame(900, 500, { min: 90, max: 120 }, 99);
