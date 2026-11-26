@@ -15,6 +15,7 @@ import {
 type Row = Database['public']['Tables']['chart_drawings']['Row'];
 type Insert = Database['public']['Tables']['chart_drawings']['Insert'];
 type Operation = 'select' | 'insert' | 'update' | 'delete';
+type SupabaseDrawingBuilder<Row> = Omit<SupabaseDrawingQuery<Row>, 'then'>;
 
 class MemorySupabase {
   readonly rows: Row[] = [];
@@ -84,7 +85,7 @@ class MemorySupabase {
         return { data: result, error: null };
       };
 
-      const builder: SupabaseDrawingQuery<Row> = {
+      const builder: SupabaseDrawingBuilder<Row> = {
         select: (_columns?: string) => builder,
         insert: (input: Insert) => {
           operation = 'insert';
