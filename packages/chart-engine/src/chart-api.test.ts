@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createChart, type ChartSnapshot } from './chart-api';
 import { createChartFrame } from './chart-frame';
-import { createChartInteractionController } from './chart-interaction';
 import { logicalIndexToCoordinate } from './time-scale';
 import { priceToCoordinate } from './price-scale';
 import { createChartRenderScene } from './canvas-painter';
@@ -86,6 +85,33 @@ describe('chart public API', () => {
     expect(() => chart.exportSnapshot()).toThrow('destroyed');
   });
 
+  it('owns interaction controller state and operations', () => {
+    const { surface } = createSurface();
+    const initialScene = createScene();
+    const onChange = vi.fn();
+    const chart = createChart({
+      surface,
+      initialScene,
+      interactionOptions: { onChange },
+      renderer: { scheduler: { requestFrame: () => 1, cancelFrame: () => {} } },
+    });
+
+    expect(chart.getInteractionSnapshot().frame).toBe(initialScene.frame);
+    const nextFrame = createChartFrame(420, 260, { min: 1, max: 9 }, 0);
+    chart.setInteractionFrame(nextFrame);
+    expect(chart.getInteractionSnapshot().frame).toBe(nextFrame);
+    expect(onChange).toHaveBeenCalled();
+
+    expect(chart.scrollTimeByBars(1)).toBe(true);
+    expect(chart.setRightOffset(4)).toBe(true);
+    expect(chart.scrollToRealtime()).toBe(true);
+    expect(chart.zoomTime(1.1)).toBe(true);
+    expect(chart.setPriceScaleLocked(true)).toBe(true);
+    expect(chart.invertPriceScale()).toBe(true);
+    expect(chart.fitPriceScale({ min: 0, max: 5 })).toBe(true);
+    chart.destroy();
+  });
+
   it('owns pointer adapter attachment, cancellation, and cleanup', () => {
     const { surface } = createSurface();
     const listeners = new Map<string, EventListener>();
@@ -121,9 +147,7 @@ describe('chart public API', () => {
       initialScene: createScene(),
       renderer: { scheduler: { requestFrame: () => 1, cancelFrame: () => {} } },
     });
-    const controller = createChartInteractionController(createScene().frame);
-
-    chart.attachPointerEvents(canvas, controller);
+    chart.attachPointerEvents(canvas);
     expect(addEventListener).toHaveBeenCalledTimes(9);
     chart.cancelDrawingCreation();
     chart.destroy();
