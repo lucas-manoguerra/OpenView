@@ -1571,7 +1571,15 @@ export function ChartCanvas({
       .every((drawing) => drawing.type === selectedDrawing.type);
 
   return (
-    <div class="grid h-[390px] min-h-[340px] w-full grid-cols-[38px_minmax(0,1fr)] bg-[#0b0f17]">
+    <div
+      class="grid h-[390px] min-h-[340px] w-full grid-cols-[38px_minmax(0,1fr)] bg-[#0b0f17]"
+      onKeyDown={(event) => {
+        if (event.key === 'Control' || event.key === 'Meta') setControlKeyPressed(true);
+      }}
+      onKeyUp={(event) => {
+        if (event.key === 'Control' || event.key === 'Meta') setControlKeyPressed(false);
+      }}
+    >
       <aside class="relative flex max-h-full min-w-0 flex-col items-center gap-1 overflow-y-auto border-r border-white/10 bg-[#101723] py-2">
         <button
           type="button"
@@ -2070,13 +2078,6 @@ export function ChartCanvas({
           class="block h-full w-full touch-none outline-none focus-visible:ring-1 focus-visible:ring-blue-400/60"
           tabIndex={0}
           role="img"
-          onKeyDown={(event) => {
-            if (event.key === 'Control' || event.key === 'Meta') setControlKeyPressed(true);
-          }}
-          onKeyUp={(event) => {
-            if (event.key === 'Control' || event.key === 'Meta') setControlKeyPressed(false);
-          }}
-          onBlur={() => setControlKeyPressed(false)}
           aria-label={
             'Gráfico interactivo de velas y volumen para ' +
             symbol +
