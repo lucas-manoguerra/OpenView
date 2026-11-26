@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'preact/hooks';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { Candle } from '@openview/market-domain';
 import type { CandleInterval } from '@openview/market-data';
 import { ChartTypeSelector, PriceScaleSelector, type ChartControlOption } from './ui';
@@ -311,6 +311,7 @@ export function ChartCanvas({
   const [chartType, setChartType] = useState<ChartType>('candles');
   const [activeIndicators, setActiveIndicators] = useState<readonly string[]>([]);
   const [drawingTool, setDrawingTool] = useState<CanvasDrawingTool>('cursor');
+  const [controlKeyPressed, setControlKeyPressed] = useState(false);
   const [drawings, setDrawings] = useState<readonly ChartRenderDrawing[]>([]);
   const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null);
   const [selectedDrawingIds, setSelectedDrawingIds] = useState<readonly string[]>([]);
@@ -321,6 +322,25 @@ export function ChartCanvas({
   const [drawingPanelLayout, setDrawingPanelLayout] = useState<DrawingPanelLayout>(
     DEFAULT_DRAWING_PANEL_LAYOUT,
   );
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Control' || event.key === 'Meta') setControlKeyPressed(true);
+    };
+    const handleKeyUp = (event: KeyboardEvent): void => {
+      if (event.key === 'Control' || event.key === 'Meta') setControlKeyPressed(false);
+    };
+    const handleWindowBlur = (): void => setControlKeyPressed(false);
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', handleWindowBlur);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleWindowBlur);
+    };
+  }, []);
 
   const [customDrawingTemplates, setCustomDrawingTemplates] = useState<
     readonly DrawingStyleTemplate[]
@@ -2483,7 +2503,8 @@ export function ChartCanvas({
             Ver todo
           </button>
         </fieldset>
-        {drawingTool === 'cursor' &&
+        {(drawingTool === 'cursor' || drawingTool === 'select') &&
+          !controlKeyPressed &&
           selectedDrawingHasSingleSelection &&
           selectedDrawing !== null &&
           drawingPanelLayout.visible.coordinates && (
@@ -2497,7 +2518,9 @@ export function ChartCanvas({
             />
           )}
 
-        {drawingTool === 'cursor' &&
+        {(drawingTool === 'cursor' || drawingTool === 'select') &&
+          !controlKeyPressed &&
+          selectedDrawingIds.length === 1 &&
           selectedDrawing !== null &&
           drawingPanelLayout.visible.appearance && (
             <DrawingPropertiesPanel
