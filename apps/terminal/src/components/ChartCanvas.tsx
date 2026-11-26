@@ -763,7 +763,9 @@ export function ChartCanvas({
       } else {
         chartApi.setInteractionFrame(frame);
         if (autoScaleRef.current) {
-          chartApi.fitPriceScale(getVisiblePriceRange(chartApi.getInteractionSnapshot(), currentCandles));
+          chartApi.fitPriceScale(
+            getVisiblePriceRange(chartApi.getInteractionSnapshot(), currentCandles),
+          );
         }
       }
 
