@@ -5,7 +5,10 @@ import type { Database } from './database.types';
 
 export type ServerSupabaseClient = SupabaseJsClient<Database>;
 
-export function createServerClient(context: APIContext): ServerSupabaseClient {
+export function createServerClient(
+  context: APIContext,
+  responseHeaders: Headers,
+): ServerSupabaseClient {
   const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
   const supabasePublishableKey = import.meta.env.PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
@@ -20,14 +23,13 @@ export function createServerClient(context: APIContext): ServerSupabaseClient {
       getAll() {
         return parseCookieHeader(context.request.headers.get('Cookie') ?? '');
       },
-      setAll(cookiesToSet: Array<{ name: string; value: string }>) {
-        cookiesToSet.forEach(({ name, value }) => {
-          context.cookies.set(name, value, {
-            httpOnly: true,
-            secure: true,
-            sameSite: 'lax',
-            path: '/',
-          });
+      setAll(cookiesToSet, headers) {
+        cookiesToSet.forEach(({ name, value, options }) => {
+          context.cookies.set(name, value, options);
+        });
+
+        Object.entries(headers).forEach(([name, value]) => {
+          responseHeaders.set(name, value);
         });
       },
     },
