@@ -236,12 +236,14 @@ importers:
       preact:
         specifier: 11.2.0
         version: 11.2.0(preact-render-to-string@6.8.3)
-      wrangler:
-        specifier: 4.168.0
-        version: 4.168.0(vitest@5.1.1(vite@8.3.8(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))
       tailwindcss:
         specifier: 4.3.5
         version: 4.3.5
+
+    devDependencies:
+      wrangler:
+        specifier: 4.168.0
+        version: 4.168.0(vitest@5.1.1(vite@8.3.8(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))
 
   packages/chart-engine:
     dependencies:
