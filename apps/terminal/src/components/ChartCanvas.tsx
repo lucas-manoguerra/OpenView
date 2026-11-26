@@ -38,7 +38,6 @@ import {
   type CanvasDrawingEditGesture,
   type ChartDrawingHit,
   type CanvasDrawingGroupEditGesture,
-  type CanvasDrawingAreaSelection,
   type CanvasDrawingGesture,
   type CanvasDrawingTool,
   attachCanvasResizeObserver,
@@ -325,8 +324,6 @@ export function ChartCanvas({
   const [drawings, setDrawings] = useState<readonly ChartRenderDrawing[]>([]);
   const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null);
   const [selectedDrawingIds, setSelectedDrawingIds] = useState<readonly string[]>([]);
-  const [drawingSelectionArea, setDrawingSelectionArea] =
-    useState<CanvasDrawingAreaSelection | null>(null);
   const [drawingUndoCount, setDrawingUndoCount] = useState(0);
   const [drawingRedoCount, setDrawingRedoCount] = useState(0);
   const [drawingPanelLayout, setDrawingPanelLayout] = useState<DrawingPanelLayout>(
@@ -679,8 +676,9 @@ export function ChartCanvas({
             canvas.style.cursor = hit === null ? '' : hit.target === 'body' ? 'move' : 'crosshair';
             chartApi?.execute({ type: 'set-drawing-hover', hit });
           },
-          onDrawingAreaSelectionChange: (selection: CanvasDrawingAreaSelection | null): void => {
-            setDrawingSelectionArea(selection);
+          onDrawingAreaSelectionChange: (selection): void => {
+            canvas.dataset['drawingSelectionPreview'] = String(selection !== null);
+            chartApi?.execute({ type: 'set-drawing-selection-preview', preview: selection });
           },
           onDrawingAreaSelectionComplete: (area: ChartDrawingSelectionArea): void => {
             ensureDrawingPanelLayoutLoaded();
@@ -2006,19 +2004,6 @@ export function ChartCanvas({
           data-drawing-redo-count={drawingRedoCount}
           data-interval={interval}
         />
-        {drawingSelectionArea !== null && (
-          <div
-            aria-hidden="true"
-            data-testid="drawing-selection-marquee"
-            class="pointer-events-none absolute z-20 border border-blue-400 bg-blue-400/10"
-            style={{
-              left: Math.min(drawingSelectionArea.start.x, drawingSelectionArea.current.x),
-              top: Math.min(drawingSelectionArea.start.y, drawingSelectionArea.current.y),
-              width: Math.abs(drawingSelectionArea.current.x - drawingSelectionArea.start.x),
-              height: Math.abs(drawingSelectionArea.current.y - drawingSelectionArea.start.y),
-            }}
-          />
-        )}
         {drawingObjectTreeOpen && (
           <aside
             aria-label="Árbol de objetos"
