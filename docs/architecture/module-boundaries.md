@@ -46,6 +46,22 @@ Posee contratos de proveedores, capacidades declaradas, normalización de respue
 
 No decide cómo presentar los datos ni importa algoritmos del motor de gráficos.
 
+### apps/terminal — identidad y persistencia
+
+Terminal es el único propietario de la autenticación, autorización de aplicación, persistencia de usuario, sincronización entre dispositivos y migración de preferencias.
+
+La persistencia se implementa detrás de repositorios/adaptadores de Terminal. Los componentes no acceden directamente al almacenamiento ni a SDKs de autenticación o backend. El repositorio remoto valida la sesión y deja la autorización final de cada fila en la base de datos.
+
+Los documentos persistidos tienen esquemas versionados y contienen únicamente estado durable confirmado. La selección, hover, previews, cursores e historial Undo/Redo son efímeros.
+
+### packages/chart-engine — estado runtime, no persistencia
+
+El motor administra el estado necesario para renderizar e interactuar con una instancia viva: viewport, escalas, dibujos, selección, previews, historial de edición y orden visual.
+
+El motor recibe datos de mercado ya normalizados, comandos y configuración explícita. Publica eventos y estado serializable para que la aplicación host decida qué conservar. No autentica, no asigna propiedad de cuenta y no guarda ni recupera documentos.
+
+El ChartSnapshot público representa estado runtime para transferencia entre instancias; no es un formato de almacenamiento de cuenta ni debe incluirse íntegramente en una persistencia durable.
+
 ## Fronteras de datos
 
 Los adaptadores externos convierten respuestas crudas en modelos válidos del dominio. El motor consume esos modelos mediante contratos explícitos. La interfaz recibe modelos de presentación y comandos; no manipula respuestas crudas de proveedores.
