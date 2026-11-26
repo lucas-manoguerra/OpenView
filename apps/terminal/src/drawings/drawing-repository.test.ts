@@ -80,9 +80,7 @@ describe('local drawing repository', () => {
       'hourly',
     ]);
     expect(
-      (await repository.list({ ...accountScope, timeframe: '4h' })).map(
-        (item) => item.drawingId,
-      ),
+      (await repository.list({ ...accountScope, timeframe: '4h' })).map((item) => item.drawingId),
     ).toEqual(['global', 'four-hour']);
   });
 
