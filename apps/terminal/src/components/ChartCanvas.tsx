@@ -675,13 +675,7 @@ export function ChartCanvas({
           getDrawingTool: () => drawingToolRef.current,
           getDrawingMagnetMode: () => drawingMagnetModeRef.current,
           getSnapToIndicators: () => snapToIndicatorsRef.current,
-          getIndicators: () => indicatorsRef.current,
           getKeepDrawing: () => keepDrawingRef.current,
-          getDrawings: () => renderableDrawingsRef.current,
-          getCandles: () => currentCandles,
-          getSelectedDrawingId: () => selectedDrawingIdRef.current,
-          getSelectedDrawingIds: () => selectedDrawingIdsRef.current,
-          hitTestDrawing: (point, tolerance) => chartApi?.hitTestDrawing(point, tolerance) ?? null,
           onContextMenu: (point): void => {
             chartApi?.execute({ type: 'request-context-menu', point });
           },
