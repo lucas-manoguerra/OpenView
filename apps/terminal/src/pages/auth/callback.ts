@@ -27,6 +27,8 @@ export async function GET(context: APIContext) {
   }
 
   const response = context.redirect(next, 303);
-  responseHeaders.forEach((value, name) => response.headers.set(name, value));
+  responseHeaders.forEach((value, name) => {
+    response.headers.set(name, value);
+  });
   return response;
 }
