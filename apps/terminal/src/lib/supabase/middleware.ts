@@ -34,7 +34,8 @@ export async function getAuthenticatedUser(context: APIContext, responseHeaders:
   }
 
   const supabase = createServerClient(context, responseHeaders);
-  const { data: claims, error } = await supabase.auth.getClaims();
+  const { data, error } = await supabase.auth.getClaims();
+  const claims = data?.claims;
 
   if (error || !claims) {
     return { supabase, user: null, error };
