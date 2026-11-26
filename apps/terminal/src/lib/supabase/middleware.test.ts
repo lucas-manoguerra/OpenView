@@ -22,6 +22,8 @@ describe('Supabase middleware helpers', () => {
   it('keeps the terminal public while protecting account routes', () => {
     expect(isPublicRoute('/')).toBe(true);
     expect(isPublicRoute('/login')).toBe(true);
+    expect(isPublicRoute('/component-lab')).toBe(true);
+    expect(isPublicRoute('/component-lab/chart/controls')).toBe(true);
     expect(isPublicRoute('/auth/callback/provider')).toBe(true);
     expect(isPublicRoute('/dashboard')).toBe(false);
     expect(isPublicRoute('/login-extra')).toBe(false);
