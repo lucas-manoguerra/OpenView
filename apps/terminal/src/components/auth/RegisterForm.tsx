@@ -32,8 +32,9 @@ export function RegisterForm() {
       <h2>Crear cuenta</h2>
       {error && <div class="error-message">{error}</div>}
       <div class="field">
-        <label>Correo electrónico</label>
+        <label htmlFor="email">Correo electrónico</label>
         <input
+          id="email"
           type="email"
           name="email"
           required
@@ -43,8 +44,9 @@ export function RegisterForm() {
         />
       </div>
       <div class="field">
-        <label>Contraseña</label>
+        <label htmlFor="password">Contraseña</label>
         <input
+          id="password"
           type="password"
           name="password"
           required
