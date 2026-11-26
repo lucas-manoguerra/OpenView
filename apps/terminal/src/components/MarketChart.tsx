@@ -12,6 +12,7 @@ import {
   OkxSpotMarketDataProvider,
   type QuoteUpdate,
 } from '@openview/market-data';
+import type { ChartRenderDrawing } from '@openview/chart-engine';
 import { type Candle, createInstrumentId, type InstrumentId } from '@openview/market-domain';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import {
@@ -24,7 +25,6 @@ import {
 } from '../watchlist/watchlist-preferences';
 import { createBrowserDrawingRepository } from '../drawings/drawing-repository';
 import { DrawingPersistenceCoordinator } from '../drawings/drawing-persistence-coordinator';
-import type { ChartRenderDrawing } from '@openview/chart-engine';
 import { ChartCanvas } from './ChartCanvas';
 import {
   MarketWatchlist,
@@ -195,6 +195,7 @@ export function MarketChart() {
     }
   }
   const [restoredDrawings, setRestoredDrawings] = useState<readonly ChartRenderDrawing[]>([]);
+  const [drawingPersistenceError, setDrawingPersistenceError] = useState<string | null>(null);
   const [drawingWorkspaceToken, setDrawingWorkspaceToken] = useState<number | null>(null);
   const drawingWorkspaceTokenRef = useRef<number | null>(null);
   const drawingLoadRequestRef = useRef(0);
@@ -206,6 +207,7 @@ export function MarketChart() {
     drawingWorkspaceTokenRef.current = null;
     setDrawingWorkspaceToken(null);
     setRestoredDrawings([]);
+    setDrawingPersistenceError(null);
 
     const coordinator = drawingCoordinatorRef.current;
     if (coordinator === null) return;
@@ -233,12 +235,15 @@ export function MarketChart() {
     const coordinator = drawingCoordinatorRef.current;
     const token = drawingWorkspaceTokenRef.current;
     if (coordinator === null || token === null) return;
-    void coordinator.persist(token, drawings).catch((cause: unknown) => {
-      console.error(
-        'No se pudieron guardar los dibujos localmente.',
-        cause instanceof Error ? cause.message : cause,
-      );
-    });
+    void coordinator.persist(token, drawings).then(
+      () => setDrawingPersistenceError(null),
+      (cause: unknown) =>
+        setDrawingPersistenceError(
+          cause instanceof Error
+            ? cause.message
+            : 'No se pudieron guardar los dibujos localmente.',
+        ),
+    );
   }, []);
 
   const recoverHistoricalRange = async (
@@ -1211,6 +1216,15 @@ export function MarketChart() {
             onRetry={() => void loadCandles(providerId, interval, selectedInstrumentId)}
             onNeedMoreHistory={() => void loadOlderCandles()}
           />
+          {drawingPersistenceError !== null && (
+            <div
+              role="status"
+              data-testid="drawing-persistence-error"
+              class="rounded-lg border border-rose-400/20 bg-rose-400/5 px-3 py-2 text-[11px] text-rose-200"
+            >
+              No se pudo guardar un cambio de dibujo: {drawingPersistenceError}
+            </div>
+          )}
           {(olderLoading || olderError !== null) && (
             <div
               class="flex items-center justify-end gap-2 px-1 text-[11px] text-slate-500"
