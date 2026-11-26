@@ -395,8 +395,6 @@ export function ChartCanvas({
   const drawingCoordinatesPanelRef = useRef<HTMLElement | null>(null);
   const drawingPanelDragCleanupRef = useRef<(() => void) | null>(null);
   const drawingSymbolRef = useRef(drawingContextKey);
-  const restoredDrawingsRef = useRef(restoredDrawings);
-  restoredDrawingsRef.current = restoredDrawings;
   const autoScaleRef = useRef(autoScale);
   const priceScaleLockedRef = useRef(priceScaleLocked);
   priceScaleModeRef.current = priceScaleMode;
@@ -958,7 +956,7 @@ export function ChartCanvas({
           setSelectedDrawingId(null);
           selectedDrawingIdsRef.current = Object.freeze([]);
           setSelectedDrawingIds(selectedDrawingIdsRef.current);
-          drawingsRef.current = restoredDrawingsRef.current;
+          drawingsRef.current = Object.freeze([]);
           renderableDrawingsRef.current = drawingsVisibleRef.current
             ? drawingsRef.current.filter((drawing) => drawing.visible !== false)
             : [];
