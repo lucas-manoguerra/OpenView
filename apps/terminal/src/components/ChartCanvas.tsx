@@ -2501,7 +2501,6 @@ export function ChartCanvas({
           selectedDrawing !== null &&
           drawingPanelLayout.visible.appearance && (
             <DrawingPropertiesPanel
-          <DrawingPropertiesPanel
             selectedDrawing={selectedDrawing}
             selectedDrawingIds={selectedDrawingIds}
             selectedDrawingsShareType={selectedDrawingsShareType}
