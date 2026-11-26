@@ -694,6 +694,51 @@ describe('chart public API', () => {
     chart.destroy();
   });
 
+  it('emits context-menu requests with chart-owned drawing hit results', () => {
+    const { surface } = createSurface();
+    const frame = createChartFrame(320, 240, { min: 0, max: 10 }, 1);
+    const candles = [
+      { timestamp: 1_000, open: 2, high: 4, low: 1, close: 3, volume: 10, logicalIndex: 0 },
+      { timestamp: 2_000, open: 3, high: 5, low: 2, close: 4, volume: 12, logicalIndex: 1 },
+    ];
+    const chart = createChart({
+      surface,
+      initialScene: createChartRenderScene(frame, candles),
+      renderer: { scheduler: { requestFrame: () => 1, cancelFrame: () => {} } },
+    });
+    chart.execute({
+      type: 'set-drawings',
+      drawings: [
+        {
+          id: 'context-menu-drawing',
+          type: 'horizontal-line',
+          start: { timestamp: 1_000, price: 3 },
+          end: null,
+          color: '#ffffff',
+        },
+      ],
+    });
+    const listener = vi.fn();
+    chart.subscribe(listener);
+    const point = {
+      x: frame.layout.plotArea.x + logicalIndexToCoordinate(0, frame.timeScale),
+      y: frame.layout.plotArea.y + priceToCoordinate(3, frame.priceScale),
+    };
+
+    chart.execute({ type: 'request-context-menu', point });
+
+    expect(listener).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'context-menu-requested',
+        request: expect.objectContaining({
+          point,
+          drawingHit: { drawingId: 'context-menu-drawing', target: 'body' },
+        }),
+      }),
+    );
+    chart.destroy();
+  });
+
   it('keeps drawing selection previews transient and outside snapshots', () => {
     const { surface } = createSurface();
     const chart = createChart({
