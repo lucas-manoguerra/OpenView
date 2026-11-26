@@ -1697,6 +1697,8 @@ test('selects multiple drawings with Ctrl click and marquee, then moves them tog
 
   const selectTool = page.getByTestId('drawing-tool-select');
   await selectTool.click();
+  await page.mouse.click(bounds.x + bounds.width * 0.84, bounds.y + bounds.height * 0.48);
+  await expect(canvas).toHaveAttribute('data-selected-drawing-count', '0');
   await page.keyboard.down('Control');
   await page.mouse.click(firstBody.x, firstBody.y);
   await page.mouse.click(secondBody.x, secondBody.y);
@@ -1826,6 +1828,8 @@ test('moves all selected drawings by one bar and one market tick with arrow keys
   await expect(canvas).toHaveAttribute('data-drawing-count', '2');
 
   await page.getByTestId('drawing-tool-select').click();
+  await page.mouse.click(bounds.x + bounds.width * 0.84, bounds.y + bounds.height * 0.48);
+  await expect(canvas).toHaveAttribute('data-selected-drawing-count', '0');
   await page.keyboard.down('Control');
   await page.mouse.click(firstBody.x, firstBody.y);
   await page.mouse.click(secondBody.x, secondBody.y);
@@ -1904,6 +1908,8 @@ test('nudges every selected drawing by one bar and one provider tick', async ({ 
   await expect(canvas).toHaveAttribute('data-drawing-count', '2');
 
   await page.getByTestId('drawing-tool-select').click();
+  await page.mouse.click(bounds.x + bounds.width * 0.84, bounds.y + bounds.height * 0.48);
+  await expect(canvas).toHaveAttribute('data-selected-drawing-count', '0');
   await page.keyboard.down('Control');
   await page.mouse.click(midpoint(firstStart, firstEnd).x, midpoint(firstStart, firstEnd).y);
   await page.mouse.click(midpoint(secondStart, secondEnd).x, midpoint(secondStart, secondEnd).y);
