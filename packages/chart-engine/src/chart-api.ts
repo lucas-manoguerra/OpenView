@@ -66,6 +66,11 @@ export type ChartDrawingCreationGesture = Readonly<{
 export type ChartDrawingStyle = Pick<ChartRenderDrawing, 'color'> &
   Partial<Omit<ChartRenderDrawing, 'id' | 'type' | 'start' | 'end' | 'color'>>;
 
+export type ChartPointerAdapterOptions = CanvasPointerAdapterOptions &
+  Readonly<{
+    getDrawingStyle?: (type: ChartRenderDrawing['type']) => ChartDrawingStyle;
+  }>;
+
 export type ChartCommand =
   | Readonly<{ type: 'set-scene'; scene: ChartRenderScene }>
   | Readonly<{ type: 'set-drawings'; drawings: readonly ChartRenderDrawing[] }>
@@ -152,7 +157,7 @@ export type ChartApi = Readonly<{
   zoomTime(factor: number): boolean;
   setPriceScaleLocked(locked: boolean): boolean;
   invertPriceScale(): boolean;
-  attachPointerEvents(canvas: HTMLCanvasElement, options?: CanvasPointerAdapterOptions): void;
+  attachPointerEvents(canvas: HTMLCanvasElement, options?: ChartPointerAdapterOptions): void;
   cancelDrawingCreation(): void;
   destroy(): void;
 }>;
@@ -305,6 +310,80 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
     emitDrawingState();
     emit(Object.freeze({ type: 'object-order-changed', order: objectOrder }));
     emitHistoryState();
+  };
+
+  const setDrawingHover = (hit: ChartDrawingHit | null): void => {
+    scene = updateChartRenderScene(scene, { hoveredDrawingHit: hit });
+    render();
+    emitDrawingState();
+  };
+
+  const setDrawingSelectionPreview = (
+    preview: ChartDrawingSelectionPreview | null,
+  ): void => {
+    drawingSelectionPreview = preview;
+    render();
+  };
+
+  const selectDrawingsWithinArea = (area: ChartDrawingSelectionArea): void => {
+    const visibleDrawings = drawingsVisible
+      ? scene.drawings.filter((drawing) => drawing.visible !== false)
+      : [];
+    setDrawingSelection(
+      selectChartDrawingsWithinArea(area, visibleDrawings, scene.candles, scene.frame),
+    );
+  };
+
+  const requestContextMenu = (point: ChartCoordinate): void => {
+    const visibleDrawings = drawingsVisible
+      ? scene.drawings.filter((drawing) => drawing.visible !== false)
+      : [];
+    const drawingHit =
+      visibleDrawings.length === 0
+        ? null
+        : hitTestChartDrawing(
+            point,
+            visibleDrawings,
+            scene.candles,
+            scene.frame,
+            8,
+            scene.selectedDrawingIds,
+          );
+    emit(
+      Object.freeze({
+        type: 'context-menu-requested',
+        request: Object.freeze({
+          point: Object.freeze({ ...point }),
+          drawingHit,
+        }),
+      }),
+    );
+  };
+
+  const previewDrawingCreation = (
+    gesture: ChartDrawingCreationGesture | null,
+    style: ChartDrawingStyle | null,
+  ): void => {
+    drawingCreationPreview =
+      gesture === null || style === null
+        ? null
+        : createDrawingFromGesture(
+            gesture,
+            style,
+            scene.candles,
+            'chart-drawing-creation-preview',
+          );
+    drawingPreview = null;
+    render();
+  };
+
+  const createDrawingFromPointerGesture = (
+    gesture: ChartDrawingCreationGesture,
+    style: ChartDrawingStyle | undefined,
+  ): void => {
+    if (style === undefined) return;
+    const drawing = createDrawingFromGesture(gesture, style, scene.candles, crypto.randomUUID());
+    if (drawing !== null) commitDrawing(drawing);
   };
 
   renderer.resize(scene.frame.layout.bounds.width, scene.frame.layout.bounds.height);
@@ -881,24 +960,25 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
 
     attachPointerEvents(
       canvas: HTMLCanvasElement,
-      pointerOptions: CanvasPointerAdapterOptions = {},
+      pointerOptions: ChartPointerAdapterOptions = {},
     ): void {
       assertActive();
       pointerAdapter?.destroy();
+      const { getDrawingStyle, ...adapterOptions } = pointerOptions;
       pointerAdapter = attachCanvasPointerEvents(canvas, interactionController, {
-        ...pointerOptions,
-        getIndicators: pointerOptions.getIndicators ?? (() => scene.indicators),
-        getCandles: pointerOptions.getCandles ?? (() => scene.candles),
+        ...adapterOptions,
+        getIndicators: adapterOptions.getIndicators ?? (() => scene.indicators),
+        getCandles: adapterOptions.getCandles ?? (() => scene.candles),
         getDrawings:
-          pointerOptions.getDrawings ??
+          adapterOptions.getDrawings ??
           (() =>
             drawingsVisible ? scene.drawings.filter((drawing) => drawing.visible !== false) : []),
         getSelectedDrawingId:
-          pointerOptions.getSelectedDrawingId ?? (() => scene.selectedDrawingId),
+          adapterOptions.getSelectedDrawingId ?? (() => scene.selectedDrawingId),
         getSelectedDrawingIds:
-          pointerOptions.getSelectedDrawingIds ?? (() => scene.selectedDrawingIds),
+          adapterOptions.getSelectedDrawingIds ?? (() => scene.selectedDrawingIds),
         hitTestDrawing:
-          pointerOptions.hitTestDrawing ??
+          adapterOptions.hitTestDrawing ??
           ((point, tolerance) => {
             const visibleDrawings = drawingsVisible
               ? scene.drawings.filter((drawing) => drawing.visible !== false)
@@ -914,6 +994,37 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
                   scene.selectedDrawingIds,
                 );
           }),
+        onDrawingSelectionChange: (drawingIds) => {
+          setDrawingSelection(drawingIds);
+          adapterOptions.onDrawingSelectionChange?.(drawingIds);
+        },
+        onDrawingHover: (hit) => {
+          setDrawingHover(hit);
+          adapterOptions.onDrawingHover?.(hit);
+        },
+        onDrawingAreaSelectionChange: (preview) => {
+          setDrawingSelectionPreview(preview);
+          adapterOptions.onDrawingAreaSelectionChange?.(preview);
+        },
+        onDrawingAreaSelectionComplete: (area) => {
+          selectDrawingsWithinArea(area);
+          adapterOptions.onDrawingAreaSelectionComplete?.(area);
+        },
+        onDrawingCreationPreview: (gesture) => {
+          previewDrawingCreation(
+            gesture,
+            gesture === null ? null : (getDrawingStyle?.(gesture.type) ?? null),
+          );
+          adapterOptions.onDrawingCreationPreview?.(gesture);
+        },
+        onDrawingComplete: (gesture) => {
+          createDrawingFromPointerGesture(gesture, getDrawingStyle?.(gesture.type));
+          adapterOptions.onDrawingComplete?.(gesture);
+        },
+        onContextMenu: (point) => {
+          requestContextMenu(point);
+          adapterOptions.onContextMenu?.(point);
+        },
       });
     },
 
