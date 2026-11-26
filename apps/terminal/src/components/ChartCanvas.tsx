@@ -31,7 +31,7 @@ import {
 } from '@openview/chart-engine';
 import type { CandleInterval } from '@openview/market-data';
 import type { Candle } from '@openview/market-domain';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import {
   DEFAULT_DRAWING_INTERACTION_PREFERENCES,
   loadBrowserDrawingInteractionPreferences,
@@ -973,7 +973,7 @@ export function ChartCanvas({
     [renderCandles, priceScaleMode, drawingContextKey],
   );
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     drawingsRef.current = restoredDrawings;
     renderableDrawingsRef.current = drawingsVisibleRef.current
       ? restoredDrawings.filter((drawing) => drawing.visible !== false)
