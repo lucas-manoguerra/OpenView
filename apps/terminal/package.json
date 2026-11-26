@@ -22,5 +22,8 @@
     "lucide-preact": "1.79.0",
     "preact": "11.2.0",
     "tailwindcss": "4.3.5"
+  },
+  "devDependencies": {
+    "wrangler": "4.168.0"
   }
 }
