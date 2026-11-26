@@ -1303,7 +1303,7 @@ describe('canvas pointer event adapter', () => {
     );
     const adapter = attachCanvasPointerEvents(canvas, controller);
 
-    expect(listenerCount()).toBe(8);
+    expect(listenerCount()).toBe(9);
 
     dispatch('pointerdown', createPointerEvent());
     adapter.destroy();
