@@ -200,8 +200,8 @@ describe('Supabase drawing repository', () => {
     );
 
     expect((await repository.list(scope)).map((item) => item.drawingId)).toEqual([
-      'global',
-      'hourly',
+      '00000000-0000-4000-8000-000000000011',
+      '00000000-0000-4000-8000-000000000012',
     ]);
   });
 
