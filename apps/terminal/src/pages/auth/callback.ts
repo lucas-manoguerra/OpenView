@@ -1,5 +1,5 @@
 import type { APIContext } from 'astro';
-import { createServerClient } from '../../../lib/supabase/server';
+import { createServerClient } from '../../lib/supabase/server';
 
 function getSafeRedirectPath(value: string | null): string {
   if (!value || !value.startsWith('/') || value.startsWith('//')) {
