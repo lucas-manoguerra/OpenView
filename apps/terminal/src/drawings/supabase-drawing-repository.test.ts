@@ -15,7 +15,16 @@ import {
 type Row = Database['public']['Tables']['chart_drawings']['Row'];
 type Insert = Database['public']['Tables']['chart_drawings']['Insert'];
 type Operation = 'select' | 'insert' | 'update' | 'delete';
-type SupabaseDrawingBuilder<Row> = Omit<SupabaseDrawingQuery<Row>, 'then'>;
+type SupabaseDrawingBuilder<Row> = {
+  select(columns?: string): SupabaseDrawingBuilder<Row>;
+  insert(values: Insert): SupabaseDrawingBuilder<Row>;
+  update(values: Partial<Row>): SupabaseDrawingBuilder<Row>;
+  delete(): SupabaseDrawingBuilder<Row>;
+  eq(column: string, value: string | number): SupabaseDrawingBuilder<Row>;
+  is(column: string, value: null): SupabaseDrawingBuilder<Row>;
+  order(column: string): SupabaseDrawingBuilder<Row>;
+  maybeSingle(): PromiseLike<SupabaseResult<Row>>;
+};
 
 class MemorySupabase {
   readonly rows: Row[] = [];
