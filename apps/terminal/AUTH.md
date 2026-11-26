@@ -51,14 +51,14 @@ En **Authentication → URL Configuration**:
 https://openview-terminal.developer-spoonacular-004.workers.dev/
 ```
 
-- Agrega estas direcciones en **Redirect URLs**:
+- Agrega estas direcciones exactas en **Redirect URLs**. Incluyen el parámetro `next` que Terminal envía durante el inicio de sesión:
 
 ```text
-https://openview-terminal.developer-spoonacular-004.workers.dev/auth/callback
-http://localhost:4321/auth/callback
+https://openview-terminal.developer-spoonacular-004.workers.dev/auth/callback?next=/dashboard
+http://localhost:4321/auth/callback?next=/dashboard
 ```
 
-Guarda los cambios. En producción se recomienda mantener las URL exactas, sin comodines innecesarios.
+Guarda los cambios. Si cambias el destino de retorno que envía Terminal, actualiza también la URL permitida correspondiente en Supabase.
 
 ## 5. Flujo de inicio de sesión
 
@@ -81,7 +81,7 @@ La restricción de proveedores debe mantenerse también en Supabase: deja Google
 - [ ] Callback de Supabase agregado en Google Cloud.
 - [ ] Google habilitado en Supabase con Client ID y Client Secret.
 - [ ] Site URL de producción configurada.
-- [ ] Redirect URLs de producción y desarrollo agregadas.
+- [ ] Redirect URLs exactas de producción y desarrollo agregadas.
 - [ ] Inicio con Google funciona en producción.
 - [ ] Inicio con Google funciona en desarrollo local.
 - [ ] Un usuario sin sesión no puede acceder a rutas privadas.
