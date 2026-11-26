@@ -6,6 +6,7 @@ export const PUBLIC_ROUTES = [
   '/component-lab',
   '/register',
   '/auth/callback',
+  '/auth/signout',
   '/forgot-password',
   '/reset-password',
 ];

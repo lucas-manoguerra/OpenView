@@ -21,6 +21,26 @@ pnpm dev
 
 La aplicación estará disponible en http://localhost:4321.
 
+## Despliegue en Cloudflare
+
+El despliegue de Cloudflare Workers utiliza Wrangler y la configuración `apps/terminal/wrangler.jsonc`. El nombre del Worker es `openview-terminal`.
+
+Para utilizar Wrangler localmente, copia `.env.cloudflare.example` como `.env.cloudflare` y configura:
+
+- `CLOUDFLARE_ACCOUNT_ID`: ID de la cuenta de Cloudflare propietaria del Worker.
+- `CLOUDFLARE_API_TOKEN`: token API de alcance mínimo con el permiso Workers Scripts Edit que requiere Wrangler.
+
+Carga los valores en la sesión actual de la terminal antes de ejecutar Wrangler:
+
+```bash
+set -a
+. ./.env.cloudflare
+set +a
+pnpm --filter @openview/terminal exec wrangler deploy --dry-run
+```
+
+Solo realiza un despliegue real después de revisar el resultado del dry-run y contar con autorización explícita. Para GitHub Actions, guarda estos valores como secretos del repositorio o del entorno con los nombres `CLOUDFLARE_ACCOUNT_ID` y `CLOUDFLARE_API_TOKEN`. Nunca subas `.env.cloudflare` al repositorio ni coloques el token API en `apps/terminal/.env`: es una credencial de despliegue, no una variable pública de la aplicación.
+
 ## Verificaciones
 
 ```bash
