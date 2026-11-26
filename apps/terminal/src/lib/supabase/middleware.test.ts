@@ -24,8 +24,12 @@ describe('Supabase middleware helpers', () => {
     expect(isPublicRoute('/login')).toBe(true);
     expect(isPublicRoute('/component-lab')).toBe(true);
     expect(isPublicRoute('/component-lab/chart/controls')).toBe(true);
-    expect(isPublicRoute('/auth/callback/provider')).toBe(true);
+    expect(isPublicRoute('/auth/callback')).toBe(true);
     expect(isPublicRoute('/dashboard')).toBe(false);
     expect(isPublicRoute('/login-extra')).toBe(false);
+    expect(isPublicRoute('/auth/signout')).toBe(false);
+    expect(isPublicRoute('/register')).toBe(false);
+    expect(isPublicRoute('/forgot-password')).toBe(false);
+    expect(isPublicRoute('/reset-password')).toBe(false);
   });
 });
