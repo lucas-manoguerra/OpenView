@@ -2057,7 +2057,6 @@ export function ChartCanvas({
             class="fixed z-[100] min-w-48 overflow-hidden rounded-lg border border-white/10 bg-[#101723] py-1 shadow-2xl"
             style={{ left: chartContextMenu.left, top: chartContextMenu.top }}
             onPointerDown={(event) => event.stopPropagation()}
-            onClick={(event) => event.stopPropagation()}
           >
             {contextMenuDrawing !== null ? (
               <>
