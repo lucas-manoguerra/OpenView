@@ -36,7 +36,7 @@ import { DrawingPlayground } from '../../components/component-lab/DrawingPlaygro
         <a href="/component-lab/drawings/properties" class="rounded border border-[#2a2e39] px-3 py-2 text-[#d1d4dc] no-underline hover:bg-white/5">Panel de propiedades</a>
         <a href="/component-lab/drawings/coordinates" class="rounded border border-[#2a2e39] px-3 py-2 text-[#d1d4dc] no-underline hover:bg-white/5">Panel de coordenadas</a>
       </nav>
-      <DrawingPlayground client:load />
+      <DrawingPlayground client:only="preact" />
     </div>
   </main>
 </TerminalLayout>
