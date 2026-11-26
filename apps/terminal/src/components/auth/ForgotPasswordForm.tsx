@@ -20,7 +20,9 @@ export function ForgotPasswordForm() {
         redirectTo: `${window.location.origin}/reset-password`,
       });
       if (authError) throw authError;
-      setSuccess('Si existe una cuenta con ese correo, recibirás un enlace para restablecer tu contraseña.');
+      setSuccess(
+        'Si existe una cuenta con ese correo, recibirás un enlace para restablecer tu contraseña.',
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al solicitar restablecimiento');
     } finally {
@@ -31,19 +33,37 @@ export function ForgotPasswordForm() {
   return (
     <form onSubmit={handleSubmit} class="forgot-password-form">
       <h2>Restablecer contraseña</h2>
-      {error && <div class="error-message" role="alert">{error}</div>}
-      {success && <div class="success-message" role="status">{success}</div>}
+      {error && (
+        <div class="error-message" role="alert">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div class="success-message" role="status">
+          {success}
+        </div>
+      )}
       {!success && (
         <>
           <p>Ingresa tu correo electrónico para recibir un enlace de restablecimiento.</p>
           <div class="field">
             <label htmlFor="email">Correo electrónico</label>
-            <input id="email" type="email" name="email" required autoComplete="email" value={email} onInput={(event) => setEmail((event.currentTarget as HTMLInputElement).value)} />
+            <input
+              id="email"
+              type="email"
+              name="email"
+              required
+              autoComplete="email"
+              value={email}
+              onInput={(event) => setEmail((event.currentTarget as HTMLInputElement).value)}
+            />
           </div>
           <button type="submit" disabled={loading}>
             {loading ? 'Enviando...' : 'Enviar enlace'}
           </button>
-          <p class="footer">¿Ya tienes el enlace? <a href="/reset-password">Restablecer contraseña</a></p>
+          <p class="footer">
+            ¿Ya tienes el enlace? <a href="/reset-password">Restablecer contraseña</a>
+          </p>
         </>
       )}
     </form>
