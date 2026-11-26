@@ -14,6 +14,7 @@ export {
   updateChartRenderScene,
   type ChartRenderCandle,
   type ChartRenderScene,
+  type ChartDrawingSelectionPreview,
   type ChartType,
   type ChartRenderSceneUpdate,
   type ChartRenderTheme,
