@@ -17,7 +17,9 @@ The Supabase CLI v3 targets the local stack by default. Use explicit linked-proj
 
 ## Chart drawings migration
 
-The hosted project has migration version `20261126111503` applied. Keep the migration filename aligned with that recorded version so `supabase db push` does not replay an already-applied schema change.
+The hosted project has migration versions `20261126111503` and `20261126111929` applied. Keep both migration filenames aligned with those recorded versions so `supabase db push` does not replay already-applied schema changes.
+
+The second migration revokes direct Data API execution of the pre-existing `public.rls_auto_enable()` SECURITY DEFINER event-trigger function for `anon` and `authenticated`. The database event trigger remains enabled; only direct RPC execution by client roles is revoked. This removed the project's two security advisor warnings.
 
 `20261126111503_create_chart_drawings.sql` creates `public.chart_drawings` with:
 
