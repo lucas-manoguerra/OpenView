@@ -11,12 +11,33 @@ export const PUBLIC_ROUTES = [
 ];
 
 export function isPublicRoute(pathname: string): boolean {
+  // The terminal/chart remains usable without an account; only account routes require auth.
+  if (pathname === '/') {
+    return true;
+  }
+
   return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
 }
 
-export async function getAuthenticatedUser(context: APIContext) {
-  const supabase = createServerClient(context);
+export function hasSupabaseAuthCookie(cookieHeader: string | null): boolean {
+  if (!cookieHeader) {
+    return false;
+  }
 
+  return cookieHeader.split(';').some((cookie) => {
+    const separatorIndex = cookie.indexOf('=');
+    const name = (separatorIndex === -1 ? cookie : cookie.slice(0, separatorIndex)).trim();
+
+    return /^sb-[a-z0-9-]+-auth-token(?:\.\d+)?$/i.test(name);
+  });
+}
+
+export async function getAuthenticatedUser(context: APIContext, responseHeaders: Headers) {
+  if (!hasSupabaseAuthCookie(context.request.headers.get('Cookie'))) {
+    return { supabase: null, user: null, error: null };
+  }
+
+  const supabase = createServerClient(context, responseHeaders);
   const { data: claims, error } = await supabase.auth.getClaims();
 
   if (error || !claims) {
