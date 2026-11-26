@@ -37,8 +37,9 @@ export function ForgotPasswordForm() {
         <>
           <p>Ingresa tu correo electrónico para recibir un enlace de restablecimiento.</p>
           <div class="field">
-            <label>Correo electrónico</label>
+            <label htmlFor="email">Correo electrónico</label>
             <input
+              id="email"
               type="email"
               name="email"
               required
