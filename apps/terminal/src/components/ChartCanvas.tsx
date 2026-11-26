@@ -60,7 +60,6 @@ import {
   type ChartIndicatorSeries,
   type ChartRenderDrawing,
   type ChartDrawingMagnetMode,
-  type ChartDrawingSelectionArea,
   type CanvasDrawingNudgeDirection,
   type NumericRange,
   type PriceScaleMode,
