@@ -643,16 +643,17 @@ export function ChartCanvas({
         return;
       }
 
+      const interactionSnapshot = chartApi?.getInteractionSnapshot() ?? null;
       const frame = createFrame(
         size,
-        controller,
+        interactionSnapshot,
         currentCandles,
         currentCandles,
         false,
         priceScaleModeRef.current,
       );
 
-      if (controller === null) {
+      if (chartApi === null) {
         scene = createChartRenderScene(
           frame,
           currentCandles,
@@ -663,22 +664,15 @@ export function ChartCanvas({
           selectedDrawingIdRef.current,
           selectedDrawingIdsRef.current,
         );
-        const interactionController = createChartInteractionController(frame, {
-          onChange: handleControllerChange,
-          onPriceScaleInteraction: () => {
-            autoScaleRef.current = false;
-            setAutoScale(false);
-          },
-        });
-        controller = interactionController;
-        interactionController.setPriceScaleLocked(priceScaleLockedRef.current);
         publishScene(scene);
+        chartApi?.setPriceScaleLocked(priceScaleLockedRef.current);
         canvas.dataset['rightOffset'] = String(frame.timeScale.rightOffset);
         canvas.dataset['followLatest'] = String(frame.timeScale.rightOffset >= 0);
         canvas.dataset['navigationMode'] =
           frame.timeScale.rightOffset >= 0 ? 'realtime' : 'historical';
-        chartApi?.attachPointerEvents(canvas, interactionController, {
-          getAutoScalePriceRange: () => getVisiblePriceRange(interactionController, currentCandles),
+        chartApi?.attachPointerEvents(canvas, {
+          getAutoScalePriceRange: () =>
+            getVisiblePriceRange(chartApi?.getInteractionSnapshot() ?? null, currentCandles),
           getDrawingTool: () => drawingToolRef.current,
           getDrawingMagnetMode: () => drawingMagnetModeRef.current,
           getSnapToIndicators: () => snapToIndicatorsRef.current,
@@ -764,9 +758,9 @@ export function ChartCanvas({
           },
         });
       } else {
-        controller.setFrame(frame);
+        chartApi.setInteractionFrame(frame);
         if (autoScaleRef.current) {
-          controller.fitPriceScale(getVisiblePriceRange(controller, currentCandles));
+          chartApi.fitPriceScale(getVisiblePriceRange(chartApi.getInteractionSnapshot(), currentCandles));
         }
       }
 
