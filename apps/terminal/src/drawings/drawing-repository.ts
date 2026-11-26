@@ -32,11 +32,7 @@ export interface DrawingRepository {
     drawing: SaveDrawingInput,
     expectedRevision: number | null,
   ): Promise<PersistedDrawing>;
-  delete(
-    scope: DrawingRepositoryScope,
-    drawingId: string,
-    expectedRevision: number,
-  ): Promise<void>;
+  delete(scope: DrawingRepositoryScope, drawingId: string, expectedRevision: number): Promise<void>;
 }
 
 export class DrawingRevisionConflictError extends Error {
@@ -181,15 +177,11 @@ export class LocalStorageDrawingRepository implements DrawingRepository {
     const key = createStorageKey(scope);
     const collection = [...restoreCollection(this.storage.getItem(key))];
     const existingIndex = collection.findIndex((item) => item.drawingId === drawing.drawingId);
-    const existing = existingIndex < 0 ? null : collection[existingIndex] ?? null;
+    const existing = existingIndex < 0 ? null : (collection[existingIndex] ?? null);
     const actualRevision = existing?.revision ?? null;
 
     if (actualRevision !== expectedRevision) {
-      throw new DrawingRevisionConflictError(
-        drawing.drawingId,
-        expectedRevision,
-        actualRevision,
-      );
+      throw new DrawingRevisionConflictError(drawing.drawingId, expectedRevision, actualRevision);
     }
     if (existing !== null && existing.timeframeScope !== scope.timeframe) {
       throw new RangeError('A drawing cannot be moved between timeframe scopes implicitly.');
@@ -225,7 +217,7 @@ export class LocalStorageDrawingRepository implements DrawingRepository {
     const index = collection.findIndex(
       (item) => item.drawingId === drawingId && item.timeframeScope === scope.timeframe,
     );
-    const existing = index < 0 ? null : collection[index] ?? null;
+    const existing = index < 0 ? null : (collection[index] ?? null);
 
     if (existing === null || existing.revision !== expectedRevision) {
       throw new DrawingRevisionConflictError(
@@ -237,7 +229,8 @@ export class LocalStorageDrawingRepository implements DrawingRepository {
 
     collection.splice(index, 1);
     if (collection.length === 0) this.storage.removeItem(key);
-    else this.storage.setItem(key, JSON.stringify({ version: STORAGE_VERSION, drawings: collection }));
+    else
+      this.storage.setItem(key, JSON.stringify({ version: STORAGE_VERSION, drawings: collection }));
   }
 }
 
