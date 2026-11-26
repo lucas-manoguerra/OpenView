@@ -108,6 +108,7 @@ export const attachCanvasPointerEvents = (
   let activeDrawingTool: Exclude<CanvasDrawingTool, 'cursor' | 'select'> | null = null;
   let drawingStart: ChartDataPoint | null = null;
   let drawingAwaitingSecondPoint = false;
+  let drawingPointerOrigin: ChartCoordinate | null = null;
   let activeDrawingEdit: CanvasDrawingEditGesture | null = null;
   let activeDrawingGroupEdit: CanvasDrawingGroupEditGesture | null = null;
   let activeDrawingAreaSelection: CanvasDrawingAreaSelection | null = null;
@@ -182,7 +183,7 @@ export const attachCanvasPointerEvents = (
       return;
     }
 
-    if (activeDrawingTool !== null && drawingStart !== null && drawingAwaitingSecondPoint) {
+    if (activeDrawingTool !== null && drawingStart !== null) {
       activePointerId = event.pointerId;
       event.preventDefault();
       canvas.setPointerCapture(event.pointerId);
@@ -270,6 +271,7 @@ export const attachCanvasPointerEvents = (
         chartCoordinateToDataPoint(position, controller.snapshot.frame),
         event,
       );
+      drawingPointerOrigin = position;
       activeDrawingTool = drawingTool;
       activePointerId = event.pointerId;
       setDiagnostic('drawingPointerDownId', String(event.pointerId));
@@ -453,8 +455,16 @@ export const attachCanvasPointerEvents = (
 
       const clickTool =
         activeDrawingTool === 'horizontal-line' || activeDrawingTool === 'vertical-line';
-      if (!clickTool && !drawingAwaitingSecondPoint) {
+      const pointerDistance =
+        drawingPointerOrigin === null
+          ? 0
+          : Math.hypot(
+              position.x - drawingPointerOrigin.x,
+              position.y - drawingPointerOrigin.y,
+            );
+      if (!clickTool && !drawingAwaitingSecondPoint && pointerDistance < 4) {
         drawingAwaitingSecondPoint = true;
+        drawingPointerOrigin = null;
         options.onDrawingCreationPreview?.({
           type: activeDrawingTool,
           start: drawingStart,
@@ -475,6 +485,7 @@ export const attachCanvasPointerEvents = (
       drawingStart = null;
       activeDrawingTool = null;
       drawingAwaitingSecondPoint = false;
+      drawingPointerOrigin = null;
       releaseActivePointer();
       return;
     }
@@ -509,6 +520,7 @@ export const attachCanvasPointerEvents = (
       drawingStart = null;
       activeDrawingTool = null;
       drawingAwaitingSecondPoint = false;
+      drawingPointerOrigin = null;
       options.onDrawingCreationPreview?.(null);
       releaseActivePointer();
       return;
@@ -646,6 +658,7 @@ export const attachCanvasPointerEvents = (
       activeDrawingGroupEdit = null;
       activeDrawingTool = null;
       drawingAwaitingSecondPoint = false;
+      drawingPointerOrigin = null;
       options.onDrawingCreationPreview?.(null);
       releaseActivePointer();
       controller.pointerCancel();
