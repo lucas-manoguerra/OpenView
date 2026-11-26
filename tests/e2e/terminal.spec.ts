@@ -2765,3 +2765,49 @@ test('discovers drawing tools by family and activates implemented tools', async 
   await expect(catalog).toHaveCount(0);
   await expect(page.getByTestId('drawing-tool-trend-line')).toHaveAttribute('aria-pressed', 'true');
 });
+
+
+test('cancels a two-click drawing preview with Escape and returns to the cursor', async ({ page }) => {
+  await page.goto('/');
+
+  const canvas = page.getByRole('img', {
+    name: /Gráfico interactivo de velas y volumen para BTC \/ USDT/,
+  });
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+
+  const bounds = await canvas.boundingBox();
+  expect(bounds).not.toBeNull();
+
+  if (bounds === null) {
+    throw new Error('The chart canvas must have a visible bounding box.');
+  }
+
+  const startX = bounds.x + bounds.width * 0.35;
+  const startY = bounds.y + bounds.height * 0.35;
+  const previewX = bounds.x + bounds.width * 0.62;
+  const previewY = bounds.y + bounds.height * 0.62;
+
+  await page.getByTestId('drawing-tool-rectangle').click();
+  await expect(page.getByTestId('drawing-tool-rectangle')).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+
+  await page.mouse.click(startX, startY);
+  await page.mouse.move(previewX, previewY);
+  await expect(canvas).toHaveAttribute('data-drawing-count', '0');
+
+  await page.keyboard.press('Escape');
+
+  await expect(page.getByTestId('drawing-tool-cursor')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('drawing-tool-rectangle')).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  );
+  await expect(canvas).toHaveAttribute('data-drawing-count', '0');
+
+  await page.mouse.click(previewX, previewY);
+  await expect(canvas).toHaveAttribute('data-drawing-count', '0');
+});
