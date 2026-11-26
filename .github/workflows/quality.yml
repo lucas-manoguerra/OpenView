@@ -106,6 +106,9 @@ jobs:
   e2e:
     name: Browser tests · Chromium · shard ${{ matrix.shard }}/11
     runs-on: ubuntu-latest
+    env:
+      PUBLIC_SUPABASE_URL: https://example.supabase.co
+      PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
     strategy:
       fail-fast: false
       matrix:
