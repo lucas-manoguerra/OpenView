@@ -13,7 +13,7 @@ import {
   type QuoteUpdate,
 } from '@openview/market-data';
 import { type Candle, createInstrumentId, type InstrumentId } from '@openview/market-domain';
-import { useCallback, useRef, useState } from 'preact/hooks';
+import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import {
   createWatchlistInstrument,
   DEFAULT_WATCHLIST,
@@ -22,6 +22,9 @@ import {
   saveBrowserWatchlistPreferences,
   type WatchlistInstrument,
 } from '../watchlist/watchlist-preferences';
+import { createBrowserDrawingRepository } from '../drawings/drawing-repository';
+import { DrawingPersistenceCoordinator } from '../drawings/drawing-persistence-coordinator';
+import type { ChartRenderDrawing } from '@openview/chart-engine';
 import { ChartCanvas } from './ChartCanvas';
 import {
   MarketWatchlist,
@@ -184,6 +187,59 @@ export function MarketChart() {
   const hasMoreHistoryRef = useRef(true);
   const candlesRef = useRef(candles);
   candlesRef.current = candles;
+  const drawingCoordinatorRef = useRef<DrawingPersistenceCoordinator | null>(null);
+  if (drawingCoordinatorRef.current === null) {
+    const repository = createBrowserDrawingRepository();
+    if (repository !== null) {
+      drawingCoordinatorRef.current = new DrawingPersistenceCoordinator(repository);
+    }
+  }
+  const [restoredDrawings, setRestoredDrawings] = useState<readonly ChartRenderDrawing[]>([]);
+  const [drawingWorkspaceToken, setDrawingWorkspaceToken] = useState<number | null>(null);
+  const drawingWorkspaceTokenRef = useRef<number | null>(null);
+  const drawingLoadRequestRef = useRef(0);
+  drawingWorkspaceTokenRef.current = drawingWorkspaceToken;
+
+  useEffect(() => {
+    const requestId = drawingLoadRequestRef.current + 1;
+    drawingLoadRequestRef.current = requestId;
+    drawingWorkspaceTokenRef.current = null;
+    setDrawingWorkspaceToken(null);
+    setRestoredDrawings([]);
+
+    const coordinator = drawingCoordinatorRef.current;
+    if (coordinator === null) return;
+
+    const scope = {
+      owner: { kind: 'anonymous' as const, id: 'local-browser' },
+      instrumentId: `${providerId}:${selectedInstrumentId}`,
+      timeframe: interval,
+    };
+
+    let active = true;
+    void coordinator.activate(scope).then((workspace) => {
+      if (!active || requestId !== drawingLoadRequestRef.current) return;
+      drawingWorkspaceTokenRef.current = workspace.token;
+      setDrawingWorkspaceToken(workspace.token);
+      setRestoredDrawings(workspace.drawings);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [interval, providerId, selectedInstrumentId]);
+
+  const handleDrawingsChange = useCallback((drawings: readonly ChartRenderDrawing[]): void => {
+    const coordinator = drawingCoordinatorRef.current;
+    const token = drawingWorkspaceTokenRef.current;
+    if (coordinator === null || token === null) return;
+    void coordinator.persist(token, drawings).catch((cause: unknown) => {
+      console.error(
+        'No se pudieron guardar los dibujos localmente.',
+        cause instanceof Error ? cause.message : cause,
+      );
+    });
+  }, []);
 
   const recoverHistoricalRange = async (
     requestId: number,
@@ -1143,6 +1199,9 @@ export function MarketChart() {
             </div>
           </section>
           <ChartCanvas
+            drawingContextKey={`${providerId}:${selectedInstrumentId}:${interval}`}
+            restoredDrawings={restoredDrawings}
+            onDrawingsChange={handleDrawingsChange}
             candles={candles}
             priceIncrement={selectedMarketInstrument?.priceIncrement ?? null}
             symbol={selectedInstrument.chartSymbol}
