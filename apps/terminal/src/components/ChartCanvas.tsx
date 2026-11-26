@@ -76,6 +76,8 @@ type ChartCanvasProps = Readonly<{
   onNeedMoreHistory: () => void;
   onContextMenuRequest?: (request: ChartContextMenuRequest) => void;
   onDrawingsChange?: (drawings: readonly ChartRenderDrawing[]) => void;
+  drawingContextKey: string;
+  restoredDrawings: readonly ChartRenderDrawing[];
 }>;
 
 type ChartRuntime = Readonly<{
@@ -314,6 +316,8 @@ export function ChartCanvas({
   onNeedMoreHistory,
   onContextMenuRequest,
   onDrawingsChange,
+  drawingContextKey,
+  restoredDrawings,
 }: ChartCanvasProps) {
   const runtimeRef = useRef<ChartRuntime | null>(null);
   const onContextMenuRequestRef = useRef(onContextMenuRequest);
@@ -390,7 +394,9 @@ export function ChartCanvas({
   const drawingPropertiesPanelRef = useRef<HTMLDivElement | null>(null);
   const drawingCoordinatesPanelRef = useRef<HTMLElement | null>(null);
   const drawingPanelDragCleanupRef = useRef<(() => void) | null>(null);
-  const drawingSymbolRef = useRef(symbol);
+  const drawingSymbolRef = useRef(drawingContextKey);
+  const restoredDrawingsRef = useRef(restoredDrawings);
+  restoredDrawingsRef.current = restoredDrawings;
   const autoScaleRef = useRef(autoScale);
   const priceScaleLockedRef = useRef(priceScaleLocked);
   priceScaleModeRef.current = priceScaleMode;
@@ -946,13 +952,13 @@ export function ChartCanvas({
   const bindDataUpdate = useCallback(
     (element: HTMLSpanElement | null): void => {
       if (element !== null) {
-        if (drawingSymbolRef.current !== symbol) {
-          drawingSymbolRef.current = symbol;
+        if (drawingSymbolRef.current !== drawingContextKey) {
+          drawingSymbolRef.current = drawingContextKey;
           selectedDrawingIdRef.current = null;
           setSelectedDrawingId(null);
           selectedDrawingIdsRef.current = Object.freeze([]);
           setSelectedDrawingIds(selectedDrawingIdsRef.current);
-          drawingsRef.current = Object.freeze([]);
+          drawingsRef.current = restoredDrawingsRef.current;
           setDrawings(drawingsRef.current);
           setDrawingUndoCount(0);
           setDrawingRedoCount(0);
@@ -963,8 +969,15 @@ export function ChartCanvas({
         runtimeRef.current?.updateCandles(renderDataRef.current.candles, priceScaleMode);
       }
     },
-    [renderCandles, priceScaleMode, symbol],
+    [renderCandles, priceScaleMode, drawingContextKey],
   );
+
+  useEffect(() => {
+    drawingsRef.current = restoredDrawings;
+    setDrawings(restoredDrawings);
+    runtimeRef.current?.setDrawings(restoredDrawings);
+    runtimeRef.current?.clearDrawingHistory();
+  }, [restoredDrawings]);
 
   const bindIndicatorsUpdate = useCallback(
     (element: HTMLSpanElement | null): void => {
