@@ -21,7 +21,7 @@ create table if not exists public.chart_drawings (
   constraint chart_drawings_payload_object
     check (jsonb_typeof(payload) = 'object'),
   constraint chart_drawings_payload_type
-    check (payload ? 'type' and payload ->> 'type' in (
+    check (\n      payload ? 'type'\n      and jsonb_typeof(payload -> 'type') = 'string'\n      and payload ->> 'type' in (
       'trend-line',
       'ray',
       'horizontal-line',
@@ -60,7 +60,7 @@ comment on table public.chart_drawings is
 comment on column public.chart_drawings.timeframe_scope is
   'NULL means visible on every timeframe; otherwise the canonical timeframe identifier.';
 comment on column public.chart_drawings.payload is
-  'Versioned serializable drawing properties only; excludes selection, hover, previews and undo history.';
+  'Serializable confirmed drawing properties only; excludes selection, hover, previews and undo history.';
 comment on column public.chart_drawings.revision is
   'Server-managed optimistic concurrency revision, starting at 1.';
 
