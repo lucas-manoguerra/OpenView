@@ -2806,3 +2806,32 @@ test('cancels a two-click drawing preview with Escape and returns to the cursor'
   await page.mouse.click(previewX, previewY);
   await expect(canvas).toHaveAttribute('data-drawing-count', '0');
 });
+
+test('opens the terminal context menu on right-click and closes it with Escape', async ({
+  page,
+}) => {
+  await page.goto('/');
+
+  const canvas = page.getByRole('img', {
+    name: /Gráfico interactivo de velas y volumen para BTC \/ USDT/,
+  });
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-candles-count')))
+    .toBeGreaterThan(400);
+
+  const bounds = await canvas.boundingBox();
+  expect(bounds).not.toBeNull();
+  if (bounds === null) {
+    throw new Error('The chart canvas must have a visible bounding box.');
+  }
+
+  await page.mouse.click(bounds.x + bounds.width * 0.55, bounds.y + bounds.height * 0.45, {
+    button: 'right',
+  });
+
+  await expect(page.getByTestId('chart-context-menu')).toBeVisible();
+  await expect(page.getByTestId('chart-context-toggle-all-drawings')).toBeVisible();
+
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('chart-context-menu')).toHaveCount(0);
+});
