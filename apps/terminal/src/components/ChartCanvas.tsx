@@ -48,7 +48,6 @@ import {
   createChart,
   type ChartApi,
   getTimestampAtLogicalIndex,
-  updateChartDrawing,
   calculateExponentialMovingAverage,
   calculateSimpleMovingAverage,
   countAppendedBars,
@@ -105,6 +104,7 @@ type ChartRuntime = Readonly<{
     target: 'start' | 'end',
     updates: Partial<ChartRenderDrawing['start']>,
   ): void;
+  nudgeDrawings(drawingIds: readonly string[], logicalDelta: number, priceDelta: number): void;
   addDrawing(drawing: ChartRenderDrawing): void;
   deleteDrawings(drawingIds: readonly string[]): void;
   setDrawingsVisible(visible: boolean): void;
@@ -378,7 +378,6 @@ export function ChartCanvas({
   const renderableDrawingsRef = useRef<readonly ChartRenderDrawing[]>(drawings);
   const selectedDrawingIdRef = useRef<string | null>(selectedDrawingId);
   const selectedDrawingIdsRef = useRef<readonly string[]>(selectedDrawingIds);
-  const commitDrawingsRef = useRef<(nextDrawings: readonly ChartRenderDrawing[]) => void>(() => {});
   const drawingPanelLayoutRef = useRef<DrawingPanelLayout>(drawingPanelLayout);
   const drawingPanelLayoutLoadedRef = useRef(false);
   const drawingPropertiesPanelRef = useRef<HTMLDivElement | null>(null);
@@ -399,14 +398,6 @@ export function ChartCanvas({
   renderableDrawingsRef.current = drawingsVisibleRef.current
     ? drawingsRef.current.filter((drawing) => drawing.visible !== false)
     : [];
-  commitDrawingsRef.current = (nextDrawings): void => {
-    drawingsRef.current = Object.freeze([...nextDrawings]);
-    renderableDrawingsRef.current = drawingsVisibleRef.current
-      ? drawingsRef.current.filter((drawing) => drawing.visible !== false)
-      : [];
-    setDrawings(drawingsRef.current);
-    runtimeRef.current?.setDrawings(drawingsRef.current);
-  };
   const ensureDrawingPanelLayoutLoaded = (): void => {
     if (drawingPanelLayoutLoadedRef.current) {
       return;
@@ -688,7 +679,7 @@ export function ChartCanvas({
           hitTestDrawing: (point, tolerance) => chartApi?.hitTestDrawing(point, tolerance) ?? null,
           getPriceIncrement: () => priceIncrementRef.current,
           onDrawingNudge: (direction: CanvasDrawingNudgeDirection): void => {
-            handleSelectedDrawingsNudge(direction, currentCandles);
+            handleSelectedDrawingsNudge(direction);
           },
           onDrawingSelectionChange: (drawingIds: readonly string[]): void => {
             updateDrawingSelection(drawingIds);
@@ -921,6 +912,9 @@ export function ChartCanvas({
       },
       updateDrawingAnchor: (drawingId, target, updates): void => {
         chartApi?.execute({ type: 'update-drawing-anchor', drawingId, target, updates });
+      },
+      nudgeDrawings: (drawingIds, logicalDelta, priceDelta): void => {
+        chartApi?.execute({ type: 'nudge-drawings', drawingIds, logicalDelta, priceDelta });
       },
       addDrawing: (drawing: ChartRenderDrawing): void => {
         chartApi?.execute({ type: 'add-drawing', drawing });
@@ -1160,10 +1154,7 @@ export function ChartCanvas({
     setDrawingTool(nextTool);
   };
 
-  const handleSelectedDrawingsNudge = (
-    direction: CanvasDrawingNudgeDirection,
-    currentCandles: readonly ChartRenderCandle[],
-  ): void => {
+  const handleSelectedDrawingsNudge = (direction: CanvasDrawingNudgeDirection): void => {
     const selectedIds = new Set(selectedDrawingIdsRef.current);
 
     if (selectedIds.size === 0 && selectedDrawingIdRef.current !== null) {
@@ -1191,35 +1182,7 @@ export function ChartCanvas({
       priceDelta = direction === 'up' ? priceIncrement : -priceIncrement;
     }
 
-    const origin = Object.freeze({ logicalIndex: 0, price: 0 });
-    const current = Object.freeze({
-      logicalIndex: logicalDelta,
-      price: priceDelta,
-    });
-    const currentDrawings = drawingsRef.current;
-
-    try {
-      const nextDrawings = currentDrawings.map((drawing) => {
-        if (!selectedIds.has(drawing.id) || drawing.locked === true) {
-          return drawing;
-        }
-
-        if (
-          (drawing.type === 'horizontal-line' && logicalDelta !== 0) ||
-          (drawing.type === 'vertical-line' && priceDelta !== 0)
-        ) {
-          return drawing;
-        }
-
-        return updateChartDrawing(drawing, 'body', origin, current, currentCandles);
-      });
-
-      if (nextDrawings.some((drawing, index) => drawing !== currentDrawings[index])) {
-        commitDrawingsRef.current(nextDrawings);
-      }
-    } catch {
-      return;
-    }
+    runtimeRef.current?.nudgeDrawings([...selectedIds], logicalDelta, priceDelta);
   };
 
   const handleSelectedDrawingUpdate = (
@@ -1388,10 +1351,8 @@ export function ChartCanvas({
   };
 
   const handleClearDrawings = (): void => {
-    if (drawingsRef.current.length > 0) {
-      commitDrawingsRef.current([]);
-      updateDrawingSelection([]);
-    }
+    runtimeRef.current?.deleteDrawings(drawingsRef.current.map((drawing) => drawing.id));
+    updateDrawingSelection([]);
   };
 
   const handleSelectDrawingFromObjectTree = (drawingId: string): void => {
@@ -1407,16 +1368,8 @@ export function ChartCanvas({
       setDrawingsVisible(true);
     }
 
-    const nextDrawings = currentDrawings.map((candidate) =>
-      candidate.id === drawingId && candidate.visible === false
-        ? Object.freeze({ ...candidate, visible: true })
-        : candidate,
-    );
-
-    if (nextDrawings.some((candidate, index) => candidate !== currentDrawings[index])) {
-      commitDrawingsRef.current(nextDrawings);
-    } else {
-      runtimeRef.current?.setDrawings(currentDrawings);
+    if (drawing.visible === false) {
+      runtimeRef.current?.updateDrawingProperties([drawingId], { visible: true });
     }
 
     drawingToolRef.current = 'cursor';
@@ -1433,13 +1386,7 @@ export function ChartCanvas({
     }
 
     const nextVisible = drawing.visible === false;
-    commitDrawingsRef.current(
-      currentDrawings.map((candidate) =>
-        candidate.id === drawingId
-          ? Object.freeze({ ...candidate, visible: nextVisible })
-          : candidate,
-      ),
-    );
+    runtimeRef.current?.updateDrawingProperties([drawingId], { visible: nextVisible });
 
     if (!nextVisible) {
       updateDrawingSelection(selectedDrawingIdsRef.current.filter((id) => id !== drawingId));
@@ -1455,13 +1402,7 @@ export function ChartCanvas({
     }
 
     const nextLocked = drawing.locked !== true;
-    commitDrawingsRef.current(
-      currentDrawings.map((candidate) =>
-        candidate.id === drawingId
-          ? Object.freeze({ ...candidate, locked: nextLocked })
-          : candidate,
-      ),
-    );
+    runtimeRef.current?.updateDrawingProperties([drawingId], { locked: nextLocked });
 
     if (nextLocked) {
       updateDrawingSelection(selectedDrawingIdsRef.current.filter((id) => id !== drawingId));
@@ -1469,14 +1410,11 @@ export function ChartCanvas({
   };
 
   const handleDeleteDrawingObject = (drawingId: string): void => {
-    const currentDrawings = drawingsRef.current;
-    const nextDrawings = currentDrawings.filter((drawing) => drawing.id !== drawingId);
-
-    if (nextDrawings.length === currentDrawings.length) {
+    if (!drawingsRef.current.some((drawing) => drawing.id === drawingId)) {
       return;
     }
 
-    commitDrawingsRef.current(nextDrawings);
+    runtimeRef.current?.deleteDrawings([drawingId]);
     updateDrawingSelection(selectedDrawingIdsRef.current.filter((id) => id !== drawingId));
   };
 
@@ -1488,8 +1426,9 @@ export function ChartCanvas({
     }
 
     const nextLocked = !currentDrawings.every((drawing) => drawing.locked === true);
-    commitDrawingsRef.current(
-      currentDrawings.map((drawing) => Object.freeze({ ...drawing, locked: nextLocked })),
+    runtimeRef.current?.updateDrawingProperties(
+      currentDrawings.map((drawing) => drawing.id),
+      { locked: nextLocked },
     );
     updateDrawingSelection([]);
   };
@@ -1515,9 +1454,7 @@ export function ChartCanvas({
       return;
     }
 
-    commitDrawingsRef.current(
-      drawingsRef.current.filter((drawing) => !selectedIds.has(drawing.id)),
-    );
+    runtimeRef.current?.deleteDrawings([...selectedIds]);
     updateDrawingSelection([]);
   };
 
