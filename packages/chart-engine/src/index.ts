@@ -133,6 +133,7 @@ export {
 export {
   createChart,
   type ChartApi,
+  type ChartContextMenuRequest,
   type ChartCommand,
   type ChartDrawingEditPreview,
   type ChartDrawingCreationGesture,
