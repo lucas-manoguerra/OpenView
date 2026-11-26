@@ -131,7 +131,9 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
         ? null
         : Object.freeze([...scene.drawings, drawingCreationPreview]));
     const previewScene =
-      previewDrawings === null ? scene : updateChartRenderScene(scene, { drawings: previewDrawings });
+      previewDrawings === null
+        ? scene
+        : updateChartRenderScene(scene, { drawings: previewDrawings });
     const renderScene = drawingsVisible
       ? previewScene
       : updateChartRenderScene(previewScene, { drawings: [] });
