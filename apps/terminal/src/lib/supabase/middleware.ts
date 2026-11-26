@@ -13,9 +13,25 @@ export function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
 }
 
-export async function getAuthenticatedUser(context: APIContext, responseHeaders: Headers) {
-  const supabase = createServerClient(context, responseHeaders);
+export function hasSupabaseAuthCookie(cookieHeader: string | null): boolean {
+  if (!cookieHeader) {
+    return false;
+  }
 
+  return cookieHeader.split(';').some((cookie) => {
+    const separatorIndex = cookie.indexOf('=');
+    const name = (separatorIndex === -1 ? cookie : cookie.slice(0, separatorIndex)).trim();
+
+    return /^sb-[a-z0-9-]+-auth-token(?:\\.\\d+)?$/i.test(name);
+  });
+}
+
+export async function getAuthenticatedUser(context: APIContext, responseHeaders: Headers) {
+  if (!hasSupabaseAuthCookie(context.request.headers.get('Cookie'))) {
+    return { supabase: null, user: null, error: null };
+  }
+
+  const supabase = createServerClient(context, responseHeaders);
   const { data: claims, error } = await supabase.auth.getClaims();
 
   if (error || !claims) {
