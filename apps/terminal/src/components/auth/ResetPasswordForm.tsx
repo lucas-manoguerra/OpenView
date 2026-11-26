@@ -1,13 +1,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../../lib/supabase/database.types';
 import { createClient } from '../../lib/supabase/client';
+import { getRecoveryTokenHash } from '../../lib/supabase/recovery-token';
 
 export function ResetPasswordForm() {
   const supabase: SupabaseClient<Database> = createClient();
   const tokenHash =
     typeof window === 'undefined'
       ? null
-      : new URL(window.location.href).searchParams.get('token_hash');
+      : getRecoveryTokenHash(window.location.search);
   let password = '';
   let confirmPassword = '';
   let error: string | null = null;
