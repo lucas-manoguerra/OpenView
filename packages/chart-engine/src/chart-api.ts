@@ -43,6 +43,7 @@ export type ChartDrawingEditPreview =
 export type ChartCommand =
   | Readonly<{ type: 'set-scene'; scene: ChartRenderScene }>
   | Readonly<{ type: 'set-drawings'; drawings: readonly ChartRenderDrawing[] }>
+  | Readonly<{ type: 'nudge-drawings'; drawingIds: readonly string[]; logicalDelta: number; priceDelta: number }>
   | Readonly<{
       type: 'update-drawing-properties';
       drawingIds: readonly string[];
@@ -249,6 +250,42 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
         render();
         emitDrawingState();
         emit(Object.freeze({ type: 'object-order-changed', order: objectOrder }));
+        emitHistoryState();
+        return;
+      }
+
+      if (command.type === 'nudge-drawings') {
+        if (
+          !Number.isFinite(command.logicalDelta) ||
+          !Number.isFinite(command.priceDelta) ||
+          (command.logicalDelta === 0 && command.priceDelta === 0)
+        ) {
+          return;
+        }
+        const drawingIds = new Set(command.drawingIds);
+        const origin = Object.freeze({ logicalIndex: 0, price: 0 });
+        const current = Object.freeze({
+          logicalIndex: command.logicalDelta,
+          price: command.priceDelta,
+        });
+        const nextDrawings = scene.drawings.map((drawing) => {
+          if (
+            !drawingIds.has(drawing.id) ||
+            drawing.locked === true ||
+            (drawing.type === 'horizontal-line' && command.logicalDelta !== 0) ||
+            (drawing.type === 'vertical-line' && command.priceDelta !== 0)
+          ) {
+            return drawing;
+          }
+          return updateChartDrawing(drawing, 'body', origin, current, scene.candles);
+        });
+        if (nextDrawings.every((drawing, index) => drawing === scene.drawings[index])) return;
+        drawingUndoStack.push(scene.drawings);
+        if (drawingUndoStack.length > 50) drawingUndoStack.shift();
+        drawingRedoStack.length = 0;
+        scene = updateChartRenderScene(scene, { drawings: Object.freeze(nextDrawings) });
+        render();
+        emitDrawingState();
         emitHistoryState();
         return;
       }
