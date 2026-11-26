@@ -96,6 +96,8 @@ type ChartRuntime = Readonly<{
   invertPriceScale(): void;
   setIndicators(indicators: readonly ChartIndicatorSeries[]): void;
   setDrawings(drawings: readonly ChartRenderDrawing[]): void;
+  addDrawing(drawing: ChartRenderDrawing): void;
+  deleteDrawings(drawingIds: readonly string[]): void;
   setDrawingsVisible(visible: boolean): void;
   undoDrawings(): void;
   redoDrawings(): void;
@@ -309,6 +311,8 @@ export function ChartCanvas({
   const [chartType, setChartType] = useState<ChartType>('candles');
   const [activeIndicators, setActiveIndicators] = useState<readonly string[]>([]);
   const [drawingTool, setDrawingTool] = useState<CanvasDrawingTool>('cursor');
+  const [controlKeyPressed, setControlKeyPressed] = useState(false);
+
   const [drawings, setDrawings] = useState<readonly ChartRenderDrawing[]>([]);
   const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null);
   const [selectedDrawingIds, setSelectedDrawingIds] = useState<readonly string[]>([]);
@@ -365,7 +369,6 @@ export function ChartCanvas({
   const selectedDrawingIdRef = useRef<string | null>(selectedDrawingId);
   const selectedDrawingIdsRef = useRef<readonly string[]>(selectedDrawingIds);
   const commitDrawingsRef = useRef<(nextDrawings: readonly ChartRenderDrawing[]) => void>(() => {});
-  const drawingSequenceRef = useRef(0);
   const drawingPanelLayoutRef = useRef<DrawingPanelLayout>(drawingPanelLayout);
   const drawingPanelLayoutLoadedRef = useRef(false);
   const drawingPropertiesPanelRef = useRef<HTMLDivElement | null>(null);
@@ -383,12 +386,9 @@ export function ChartCanvas({
   snapToIndicatorsRef.current = snapToIndicators;
   keepDrawingRef.current = keepDrawing;
   drawingsVisibleRef.current = drawingsVisible;
-  drawingsRef.current = drawings;
-  renderableDrawingsRef.current = drawingsVisible
-    ? drawings.filter((drawing) => drawing.visible !== false)
+  renderableDrawingsRef.current = drawingsVisibleRef.current
+    ? drawingsRef.current.filter((drawing) => drawing.visible !== false)
     : [];
-  selectedDrawingIdRef.current = selectedDrawingId;
-  selectedDrawingIdsRef.current = selectedDrawingIds;
   commitDrawingsRef.current = (nextDrawings): void => {
     drawingsRef.current = Object.freeze([...nextDrawings]);
     renderableDrawingsRef.current = drawingsVisibleRef.current
@@ -700,17 +700,7 @@ export function ChartCanvas({
             });
           },
           onDrawingDeleteMany: (drawingIds: readonly string[]): void => {
-            const deletedIds = new Set(drawingIds);
-            const nextDrawings = drawingsRef.current.filter(
-              (drawing) => !deletedIds.has(drawing.id),
-            );
-
-            if (nextDrawings.length === drawingsRef.current.length) {
-              return;
-            }
-
-            commitDrawingsRef.current(nextDrawings);
-            updateDrawingSelection([]);
+            runtimeRef.current?.deleteDrawings(drawingIds);
           },
           onDrawingEditPreview: (gesture: CanvasDrawingEditGesture | null): void => {
             chartApi?.execute({
@@ -731,16 +721,14 @@ export function ChartCanvas({
             });
           },
           onDrawingDelete: (drawingId: string): void => {
-            const nextDrawings = drawingsRef.current.filter((drawing) => drawing.id !== drawingId);
-
-            if (nextDrawings.length === drawingsRef.current.length) {
-              return;
-            }
-
-            commitDrawingsRef.current(nextDrawings);
-            updateDrawingSelection([]);
+            runtimeRef.current?.deleteDrawings([drawingId]);
           },
           onDrawingComplete: (gesture: CanvasDrawingGesture): void => {
+            canvas.dataset['drawingGestureReceived'] = gesture.type;
+            canvas.dataset['drawingGestureIndexes'] = [
+              gesture.start.logicalIndex,
+              gesture.end?.logicalIndex ?? 'click',
+            ].join(',');
             const startTimestamp = getTimestampAtLogicalIndex(
               gesture.start.logicalIndex,
               currentCandles,
@@ -751,12 +739,16 @@ export function ChartCanvas({
                 : getTimestampAtLogicalIndex(gesture.end.logicalIndex, currentCandles);
 
             if (startTimestamp === null || (gesture.end !== null && endTimestamp === null)) {
+              canvas.dataset['drawingCreationOutcome'] = 'timestamp-conversion-rejected';
+              canvas.dataset['drawingCreationTimestamps'] = [
+                startTimestamp ?? 'null',
+                endTimestamp ?? 'null',
+              ].join(',');
               return;
             }
 
-            drawingSequenceRef.current += 1;
             const drawing: ChartRenderDrawing = Object.freeze({
-              id: 'drawing-' + drawingSequenceRef.current,
+              id: crypto.randomUUID(),
               type: gesture.type,
               start: Object.freeze({
                 timestamp: startTimestamp,
@@ -771,7 +763,12 @@ export function ChartCanvas({
                     }),
               ...drawingToolPreferencesRef.current[gesture.type],
             });
-            commitDrawingsRef.current([...drawingsRef.current, drawing]);
+            runtimeRef.current?.addDrawing(drawing);
+            canvas.dataset['drawingCreationOutcome'] = 'add-drawing-dispatched';
+            canvas.dataset['drawingCreationTimestamps'] = [
+              startTimestamp,
+              endTimestamp ?? 'click',
+            ].join(',');
           },
           onDrawingToolExit: (): void => {
             drawingToolRef.current = 'cursor';
@@ -884,6 +881,12 @@ export function ChartCanvas({
         scene = updateChartRenderScene(scene, { drawings: nextDrawings });
         chartApi?.execute({ type: 'set-drawings', drawings: nextDrawings });
       },
+      addDrawing: (drawing: ChartRenderDrawing): void => {
+        chartApi?.execute({ type: 'add-drawing', drawing });
+      },
+      deleteDrawings: (drawingIds: readonly string[]): void => {
+        chartApi?.execute({ type: 'delete-drawings', drawingIds });
+      },
       setDrawingsVisible: (visible: boolean): void => {
         chartApi?.execute({ type: 'set-drawings-visible', visible });
       },
@@ -988,7 +991,6 @@ export function ChartCanvas({
       if (element !== null) {
         if (drawingSymbolRef.current !== symbol) {
           drawingSymbolRef.current = symbol;
-          drawingSequenceRef.current = 0;
           selectedDrawingIdRef.current = null;
           setSelectedDrawingId(null);
           selectedDrawingIdsRef.current = Object.freeze([]);
@@ -1569,7 +1571,16 @@ export function ChartCanvas({
       .every((drawing) => drawing.type === selectedDrawing.type);
 
   return (
-    <div class="grid h-[390px] min-h-[340px] w-full grid-cols-[38px_minmax(0,1fr)] bg-[#0b0f17]">
+    <section
+      aria-label="Herramientas y gráfico"
+      class="grid h-[390px] min-h-[340px] w-full grid-cols-[38px_minmax(0,1fr)] bg-[#0b0f17]"
+      onKeyDownCapture={(event) => {
+        if (event.key === 'Control' || event.key === 'Meta') setControlKeyPressed(true);
+      }}
+      onKeyUpCapture={(event) => {
+        if (event.key === 'Control' || event.key === 'Meta') setControlKeyPressed(false);
+      }}
+    >
       <aside class="relative flex max-h-full min-w-0 flex-col items-center gap-1 overflow-y-auto border-r border-white/10 bg-[#101723] py-2">
         <button
           type="button"
@@ -2077,6 +2088,7 @@ export function ChartCanvas({
           data-chart-type={chartType}
           data-indicator-count={renderIndicators.length}
           data-drawing-count={drawings.length}
+          data-drawing-ids={drawings.map((drawing) => drawing.id).join(',')}
           data-renderable-drawing-count={renderableDrawingsRef.current.length}
           data-price-increment={priceIncrement ?? ''}
           data-drawings-locked={String(allDrawingsLocked)}
@@ -2085,6 +2097,10 @@ export function ChartCanvas({
           data-drawing-snap-to-indicators={String(snapToIndicators)}
           data-keep-drawing={String(keepDrawing)}
           data-selected-drawing-id={selectedDrawingId ?? ''}
+          data-selected-drawing-indexes={selectedDrawingIds
+            .map((id) => drawings.findIndex((drawing) => drawing.id === id) + 1)
+            .filter((order) => order > 0)
+            .join(',')}
           data-selected-drawing-type={selectedDrawing?.type ?? ''}
           data-selected-drawing-start-price={
             selectedDrawing === null ? '' : String(selectedDrawing.start.price)
@@ -2168,7 +2184,8 @@ export function ChartCanvas({
                   No hay dibujos en este gráfico.
                 </div>
               ) : (
-                [...drawings].reverse().map((drawing) => {
+                [...drawings].reverse().map((drawing, index) => {
+                  const drawingOrder = drawings.length - index;
                   const isVisible = drawing.visible !== false;
                   const isLocked = drawing.locked === true;
                   const isSelected = selectedDrawingIds.includes(drawing.id);
@@ -2185,7 +2202,7 @@ export function ChartCanvas({
 
                   return (
                     <div
-                      data-testid={`drawing-object-row-${drawing.id}`}
+                      data-testid={`drawing-object-row-${drawingOrder}`}
                       data-drawing-visible={String(isVisible)}
                       data-drawing-locked={String(isLocked)}
                       class={
@@ -2197,7 +2214,7 @@ export function ChartCanvas({
                         type="button"
                         aria-label={`Seleccionar ${drawingName.toLowerCase()} ${drawing.id}`}
                         aria-pressed={isSelected}
-                        data-testid={`drawing-object-select-${drawing.id}`}
+                        data-testid={`drawing-object-select-${drawingOrder}`}
                         onClick={() => handleSelectDrawingFromObjectTree(drawing.id)}
                         class="flex min-w-0 flex-1 items-center gap-2 rounded px-1 py-1 text-left"
                       >
@@ -2219,7 +2236,7 @@ export function ChartCanvas({
                         type="button"
                         aria-label={isVisible ? `Ocultar ${drawing.id}` : `Mostrar ${drawing.id}`}
                         aria-pressed={!isVisible}
-                        data-testid={`drawing-object-visibility-${drawing.id}`}
+                        data-testid={`drawing-object-visibility-${drawingOrder}`}
                         title={isVisible ? 'Ocultar dibujo' : 'Mostrar dibujo'}
                         onClick={() => handleToggleDrawingObjectVisibility(drawing.id)}
                         class="grid size-6 shrink-0 place-items-center rounded text-[11px] text-slate-400 hover:bg-white/10 hover:text-slate-100"
@@ -2232,7 +2249,7 @@ export function ChartCanvas({
                           isLocked ? `Desbloquear ${drawing.id}` : `Bloquear ${drawing.id}`
                         }
                         aria-pressed={isLocked}
-                        data-testid={`drawing-object-lock-${drawing.id}`}
+                        data-testid={`drawing-object-lock-${drawingOrder}`}
                         title={isLocked ? 'Desbloquear dibujo' : 'Bloquear dibujo'}
                         onClick={() => handleToggleDrawingObjectLock(drawing.id)}
                         class="grid size-6 shrink-0 place-items-center rounded text-[11px] text-slate-400 hover:bg-white/10 hover:text-slate-100"
@@ -2242,7 +2259,7 @@ export function ChartCanvas({
                       <button
                         type="button"
                         aria-label={`Eliminar ${drawing.id}`}
-                        data-testid={`drawing-object-delete-${drawing.id}`}
+                        data-testid={`drawing-object-delete-${drawingOrder}`}
                         title="Eliminar dibujo"
                         onClick={() => handleDeleteDrawingObject(drawing.id)}
                         class="grid size-6 shrink-0 place-items-center rounded text-[12px] text-slate-500 hover:bg-rose-500/15 hover:text-rose-200"
@@ -2477,7 +2494,9 @@ export function ChartCanvas({
             Ver todo
           </button>
         </fieldset>
-        {selectedDrawingHasSingleSelection &&
+        {(drawingTool === 'cursor' || drawingTool === 'select') &&
+          !controlKeyPressed &&
+          selectedDrawingHasSingleSelection &&
           selectedDrawing !== null &&
           drawingPanelLayout.visible.coordinates && (
             <DrawingCoordinatesPanel
@@ -2490,34 +2509,37 @@ export function ChartCanvas({
             />
           )}
 
-        {selectedDrawing !== null && drawingPanelLayout.visible.appearance && (
-          <DrawingPropertiesPanel
-            selectedDrawing={selectedDrawing}
-            selectedDrawingIds={selectedDrawingIds}
-            selectedDrawingsShareType={selectedDrawingsShareType}
-            panelPosition={drawingPanelLayout.positions.appearance}
-            templates={drawingStyleTemplates}
-            activeDefaultStyle={activeDefaultStyle !== null}
-            activeTemplateTool={activeTemplateTool}
-            expanded={drawingTemplatesExpanded}
-            selectedTemplateId={selectedDrawingTemplateId}
-            newTemplateName={newDrawingTemplateName}
-            templateError={drawingTemplateError}
-            panelRef={(element) => attachDrawingPanelElement('appearance', element)}
-            onDragStart={(event) => handleDrawingPanelPointerDown('appearance', event)}
-            onClose={() => handleDrawingPanelVisibilityChange('appearance', false)}
-            onStyleChange={handleSelectedDrawingUpdate}
-            onToggleTemplates={handleToggleDrawingTemplates}
-            onTemplateChange={setSelectedDrawingTemplateId}
-            onApplyTemplate={handleApplyDrawingTemplate}
-            onDeleteTemplate={handleDeleteDrawingTemplate}
-            onTemplateNameChange={(name) => {
-              setNewDrawingTemplateName(name);
-              setDrawingTemplateError(null);
-            }}
-            onSaveTemplate={handleSaveDrawingTemplate}
-          />
-        )}
+        {(drawingTool === 'cursor' || drawingTool === 'select') &&
+          !controlKeyPressed &&
+          selectedDrawing !== null &&
+          drawingPanelLayout.visible.appearance && (
+            <DrawingPropertiesPanel
+              selectedDrawing={selectedDrawing}
+              selectedDrawingIds={selectedDrawingIds}
+              selectedDrawingsShareType={selectedDrawingsShareType}
+              panelPosition={drawingPanelLayout.positions.appearance}
+              templates={drawingStyleTemplates}
+              activeDefaultStyle={activeDefaultStyle !== null}
+              activeTemplateTool={activeTemplateTool}
+              expanded={drawingTemplatesExpanded}
+              selectedTemplateId={selectedDrawingTemplateId}
+              newTemplateName={newDrawingTemplateName}
+              templateError={drawingTemplateError}
+              panelRef={(element) => attachDrawingPanelElement('appearance', element)}
+              onDragStart={(event) => handleDrawingPanelPointerDown('appearance', event)}
+              onClose={() => handleDrawingPanelVisibilityChange('appearance', false)}
+              onStyleChange={handleSelectedDrawingUpdate}
+              onToggleTemplates={handleToggleDrawingTemplates}
+              onTemplateChange={setSelectedDrawingTemplateId}
+              onApplyTemplate={handleApplyDrawingTemplate}
+              onDeleteTemplate={handleDeleteDrawingTemplate}
+              onTemplateNameChange={(name) => {
+                setNewDrawingTemplateName(name);
+                setDrawingTemplateError(null);
+              }}
+              onSaveTemplate={handleSaveDrawingTemplate}
+            />
+          )}
         {loading && (
           <div class="pointer-events-none absolute inset-0 grid place-items-center bg-[#0b0f17]/70">
             <span
@@ -2561,6 +2583,6 @@ export function ChartCanvas({
           Drag to pan · Scroll to zoom · Double-click price axis to fit
         </div>
       </div>
-    </div>
+    </section>
   );
 }

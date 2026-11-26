@@ -43,6 +43,8 @@ export type ChartDrawingEditPreview =
 export type ChartCommand =
   | Readonly<{ type: 'set-scene'; scene: ChartRenderScene }>
   | Readonly<{ type: 'set-drawings'; drawings: readonly ChartRenderDrawing[] }>
+  | Readonly<{ type: 'add-drawing'; drawing: ChartRenderDrawing }>
+  | Readonly<{ type: 'delete-drawings'; drawingIds: readonly string[] }>
   | Readonly<{ type: 'set-drawings-visible'; visible: boolean }>
   | Readonly<{ type: 'set-drawing-selection'; drawingIds: readonly string[] }>
   | Readonly<{ type: 'set-drawing-hover'; hit: ChartDrawingHit | null }>
@@ -169,6 +171,62 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
         emit(Object.freeze({ type: 'scene-changed', scene }));
         emit(Object.freeze({ type: 'object-order-changed', order: objectOrder }));
         emitDrawingState();
+        return;
+      }
+
+      if (command.type === 'add-drawing') {
+        if (scene.drawings.some((drawing) => drawing.id === command.drawing.id)) {
+          throw new RangeError('A drawing with this id already exists.');
+        }
+        drawingPreview = null;
+        drawingUndoStack.push(scene.drawings);
+        if (drawingUndoStack.length > 50) drawingUndoStack.shift();
+        drawingRedoStack.length = 0;
+        scene = updateChartRenderScene(scene, {
+          drawings: [...scene.drawings, command.drawing],
+          selectedDrawingId: command.drawing.id,
+          selectedDrawingIds: [command.drawing.id],
+          hoveredDrawingHit: null,
+        });
+        objectOrder = reconcileChartObjectOrder(objectOrder, getAvailableObjects(scene));
+        render();
+        emitDrawingState();
+        emit(Object.freeze({ type: 'object-order-changed', order: objectOrder }));
+        emitHistoryState();
+        return;
+      }
+
+      if (command.type === 'delete-drawings') {
+        const deletedIds = new Set(command.drawingIds);
+        const nextDrawings = scene.drawings.filter((drawing) => !deletedIds.has(drawing.id));
+        if (nextDrawings.length === scene.drawings.length) return;
+        drawingPreview = null;
+        drawingUndoStack.push(scene.drawings);
+        if (drawingUndoStack.length > 50) drawingUndoStack.shift();
+        drawingRedoStack.length = 0;
+        const availableIds = new Set(nextDrawings.map((drawing) => drawing.id));
+        const selectedDrawingIds = Object.freeze(
+          scene.selectedDrawingIds.filter((id) => availableIds.has(id)),
+        );
+        const selectedDrawingId =
+          scene.selectedDrawingId !== null && availableIds.has(scene.selectedDrawingId)
+            ? scene.selectedDrawingId
+            : (selectedDrawingIds[selectedDrawingIds.length - 1] ?? null);
+        const hoveredDrawingHit =
+          scene.hoveredDrawingHit !== null && availableIds.has(scene.hoveredDrawingHit.drawingId)
+            ? scene.hoveredDrawingHit
+            : null;
+        scene = updateChartRenderScene(scene, {
+          drawings: nextDrawings,
+          selectedDrawingId,
+          selectedDrawingIds,
+          hoveredDrawingHit,
+        });
+        objectOrder = reconcileChartObjectOrder(objectOrder, getAvailableObjects(scene));
+        render();
+        emitDrawingState();
+        emit(Object.freeze({ type: 'object-order-changed', order: objectOrder }));
+        emitHistoryState();
         return;
       }
 

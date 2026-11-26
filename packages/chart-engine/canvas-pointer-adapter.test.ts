@@ -245,6 +245,42 @@ describe('canvas pointer event adapter', () => {
     expect(onDrawingToolExit).not.toHaveBeenCalled();
   });
 
+  it('accepts a different drawing tool for the next gesture', () => {
+    const { canvas, dispatch } = createCanvasTarget();
+    const frame = createChartFrame(900, 500, { min: 90, max: 120 }, 99);
+    const controller = createChartInteractionController(frame);
+    const gestures: CanvasDrawingGesture[] = [];
+    let drawingTool: 'trend-line' | 'ray' = 'trend-line';
+    attachCanvasPointerEvents(canvas, controller, {
+      getDrawingTool: () => drawingTool,
+      getKeepDrawing: () => true,
+      onDrawingComplete: (drawing) => gestures.push(drawing),
+    });
+
+    const draw = (offset: number): void => {
+      const start = {
+        x: frame.layout.plotArea.x + 40 + offset,
+        y: frame.layout.plotArea.y + 60,
+      };
+      const end = {
+        x: frame.layout.plotArea.x + 140 + offset,
+        y: frame.layout.plotArea.y + 120,
+      };
+
+      dispatch(
+        'pointerdown',
+        createPointerEvent({ clientX: 100 + start.x, clientY: 50 + start.y }),
+      );
+      dispatch('pointerup', createPointerEvent({ clientX: 100 + end.x, clientY: 50 + end.y }));
+    };
+
+    draw(0);
+    drawingTool = 'ray';
+    draw(180);
+
+    expect(gestures.map((gesture) => gesture.type)).toEqual(['trend-line', 'ray']);
+  });
+
   it('creates a horizontal line on click without requiring a drag', () => {
     const { canvas, dispatch } = createCanvasTarget();
     const frame = createChartFrame(900, 500, { min: 90, max: 120 }, 99);

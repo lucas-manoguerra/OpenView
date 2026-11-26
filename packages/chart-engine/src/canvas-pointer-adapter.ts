@@ -146,18 +146,29 @@ export const attachCanvasPointerEvents = (
 
   const releaseActivePointer = (): void => {
     if (activePointerId === null) {
+      setDiagnostic('drawingPointerActiveAfterRelease', 'null');
       return;
     }
 
-    if (canvas.hasPointerCapture(activePointerId)) {
-      canvas.releasePointerCapture(activePointerId);
+    const releasedPointerId = activePointerId;
+    if (canvas.hasPointerCapture(releasedPointerId)) {
+      canvas.releasePointerCapture(releasedPointerId);
     }
 
     activePointerId = null;
+    setDiagnostic('drawingPointerReleasedId', String(releasedPointerId));
+    setDiagnostic('drawingPointerActiveAfterRelease', 'null');
+  };
+
+  const setDiagnostic = (key: string, value: string): void => {
+    if (canvas.dataset !== undefined) canvas.dataset[key] = value;
   };
 
   const handlePointerDown = (event: PointerEvent): void => {
+    setDiagnostic('drawingPointerDownEventId', String(event.pointerId));
+    setDiagnostic('drawingPointerActiveAtDown', String(activePointerId));
     if (activePointerId !== null) {
+      setDiagnostic('drawingPointerDownOutcome', 'blocked-active-pointer');
       return;
     }
 
@@ -165,6 +176,7 @@ export const attachCanvasPointerEvents = (
     const drawingTool = options.getDrawingTool?.() ?? 'cursor';
 
     if (event.button !== 0) {
+      setDiagnostic('drawingPointerDownOutcome', 'ignored-non-primary-button');
       return;
     }
 
@@ -241,6 +253,7 @@ export const attachCanvasPointerEvents = (
         position.y <= plotArea.y + plotArea.height;
 
       if (!insidePlot) {
+        setDiagnostic('drawingPointerDownOutcome', 'ignored-outside-plot');
         return;
       }
 
@@ -250,6 +263,9 @@ export const attachCanvasPointerEvents = (
       );
       activeDrawingTool = drawingTool;
       activePointerId = event.pointerId;
+      setDiagnostic('drawingPointerDownId', String(event.pointerId));
+      setDiagnostic('drawingPointerDownOutcome', 'drawing-started');
+      setDiagnostic('drawingPointerTool', drawingTool);
       event.preventDefault();
       canvas.setPointerCapture(event.pointerId);
       return;
@@ -323,9 +339,13 @@ export const attachCanvasPointerEvents = (
   };
 
   const handlePointerUp = (event: PointerEvent): void => {
+    setDiagnostic('drawingPointerUpId', String(event.pointerId));
+    setDiagnostic('drawingPointerActiveId', String(activePointerId));
     if (activePointerId === null || event.pointerId !== activePointerId) {
+      setDiagnostic('drawingPointerOutcome', 'pointer-id-mismatch');
       return;
     }
+    setDiagnostic('drawingPointerOutcome', 'pointer-up-matched');
 
     if (activeDrawingAreaSelection !== null) {
       const position = getCanvasPosition(canvas, event);
@@ -427,6 +447,7 @@ export const attachCanvasPointerEvents = (
   };
 
   const handlePointerCancel = (event: PointerEvent): void => {
+    setDiagnostic('drawingPointerCancelId', String(event.pointerId));
     if (activePointerId === null || event.pointerId !== activePointerId) {
       return;
     }

@@ -549,4 +549,39 @@ describe('chart public API', () => {
     expect(chart.exportSnapshot().objectOrder).toEqual(snapshot.objectOrder);
     chart.destroy();
   });
+
+  it('creates and deletes drawings through chart-owned commands with undo and redo', () => {
+    const { surface } = createSurface();
+    const chart = createChart({
+      surface,
+      initialScene: createScene(),
+      renderer: { scheduler: { requestFrame: () => 1, cancelFrame: () => {} } },
+    });
+    const drawing = {
+      id: 'chart-created-drawing',
+      type: 'trend-line' as const,
+      start: { timestamp: 1, price: 2 },
+      end: { timestamp: 2, price: 3 },
+      color: '#ffffff',
+    };
+
+    chart.execute({ type: 'add-drawing', drawing });
+    expect(chart.exportSnapshot().scene.drawings).toMatchObject([drawing]);
+    expect(chart.exportSnapshot().scene.selectedDrawingIds).toEqual([drawing.id]);
+    expect(() => chart.execute({ type: 'add-drawing', drawing })).toThrow(
+      'A drawing with this id already exists.',
+    );
+
+    chart.execute({ type: 'undo-drawings' });
+    expect(chart.exportSnapshot().scene.drawings).toHaveLength(0);
+    chart.execute({ type: 'redo-drawings' });
+    expect(chart.exportSnapshot().scene.drawings).toMatchObject([drawing]);
+
+    chart.execute({ type: 'delete-drawings', drawingIds: [drawing.id] });
+    expect(chart.exportSnapshot().scene.drawings).toHaveLength(0);
+    expect(chart.exportSnapshot().scene.selectedDrawingIds).toHaveLength(0);
+    chart.execute({ type: 'undo-drawings' });
+    expect(chart.exportSnapshot().scene.drawings).toMatchObject([drawing]);
+    chart.destroy();
+  });
 });
