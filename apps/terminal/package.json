@@ -21,7 +21,9 @@
     "astro": "7.4.13",
     "lucide-preact": "1.79.0",
     "preact": "11.2.0",
-    "tailwindcss": "4.3.5"
+    "tailwindcss": "4.3.5",
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.119.2"
   },
   "devDependencies": {
     "wrangler": "4.168.0"

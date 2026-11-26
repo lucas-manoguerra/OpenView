@@ -12,9 +12,13 @@ export default defineConfig({
     ...devices['Desktop Chrome'],
   },
   webServer: {
-    command: 'pnpm --filter @openview/terminal dev --host 127.0.0.1',
+    command: 'pnpm --filter @openview/terminal dev --host 127.0.0.1 --verbose',
     url: 'http://127.0.0.1:4321',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    env: {
+      ...process.env,
+      DEBUG: 'astro:*,vite:*,@cloudflare/*',
+    },
   },
 });
