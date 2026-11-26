@@ -1,7 +1,7 @@
 {
   "$schema": "https://cloudflare-workers.cloudflareworkers.com/config_schema_2025.json",
   "name": "openview-terminal",
-  "compatibility_date": "2026-11-26",
+  "compatibility_date": "2026-11-24",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "directory": "./dist",
