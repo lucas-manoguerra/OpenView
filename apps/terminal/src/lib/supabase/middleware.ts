@@ -10,7 +10,6 @@ export const PUBLIC_ROUTES = [
 ];
 
 export function isPublicRoute(pathname: string): boolean {
-  // The terminal/chart remains usable without an account; only account routes require auth.
   if (pathname === '/') {
     return true;
   }
