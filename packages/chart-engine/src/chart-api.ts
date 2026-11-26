@@ -13,7 +13,6 @@ import {
 } from './canvas-pointer-adapter';
 import {
   createChartInteractionController,
-  type ChartInteractionController,
   type ChartInteractionOptions,
   type ChartInteractionSnapshot,
 } from './chart-interaction';
