@@ -14,7 +14,7 @@ import {
   type QuoteUpdate,
 } from '@openview/market-data';
 import { type Candle, createInstrumentId, type InstrumentId } from '@openview/market-domain';
-import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
+import { useCallback, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { createBrowserDrawingRepository } from '../drawings/drawing-repository';
 import { DrawingPersistenceCoordinator } from '../drawings/drawing-persistence-coordinator';
 import {
@@ -201,7 +201,7 @@ export function MarketChart() {
   const drawingLoadRequestRef = useRef(0);
   drawingWorkspaceTokenRef.current = drawingWorkspaceToken;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const requestId = drawingLoadRequestRef.current + 1;
     drawingLoadRequestRef.current = requestId;
     drawingWorkspaceTokenRef.current = null;
@@ -230,9 +230,7 @@ export function MarketChart() {
       .catch((cause: unknown) => {
         if (!active || requestId !== drawingLoadRequestRef.current) return;
         setDrawingPersistenceError(
-          cause instanceof Error
-            ? cause.message
-            : 'No se pudieron restaurar los dibujos locales.',
+          cause instanceof Error ? cause.message : 'No se pudieron restaurar los dibujos locales.',
         );
       });
 
@@ -249,9 +247,7 @@ export function MarketChart() {
       () => setDrawingPersistenceError(null),
       (cause: unknown) =>
         setDrawingPersistenceError(
-          cause instanceof Error
-            ? cause.message
-            : 'No se pudieron guardar los dibujos localmente.',
+          cause instanceof Error ? cause.message : 'No se pudieron guardar los dibujos localmente.',
         ),
     );
   }, []);
