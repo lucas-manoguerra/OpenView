@@ -2509,6 +2509,13 @@ test('selects drawings with Control and moves and deletes the group together', a
 });
 
 test('saves and reapplies custom drawing style templates across reloads', async ({ page }) => {
+  await page.addInitScript(() => {
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith('openview.terminal.drawings')) {
+        localStorage.removeItem(key);
+      }
+    }
+  });
   await page.goto('/');
   await expect
     .poll(async () =>
