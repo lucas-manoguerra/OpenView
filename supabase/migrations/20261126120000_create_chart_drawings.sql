@@ -21,7 +21,10 @@ create table if not exists public.chart_drawings (
   constraint chart_drawings_payload_object
     check (jsonb_typeof(payload) = 'object'),
   constraint chart_drawings_payload_type
-    check (\n      payload ? 'type'\n      and jsonb_typeof(payload -> 'type') = 'string'\n      and payload ->> 'type' in (
+    check (
+      payload ? 'type'
+      and jsonb_typeof(payload -> 'type') = 'string'
+      and payload ->> 'type' in (
       'trend-line',
       'ray',
       'horizontal-line',
