@@ -1372,7 +1372,11 @@ test('draws geometric annotations and supports undo, redo and clearing', async (
   await expect(canvas).toHaveAttribute('data-drawing-count', '1');
 
   await drawDrag('drawing-tool-ray', startX + 12, startY + 20, endX + 30, endY - 15);
-  await expect(canvas).toHaveAttribute('data-drawing-count', '2');
+  const drawingDiagnostics = await canvas.evaluate((element) => ({ ...element.dataset }));
+  await expect(canvas, JSON.stringify(drawingDiagnostics)).toHaveAttribute(
+    'data-drawing-count',
+    '2',
+  );
   const drawingIds = (await canvas.getAttribute('data-drawing-ids'))?.split(',') ?? [];
   expect(drawingIds).toHaveLength(2);
   expect(new Set(drawingIds).size).toBe(2);
