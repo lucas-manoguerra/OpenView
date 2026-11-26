@@ -1572,11 +1572,13 @@ export function ChartCanvas({
 
   return (
     <div
+      role="group"
+      aria-label="Herramientas y gráfico"
       class="grid h-[390px] min-h-[340px] w-full grid-cols-[38px_minmax(0,1fr)] bg-[#0b0f17]"
-      onKeyDown={(event) => {
+      onKeyDownCapture={(event) => {
         if (event.key === 'Control' || event.key === 'Meta') setControlKeyPressed(true);
       }}
-      onKeyUp={(event) => {
+      onKeyUpCapture={(event) => {
         if (event.key === 'Control' || event.key === 'Meta') setControlKeyPressed(false);
       }}
     >
