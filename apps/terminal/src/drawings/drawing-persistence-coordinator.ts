@@ -41,6 +41,7 @@ export class DrawingPersistenceCoordinator {
   async activate(scope: DrawingRepositoryScope): Promise<DrawingWorkspace> {
     const token = ++this.nextToken;
     this.active = null;
+    await this.writes;
     const persisted = await this.repository.list(scope);
 
     if (token !== this.nextToken) {
