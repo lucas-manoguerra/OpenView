@@ -540,10 +540,10 @@ export function ChartCanvas({
     let scene: ChartRenderScene | null = null;
     let lastSize: CanvasResize | null = null;
 
-    const publishScene = (nextScene: ChartRenderScene): void => {
+    const publishScene = (nextScene: ChartRenderScene): ChartApi => {
       scene = nextScene;
       if (chartApi === null) {
-        chartApi = createChart({
+        const createdChartApi = createChart({
           surface: canvas,
           initialScene: nextScene,
           interactionOptions: {
@@ -554,7 +554,8 @@ export function ChartCanvas({
             },
           },
         });
-        chartApi.subscribe((event) => {
+        chartApi = createdChartApi;
+        createdChartApi.subscribe((event) => {
           if (event.type === 'history-state-changed') {
             setDrawingUndoCount(event.undoCount);
             setDrawingRedoCount(event.redoCount);
@@ -589,16 +590,17 @@ export function ChartCanvas({
           setSelectedDrawingIds(event.selectedDrawingIds);
         });
         if (lastSize !== null) {
-          chartApi.execute({
+          createdChartApi.execute({
             type: 'resize',
             width: lastSize.width,
             height: lastSize.height,
             devicePixelRatio: lastSize.devicePixelRatio,
           });
         }
-        return;
+        return createdChartApi;
       }
       chartApi.execute({ type: 'set-scene', scene: nextScene });
+      return chartApi;
     };
 
     const handleControllerChange = (snapshot: ChartInteractionSnapshot): void => {
@@ -667,13 +669,13 @@ export function ChartCanvas({
           selectedDrawingIdRef.current,
           selectedDrawingIdsRef.current,
         );
-        publishScene(scene);
-        chartApi?.setPriceScaleLocked(priceScaleLockedRef.current);
+        const activeChartApi = publishScene(scene);
+        activeChartApi.setPriceScaleLocked(priceScaleLockedRef.current);
         canvas.dataset['rightOffset'] = String(frame.timeScale.rightOffset);
         canvas.dataset['followLatest'] = String(frame.timeScale.rightOffset >= 0);
         canvas.dataset['navigationMode'] =
           frame.timeScale.rightOffset >= 0 ? 'realtime' : 'historical';
-        chartApi?.attachPointerEvents(canvas, {
+        activeChartApi.attachPointerEvents(canvas, {
           getAutoScalePriceRange: () =>
             getVisiblePriceRange(chartApi?.getInteractionSnapshot() ?? null, currentCandles),
           getDrawingTool: () => drawingToolRef.current,
@@ -681,7 +683,7 @@ export function ChartCanvas({
           getSnapToIndicators: () => snapToIndicatorsRef.current,
           getKeepDrawing: () => keepDrawingRef.current,
           onContextMenu: (point): void => {
-            chartApi?.execute({ type: 'request-context-menu', point });
+            activeChartApi.execute({ type: 'request-context-menu', point });
           },
           getPriceIncrement: () => priceIncrementRef.current,
           onDrawingNudge: (direction: CanvasDrawingNudgeDirection): void => {
@@ -692,18 +694,18 @@ export function ChartCanvas({
           },
           onDrawingHover: (hit: ChartDrawingHit | null): void => {
             canvas.style.cursor = hit === null ? '' : hit.target === 'body' ? 'move' : 'crosshair';
-            chartApi?.execute({ type: 'set-drawing-hover', hit });
+            activeChartApi.execute({ type: 'set-drawing-hover', hit });
           },
           onDrawingAreaSelectionChange: (selection): void => {
             canvas.dataset['drawingSelectionPreview'] = String(selection !== null);
-            chartApi?.execute({ type: 'set-drawing-selection-preview', preview: selection });
+            activeChartApi.execute({ type: 'set-drawing-selection-preview', preview: selection });
           },
           onDrawingAreaSelectionComplete: (area: ChartDrawingSelectionArea): void => {
             ensureDrawingPanelLayoutLoaded();
-            chartApi?.execute({ type: 'select-drawings-within-area', area });
+            activeChartApi.execute({ type: 'select-drawings-within-area', area });
           },
           onDrawingGroupEdit: (gesture: CanvasDrawingGroupEditGesture): void => {
-            chartApi?.execute({
+            activeChartApi.execute({
               type: 'commit-drawing-edit',
               gesture: { kind: 'group', ...gesture },
             });
