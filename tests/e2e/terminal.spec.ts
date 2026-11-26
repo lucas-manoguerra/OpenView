@@ -2767,7 +2767,9 @@ test('discovers drawing tools by family and activates implemented tools', async 
 });
 
 
-test('cancels a two-click drawing preview with Escape and returns to the cursor', async ({ page }) => {
+test('cancels a two-click drawing preview with Escape and returns to the cursor', async ({
+  page,
+}) => {
   await page.goto('/');
 
   const canvas = page.getByRole('img', {
@@ -2790,10 +2792,7 @@ test('cancels a two-click drawing preview with Escape and returns to the cursor'
   const previewY = bounds.y + bounds.height * 0.62;
 
   await page.getByTestId('drawing-tool-rectangle').click();
-  await expect(page.getByTestId('drawing-tool-rectangle')).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  );
+  await expect(page.getByTestId('drawing-tool-rectangle')).toHaveAttribute('aria-pressed', 'true');
 
   await page.mouse.click(startX, startY);
   await page.mouse.move(previewX, previewY);
@@ -2802,10 +2801,7 @@ test('cancels a two-click drawing preview with Escape and returns to the cursor'
   await page.keyboard.press('Escape');
 
   await expect(page.getByTestId('drawing-tool-cursor')).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByTestId('drawing-tool-rectangle')).toHaveAttribute(
-    'aria-pressed',
-    'false',
-  );
+  await expect(page.getByTestId('drawing-tool-rectangle')).toHaveAttribute('aria-pressed', 'false');
   await expect(canvas).toHaveAttribute('data-drawing-count', '0');
 
   await page.mouse.click(previewX, previewY);
