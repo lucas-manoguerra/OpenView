@@ -59,6 +59,7 @@ describe('local drawing repository', () => {
       createdAt: '2026-11-26T12:00:00.000Z',
       updatedAt: '2026-11-26T12:00:00.000Z',
       revision: 1,
+      timeframeScope: accountScope.timeframe,
     });
     expect(await repository.list(accountScope)).toEqual([saved]);
   });
@@ -75,13 +76,13 @@ describe('local drawing repository', () => {
       null,
     );
 
-    expect((await repository.list(accountScope)).map((item) => item.drawingId)).toEqual([
-      'global',
-      'hourly',
+    expect((await repository.list(accountScope)).map((item) => [item.drawingId, item.timeframeScope])).toEqual([
+      ['global', null],
+      ['hourly', '1h'],
     ]);
     expect(
-      (await repository.list({ ...accountScope, timeframe: '4h' })).map((item) => item.drawingId),
-    ).toEqual(['global', 'four-hour']);
+      (await repository.list({ ...accountScope, timeframe: '4h' })).map((item) => [item.drawingId, item.timeframeScope]),
+    ).toEqual([['global', null], ['four-hour', '4h']]);
   });
 
   it('isolates owners and instruments', async () => {
