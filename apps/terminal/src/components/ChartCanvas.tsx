@@ -2511,7 +2511,6 @@ export function ChartCanvas({
 
         {(drawingTool === 'cursor' || drawingTool === 'select') &&
           !controlKeyPressed &&
-          selectedDrawingIds.length === 1 &&
           selectedDrawing !== null &&
           drawingPanelLayout.visible.appearance && (
             <DrawingPropertiesPanel
