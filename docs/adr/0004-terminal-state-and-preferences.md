@@ -2,7 +2,7 @@
 
 ## Estado
 
-Aceptado.
+Aceptado. Complementado por ADR 0005 para persistencia de cuenta y sincronización entre dispositivos.
 
 ## Contexto
 
@@ -24,6 +24,14 @@ Las preferencias de una watchlist no son datos de mercado. No deben contener cot
 - El histórico OHLCV pertenece al servicio de datos y no se persiste como preferencia.
 - La watchlist y el instrumento seleccionado son preferencias persistentes.
 - El motor de gráficos mantiene su propio estado de interacción y no depende del store de preferencias.
+
+## Alcance de la persistencia local
+
+El almacenamiento local descrito en esta decisión es una solución transitoria para preferencias anónimas y caché de interfaz. No define la propiedad final de dibujos, plantillas ni configuraciones asociadas a una cuenta.
+
+Con autenticación, la fuente canónica de las preferencias sincronizables será el repositorio remoto de Terminal, con autorización por usuario. localStorage o IndexedDB podrán mantenerse como caché/offline, nunca como mecanismo de identidad ni como única persistencia de datos de cuenta.
+
+Los dibujos durables se guardan mediante el repositorio de Terminal y no como ChartSnapshot completo. La separación y el modelo de cuenta se especifican en ADR 0005.
 
 ## Consecuencias
 
