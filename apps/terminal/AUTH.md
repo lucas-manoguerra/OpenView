@@ -2,6 +2,10 @@
 
 Terminal uses Supabase SSR with the PKCE flow. Configure the hosted Supabase project as follows before enabling email authentication in a deployed environment.
 
+## Local environment
+
+Copy `apps/terminal/.env.example` to `apps/terminal/.env` and replace the placeholders with the project's Supabase URL and publishable key. The app reads `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_PUBLISHABLE_KEY` in both browser and server clients. These are public client configuration values; never put a Supabase service-role or secret key in this file. Keep `.env` untracked and commit only `.env.example`.
+
 ## Redirect URLs
 
 Add the deployed Terminal origin's following URL to **Authentication → URL Configuration → Redirect URLs**:
