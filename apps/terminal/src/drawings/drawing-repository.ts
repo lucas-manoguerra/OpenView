@@ -65,20 +65,20 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const isDrawingPoint = (value: unknown): value is ChartDrawingPoint =>
   isRecord(value) &&
-  typeof value.logicalIndex === 'number' &&
-  Number.isFinite(value.logicalIndex) &&
-  typeof value.price === 'number' &&
-  Number.isFinite(value.price);
+  typeof value['timestamp'] === 'number' &&
+  Number.isFinite(value['timestamp']) &&
+  typeof value['price'] === 'number' &&
+  Number.isFinite(value['price']);
 
 const isDrawingPayload = (value: unknown): value is Omit<ChartRenderDrawing, 'id'> => {
   if (!isRecord(value)) return false;
   if (
     !['trend-line', 'ray', 'horizontal-line', 'vertical-line', 'rectangle'].includes(
-      String(value.type),
+      String(value['type']),
     ) ||
-    !isDrawingPoint(value.start) ||
-    (value.end !== null && !isDrawingPoint(value.end)) ||
-    typeof value.color !== 'string'
+    !isDrawingPoint(value['start']) ||
+    (value['end'] !== null && !isDrawingPoint(value['end'])) ||
+    typeof value['color'] !== 'string'
   ) {
     return false;
   }
@@ -88,20 +88,20 @@ const isDrawingPayload = (value: unknown): value is Omit<ChartRenderDrawing, 'id
 const isStoredDrawing = (value: unknown): value is StoredDrawing => {
   if (!isRecord(value)) return false;
   return (
-    typeof value.drawingId === 'string' &&
-    value.drawingId.length > 0 &&
-    isDrawingPayload(value.payload) &&
-    typeof value.zOrder === 'number' &&
-    Number.isSafeInteger(value.zOrder) &&
-    value.zOrder >= 0 &&
-    typeof value.createdAt === 'string' &&
-    Number.isFinite(Date.parse(value.createdAt)) &&
-    typeof value.updatedAt === 'string' &&
-    Number.isFinite(Date.parse(value.updatedAt)) &&
-    typeof value.revision === 'number' &&
-    Number.isSafeInteger(value.revision) &&
-    value.revision > 0 &&
-    (value.timeframeScope === null || typeof value.timeframeScope === 'string')
+    typeof value['drawingId'] === 'string' &&
+    value['drawingId'].length > 0 &&
+    isDrawingPayload(value['payload']) &&
+    typeof value['zOrder'] === 'number' &&
+    Number.isSafeInteger(value['zOrder']) &&
+    value['zOrder'] >= 0 &&
+    typeof value['createdAt'] === 'string' &&
+    Number.isFinite(Date.parse(value['createdAt'])) &&
+    typeof value['updatedAt'] === 'string' &&
+    Number.isFinite(Date.parse(value['updatedAt'])) &&
+    typeof value['revision'] === 'number' &&
+    Number.isSafeInteger(value['revision']) &&
+    value['revision'] > 0 &&
+    (value['timeframeScope'] === null || typeof value['timeframeScope'] === 'string')
   );
 };
 
@@ -111,12 +111,12 @@ const restoreCollection = (serialized: string | null): readonly StoredDrawing[] 
     const parsed: unknown = JSON.parse(serialized);
     if (
       !isRecord(parsed) ||
-      parsed.version !== STORAGE_VERSION ||
-      !Array.isArray(parsed.drawings)
+      parsed['version'] !== STORAGE_VERSION ||
+      !Array.isArray(parsed['drawings'])
     ) {
       return Object.freeze([]);
     }
-    const restored = parsed.drawings.filter(isStoredDrawing);
+    const restored = parsed['drawings'].filter(isStoredDrawing);
     const unique = new Map<string, StoredDrawing>();
     for (const drawing of restored) unique.set(drawing.drawingId, drawing);
     return Object.freeze([...unique.values()]);
