@@ -2,12 +2,12 @@ import type { APIContext } from 'astro';
 import { createServerClient } from '../../lib/supabase/server';
 
 export async function POST(context: APIContext) {
-  const supabase = createServerClient(context);
+  const responseHeaders = new Headers();
+  const supabase = createServerClient(context, responseHeaders);
   await supabase.auth.signOut();
+  responseHeaders.set('Location', '/login');
   return new Response(null, {
-    status: 302,
-    headers: {
-      Location: '/login',
-    },
+    status: 303,
+    headers: responseHeaders,
   });
 }
