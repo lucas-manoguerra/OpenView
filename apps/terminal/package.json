@@ -7,17 +7,23 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "wrangler:types": "wrangler types"
   },
   "dependencies": {
+    "@astrojs/cloudflare": "14.4.9",
+    "@astrojs/preact": "6.1.2",
     "@openview/chart-engine": "workspace:*",
     "@openview/market-data": "workspace:*",
     "@openview/market-domain": "workspace:*",
-    "@astrojs/preact": "6.1.2",
     "@tailwindcss/vite": "4.3.5",
     "astro": "7.4.13",
+    "lucide-preact": "1.79.0",
     "preact": "11.2.0",
-    "tailwindcss": "4.3.5",
-    "lucide-preact": "1.79.0"
+    "tailwindcss": "4.3.5"
+  },
+  "devDependencies": {
+    "wrangler": "4.168.0"
   }
 }

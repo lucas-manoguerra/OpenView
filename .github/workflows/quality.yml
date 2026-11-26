@@ -100,6 +100,9 @@ jobs:
       - name: Build terminal application
         run: pnpm build
 
+      - name: Validate Cloudflare Worker bundle
+        run: pnpm --filter @openview/terminal exec wrangler deploy --dry-run
+
   e2e:
     name: Browser tests · Chromium · shard ${{ matrix.shard }}/11
     runs-on: ubuntu-latest
