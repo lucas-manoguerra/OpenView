@@ -2549,7 +2549,7 @@ export function ChartCanvas({
               }}
               onSaveTemplate={handleSaveDrawingTemplate}
             />
-        )}
+          )}
         {loading && (
           <div class="pointer-events-none absolute inset-0 grid place-items-center bg-[#0b0f17]/70">
             <span
