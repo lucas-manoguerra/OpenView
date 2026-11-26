@@ -101,12 +101,12 @@ jobs:
         run: pnpm build
 
   e2e:
-    name: Browser tests · Chromium · shard ${{ matrix.shard }}/10
+    name: Browser tests · Chromium · shard ${{ matrix.shard }}/11
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -120,24 +120,24 @@ jobs:
       - name: Enforce maximum of five browser tests per shard
         shell: bash
         run: |
-          test_list="$(pnpm exec playwright test --list --shard=${{ matrix.shard }}/10 --reporter=list)"
+          test_list="$(pnpm exec playwright test --fully-parallel --list --shard=${{ matrix.shard }}/11 --reporter=list)"
           printf '%s\n' "$test_list"
 
           shard_tests="$(printf '%s\n' "$test_list" | sed -nE 's/^Total: ([0-9]+) tests?.*/\1/p' | tail -n 1)"
           if [[ -z "$shard_tests" ]]; then
-            echo "::error::Unable to determine the Playwright test count for shard ${{ matrix.shard }}/10."
+            echo "::error::Unable to determine the Playwright test count for shard ${{ matrix.shard }}/11."
             exit 1
           fi
 
           if (( shard_tests > 5 )); then
-            echo "::error::Shard ${{ matrix.shard }}/10 contains $shard_tests tests; the maximum is five."
+            echo "::error::Shard ${{ matrix.shard }}/11 contains $shard_tests tests; the maximum is five."
             exit 1
           fi
 
-          echo "Shard ${{ matrix.shard }}/10 contains $shard_tests tests (maximum: five)."
+          echo "Shard ${{ matrix.shard }}/11 contains $shard_tests tests (maximum: five)."
 
       - name: Run Playwright shard
-        run: pnpm exec playwright test --shard=${{ matrix.shard }}/10
+        run: pnpm exec playwright test --fully-parallel --shard=${{ matrix.shard }}/11
 
       - name: Upload browser test reports
         if: ${{ !cancelled() }}

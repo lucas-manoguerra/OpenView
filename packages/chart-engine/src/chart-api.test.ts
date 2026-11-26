@@ -550,6 +550,30 @@ describe('chart public API', () => {
     chart.destroy();
   });
 
+  it('keeps drawing creation previews transient and outside snapshots', () => {
+    const { surface } = createSurface();
+    const chart = createChart({
+      surface,
+      initialScene: createScene(),
+      renderer: { scheduler: { requestFrame: () => 1, cancelFrame: () => {} } },
+    });
+    const preview = {
+      id: 'chart-drawing-creation-preview',
+      type: 'rectangle' as const,
+      start: { timestamp: 1, price: 2 },
+      end: { timestamp: 2, price: 3 },
+      color: '#ffffff',
+    };
+
+    chart.execute({ type: 'set-drawing-creation-preview', drawing: preview });
+    expect(chart.exportSnapshot().scene.drawings).toHaveLength(0);
+    expect(chart.exportSnapshot().objectOrder.some((item) => item.id === preview.id)).toBe(false);
+
+    chart.execute({ type: 'set-drawing-creation-preview', drawing: null });
+    expect(chart.exportSnapshot().scene.drawings).toHaveLength(0);
+    chart.destroy();
+  });
+
   it('creates and deletes drawings through chart-owned commands with undo and redo', () => {
     const { surface } = createSurface();
     const chart = createChart({

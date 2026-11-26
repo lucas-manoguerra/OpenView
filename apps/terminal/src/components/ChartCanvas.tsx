@@ -306,6 +306,7 @@ export function ChartCanvas({
   onNeedMoreHistory,
 }: ChartCanvasProps) {
   const runtimeRef = useRef<ChartRuntime | null>(null);
+  const pointerAdapterRef = useRef<CanvasPointerAdapter | null>(null);
   const rightOffsetInputRef = useRef<HTMLInputElement | null>(null);
   const [priceScaleMode, setPriceScaleMode] = useState<PriceScaleMode>('linear');
   const [chartType, setChartType] = useState<ChartType>('candles');
@@ -723,6 +724,35 @@ export function ChartCanvas({
           onDrawingDelete: (drawingId: string): void => {
             runtimeRef.current?.deleteDrawings([drawingId]);
           },
+          onDrawingCreationPreview: (gesture: CanvasDrawingGesture | null): void => {
+            if (gesture === null) {
+              chartApi?.execute({ type: 'set-drawing-creation-preview', drawing: null });
+              return;
+            }
+            const startTimestamp = getTimestampAtLogicalIndex(
+              gesture.start.logicalIndex,
+              currentCandles,
+            );
+            const endTimestamp =
+              gesture.end === null
+                ? null
+                : getTimestampAtLogicalIndex(gesture.end.logicalIndex, currentCandles);
+            if (startTimestamp === null || (gesture.end !== null && endTimestamp === null)) {
+              chartApi?.execute({ type: 'set-drawing-creation-preview', drawing: null });
+              return;
+            }
+            const preview: ChartRenderDrawing = Object.freeze({
+              id: crypto.randomUUID(),
+              type: gesture.type,
+              start: Object.freeze({ timestamp: startTimestamp, price: gesture.start.price }),
+              end:
+                gesture.end === null || endTimestamp === null
+                  ? null
+                  : Object.freeze({ timestamp: endTimestamp, price: gesture.end.price }),
+              ...drawingToolPreferencesRef.current[gesture.type],
+            });
+            chartApi?.execute({ type: 'set-drawing-creation-preview', drawing: preview });
+          },
           onDrawingComplete: (gesture: CanvasDrawingGesture): void => {
             canvas.dataset['drawingGestureReceived'] = gesture.type;
             canvas.dataset['drawingGestureIndexes'] = [
@@ -775,6 +805,7 @@ export function ChartCanvas({
             setDrawingTool('cursor');
           },
         });
+        pointerAdapterRef.current = pointerAdapter;
       } else {
         controller.setFrame(frame);
         if (autoScaleRef.current) {
@@ -978,6 +1009,7 @@ export function ChartCanvas({
       },
       destroy: (): void => {
         pointerAdapter?.destroy();
+        pointerAdapterRef.current = null;
         resizeAdapter.destroy();
         chartApi?.destroy();
         chartApi = null;
@@ -1107,12 +1139,10 @@ export function ChartCanvas({
     setDrawingTemplatesLoaded(true);
   };
 
-  const handleDrawingToolChange = (nextTool: CanvasDrawingTool): void => {
+  const handleDrawingToolChange = (requestedTool: CanvasDrawingTool): void => {
+    const nextTool = requestedTool === 'select' ? 'cursor' : requestedTool;
     if (nextTool !== 'cursor') {
       ensureDrawingInteractionPreferencesLoaded();
-    }
-
-    if (nextTool !== 'cursor' && nextTool !== 'select') {
       ensureDrawingToolPreferencesLoaded();
     }
 
@@ -1401,8 +1431,8 @@ export function ChartCanvas({
       runtimeRef.current?.setDrawings(currentDrawings);
     }
 
-    drawingToolRef.current = 'select';
-    setDrawingTool('select');
+    drawingToolRef.current = 'cursor';
+    setDrawingTool('cursor');
     updateDrawingSelection([drawingId]);
   };
 
@@ -1576,6 +1606,13 @@ export function ChartCanvas({
       class="grid h-[390px] min-h-[340px] w-full grid-cols-[38px_minmax(0,1fr)] bg-[#0b0f17]"
       onKeyDownCapture={(event) => {
         if (event.key === 'Control' || event.key === 'Meta') setControlKeyPressed(true);
+        if (event.key === 'Escape' && drawingToolRef.current !== 'cursor') {
+          event.preventDefault();
+          event.stopPropagation();
+          pointerAdapterRef.current?.cancelDrawingCreation();
+          drawingToolRef.current = 'cursor';
+          setDrawingTool('cursor');
+        }
       }}
       onKeyUpCapture={(event) => {
         if (event.key === 'Control' || event.key === 'Meta') setControlKeyPressed(false);
@@ -1597,22 +1634,6 @@ export function ChartCanvas({
           }
         >
           ↖
-        </button>
-        <button
-          type="button"
-          aria-label="Seleccionar y editar dibujos"
-          aria-pressed={drawingTool === 'select'}
-          data-testid="drawing-tool-select"
-          title="Seleccionar y editar dibujos"
-          onClick={() => handleDrawingToolChange('select')}
-          class={
-            'grid size-8 place-items-center rounded text-sm transition-colors ' +
-            (drawingTool === 'select'
-              ? 'bg-blue-500/20 text-blue-200'
-              : 'text-slate-400 hover:bg-white/5 hover:text-slate-100')
-          }
-        >
-          ◉
         </button>
         <DrawingToolCatalogMenu
           activeTool={drawingTool}

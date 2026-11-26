@@ -11,6 +11,7 @@ import {
   type CanvasDrawingAreaSelection,
   type CanvasDrawingGesture,
   type CanvasDrawingGroupEditGesture,
+  type CanvasDrawingTool,
 } from './src/canvas-pointer-adapter';
 
 type Listener = EventListenerOrEventListenerObject;
@@ -281,6 +282,52 @@ describe('canvas pointer event adapter', () => {
     expect(gestures.map((gesture) => gesture.type)).toEqual(['trend-line', 'ray']);
   });
 
+  it('previews a two-point drawing after the first click and completes it on the second click', () => {
+    const { canvas, dispatch } = createCanvasTarget();
+    const frame = createChartFrame(900, 500, { min: 90, max: 120 }, 99);
+    const controller = createChartInteractionController(frame);
+    const gestures: CanvasDrawingGesture[] = [];
+    const previews: (CanvasDrawingGesture | null)[] = [];
+    attachCanvasPointerEvents(canvas, controller, {
+      getDrawingTool: () => 'rectangle',
+      onDrawingComplete: (gesture) => gestures.push(gesture),
+      onDrawingCreationPreview: (gesture) => previews.push(gesture),
+    });
+    const start = { x: frame.layout.plotArea.x + 70, y: frame.layout.plotArea.y + 55 };
+    const end = { x: frame.layout.plotArea.x + 190, y: frame.layout.plotArea.y + 155 };
+
+    dispatch('pointerdown', createPointerEvent({ clientX: 100 + start.x, clientY: 50 + start.y }));
+    dispatch('pointerup', createPointerEvent({ clientX: 100 + start.x, clientY: 50 + start.y }));
+
+    expect(gestures).toHaveLength(0);
+    expect(previews.at(-1)).toEqual({
+      type: 'rectangle',
+      start: chartCoordinateToDataPoint(start, frame),
+      end: chartCoordinateToDataPoint(start, frame),
+    });
+
+    dispatch('pointermove', createPointerEvent({ clientX: 100 + end.x, clientY: 50 + end.y }));
+    expect(previews.at(-1)?.end).toEqual(chartCoordinateToDataPoint(end, frame));
+
+    dispatch(
+      'pointerdown',
+      createPointerEvent({ clientX: 100 + end.x, clientY: 50 + end.y, pointerId: 8 }),
+    );
+    dispatch(
+      'pointerup',
+      createPointerEvent({ clientX: 100 + end.x, clientY: 50 + end.y, pointerId: 8 }),
+    );
+
+    expect(gestures).toEqual([
+      {
+        type: 'rectangle',
+        start: chartCoordinateToDataPoint(start, frame),
+        end: chartCoordinateToDataPoint(end, frame),
+      },
+    ]);
+    expect(previews.at(-1)).toBeNull();
+  });
+
   it('creates a horizontal line on click without requiring a drag', () => {
     const { canvas, dispatch } = createCanvasTarget();
     const frame = createChartFrame(900, 500, { min: 90, max: 120 }, 99);
@@ -463,7 +510,7 @@ describe('canvas pointer event adapter', () => {
     expect(controller.snapshot.dragging).toBe(false);
   });
 
-  it('selects a drawing and reports a moved control point', () => {
+  it('selects and edits a drawing directly with the cursor tool', () => {
     const { canvas, dispatch, capturedPointers } = createCanvasTarget();
     const frame = createChartFrame(900, 500, { min: 90, max: 120 }, 2);
     const controller = createChartInteractionController(frame);
@@ -506,7 +553,7 @@ describe('canvas pointer event adapter', () => {
     const selections: (string | null)[] = [];
     const edits: { drawingId: string; target: string; origin: unknown; current: unknown }[] = [];
     attachCanvasPointerEvents(canvas, controller, {
-      getDrawingTool: () => 'select',
+      getDrawingTool: () => 'cursor',
       getDrawings: () => [drawing],
       getCandles: () => candles,
       onDrawingSelect: (drawingId) => selections.push(drawingId),
@@ -1006,6 +1053,45 @@ describe('canvas pointer event adapter', () => {
     expect(preventDefault).not.toHaveBeenCalled();
   });
 
+  it('cancels the two-click drawing preview on Escape after the first click', () => {
+    const { canvas, dispatch } = createCanvasTarget();
+    const previews: (CanvasDrawingGesture | null)[] = [];
+    const exits: string[] = [];
+    let drawingTool: CanvasDrawingTool = 'rectangle';
+    attachCanvasPointerEvents(
+      canvas,
+      createChartInteractionController(createChartFrame(900, 500, { min: 90, max: 120 }, 2)),
+      {
+        getDrawingTool: () => drawingTool,
+        onDrawingCreationPreview: (preview) => previews.push(preview),
+        onDrawingToolExit: () => {
+          exits.push('cursor');
+          drawingTool = 'cursor';
+        },
+      },
+    );
+
+    dispatch('pointerdown', {
+      button: 0,
+      clientX: 300,
+      clientY: 200,
+      pointerId: 1,
+      preventDefault: vi.fn(),
+    } as unknown as PointerEvent);
+    dispatch('pointerup', {
+      button: 0,
+      clientX: 300,
+      clientY: 200,
+      pointerId: 1,
+      preventDefault: vi.fn(),
+    } as unknown as PointerEvent);
+    dispatch('keydown', { key: 'Escape', preventDefault: vi.fn() } as unknown as KeyboardEvent);
+
+    expect(previews.at(-1)).toBeNull();
+    expect(drawingTool).toBe('cursor');
+    expect(exits).toEqual(['cursor']);
+  });
+
   it('deletes the selected drawing on Delete and deselects on Escape', () => {
     const { canvas, dispatch } = createCanvasTarget();
     const deleted: string[] = [];
@@ -1029,6 +1115,31 @@ describe('canvas pointer event adapter', () => {
 
     expect(deleted).toEqual(['trend-1']);
     expect(selections).toEqual([null]);
+  });
+
+  it('exits an active drawing tool on Escape and clears an unfinished preview', () => {
+    const { canvas, dispatch } = createCanvasTarget();
+    const previews: (CanvasDrawingGesture | null)[] = [];
+    const exits: string[] = [];
+    let drawingTool: CanvasDrawingTool = 'rectangle';
+    attachCanvasPointerEvents(
+      canvas,
+      createChartInteractionController(createChartFrame(900, 500, { min: 90, max: 120 }, 2)),
+      {
+        getDrawingTool: () => drawingTool,
+        onDrawingCreationPreview: (preview) => previews.push(preview),
+        onDrawingToolExit: () => {
+          exits.push('cursor');
+          drawingTool = 'cursor';
+        },
+      },
+    );
+
+    dispatch('keydown', { key: 'Escape', preventDefault: vi.fn() } as unknown as KeyboardEvent);
+
+    expect(drawingTool).toBe('cursor');
+    expect(exits).toEqual(['cursor']);
+    expect(previews).toEqual([null]);
   });
 
   it('pans during captured pointer movement and releases capture on pointer up', () => {
@@ -1236,7 +1347,7 @@ describe('canvas pointer event adapter', () => {
     };
     const hoverHits: unknown[] = [];
     attachCanvasPointerEvents(canvas, controller, {
-      getDrawingTool: () => 'select',
+      getDrawingTool: () => 'cursor',
       getDrawings: () => [drawing],
       getCandles: () => candles,
       getSelectedDrawingIds: () => ['trend-1'],
