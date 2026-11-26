@@ -1,12 +1,6 @@
 // Generated from the connected OpenView Supabase project.
 // Regenerate after database schema changes with the Supabase type generator.
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[];
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
   __InternalSupabase: {
