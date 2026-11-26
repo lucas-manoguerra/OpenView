@@ -1,20 +1,33 @@
-# Supabase Auth configuration for Terminal
+# Configuración de autenticación de Supabase para Terminal
 
-Terminal uses Supabase SSR with the PKCE flow. Configure the hosted Supabase project before enabling email authentication in a deployed environment.
+Terminal utiliza Supabase SSR (renderizado del lado del servidor) con el flujo PKCE. Antes de habilitar el acceso por correo electrónico en un entorno publicado, configura el proyecto de Supabase siguiendo estos pasos.
 
-## Local environment
+## 1. Configurar las variables del entorno local
 
-Copy `apps/terminal/.env.example` to `apps/terminal/.env` and replace the placeholders with the project's Supabase URL and publishable key. The app reads `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_PUBLISHABLE_KEY` in both browser and server clients. These are public client configuration values; never put a Supabase service-role or secret key in this file. Keep `.env` untracked and commit only `.env.example`.
+1. Copia el archivo `apps/terminal/.env.example` y crea `apps/terminal/.env`.
+2. Abre `apps/terminal/.env` y reemplaza los valores de ejemplo por la URL y la clave publicable de tu proyecto de Supabase.
+3. Comprueba que estén definidas estas dos variables:
 
-## Hosted URL configuration
+```dotenv
+PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
+PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_reemplazar_por_tu_clave
+```
 
-In **Supabase Dashboard → Authentication → URL Configuration**, set the Site URL to the canonical deployed Terminal origin:
+La aplicación utiliza estas variables tanto en el navegador como en el servidor. Son datos de configuración públicos. **Nunca** coloques una clave `service_role` ni una clave secreta de Supabase en este archivo. El archivo `.env` debe permanecer fuera de Git; solamente se versiona `.env.example`.
+
+## 2. Configurar las direcciones permitidas en Supabase
+
+1. Entra al [panel de Supabase](https://supabase.com/dashboard).
+2. Selecciona el proyecto de OpenView.
+3. En el menú lateral, entra en **Autenticación (Authentication)**.
+4. Abre **Configuración de URL (URL Configuration)**.
+5. En **URL del sitio (Site URL)**, coloca exactamente esta dirección:
 
 ```text
 https://openview-terminal.developer-spoonacular-004.workers.dev/
 ```
 
-Add these exact entries to **Redirect URLs**:
+6. En **Direcciones de redirección (Redirect URLs)**, agrega estas cuatro direcciones, una por una:
 
 ```text
 https://openview-terminal.developer-spoonacular-004.workers.dev/auth/callback
@@ -23,17 +36,30 @@ http://localhost:4321/auth/callback
 http://localhost:4321/reset-password
 ```
 
-The registration form passes `/auth/callback?next=/dashboard` as `emailRedirectTo`. The callback exchanges the PKCE authorization code on the server and writes the resulting session cookies. The recovery form passes the absolute `/reset-password` URL as `redirectTo`.
+7. Guarda los cambios.
 
-Keep the Site URL set to the canonical Terminal origin. Do not add broad wildcard redirects unless the deployment model requires them.
+**Importante:** conserva la URL del sitio con el dominio principal de Terminal. No agregues comodines ni direcciones demasiado amplias si no son necesarios.
 
-## Signup confirmation email
+La pantalla de registro envía al usuario a `/auth/callback?next=/dashboard` después de confirmar el correo. Esa ruta recibe el código de autorización, intercambia el código por una sesión en el servidor y guarda las cookies de sesión. El formulario de recuperación utiliza la dirección absoluta `/reset-password`.
 
-The signup flow uses Supabase's standard confirmation URL (`{{ .ConfirmationURL }}`). The redirect destination is supplied by the registration form and must be allowed by Redirect URLs above.
+## 3. Revisar el correo de confirmación de registro
 
-## Password recovery email
+1. En el panel de Supabase, entra en **Autenticación (Authentication) → Plantillas de correo (Email Templates)**.
+2. Abre la plantilla **Confirmación de registro (Confirm signup)**.
+3. Comprueba que el enlace de confirmación utilice esta variable de Supabase:
 
-In **Supabase Dashboard → Authentication → Email Templates → Reset Password**, use this template so the one-time token hash is delivered to the redirect destination:
+```text
+{{ .ConfirmationURL }}
+```
+
+4. Guarda la plantilla si hiciste algún cambio.
+
+La aplicación indica la dirección de retorno al registrar al usuario. Esa dirección debe coincidir con una de las direcciones permitidas del paso 2.
+
+## 4. Configurar el correo para recuperar la contraseña
+
+1. En **Autenticación (Authentication) → Plantillas de correo (Email Templates)**, abre **Restablecer contraseña (Reset Password)**.
+2. Reemplaza el contenido de la plantilla por este texto:
 
 ```html
 <h2>Restablecer contraseña</h2>
@@ -46,16 +72,25 @@ In **Supabase Dashboard → Authentication → Email Templates → Reset Passwor
 <p>Si no solicitaste este cambio, puedes ignorar este correo.</p>
 ```
 
-The resulting URL must contain both `token_hash` and `type=recovery`. The reset form verifies that one-time token with `verifyOtp` before calling `updateUser`.
+3. Guarda la plantilla.
 
-Do not use the default `{{ .ConfirmationURL }}` link for this custom token-hash reset form: the form explicitly expects the token hash in the query string.
+**No reemplaces ese enlace por `{{ .ConfirmationURL }}`.** El formulario de recuperación de OpenView necesita recibir los parámetros `token_hash` y `type=recovery` en la dirección web. Luego verifica ese código de un solo uso con `verifyOtp` antes de permitir el cambio de contraseña mediante `updateUser`.
 
-## Verification checklist
+## 5. Comprobar que todo funciona
 
-- Confirm the deployed and local callback and reset URLs are allow-listed.
-- Send a signup confirmation and verify it returns through `/auth/callback` to the dashboard with an authenticated session.
-- Send a password recovery email and verify its link opens `/reset-password?token_hash=...&type=recovery`.
-- Verify expired and reused recovery links are rejected.
-- Verify signing out clears the SSR session cookies.
+Cuando hayas guardado la configuración anterior, realiza estas pruebas:
 
-Never place a Supabase service-role or secret key in browser-exposed environment variables.
+- [ ] Las cuatro direcciones de retorno (dos de producción y dos locales) aparecen en la lista de direcciones permitidas.
+- [ ] Al registrar una cuenta, llega el correo de confirmación.
+- [ ] Al abrir el enlace de confirmación, el navegador vuelve a `/auth/callback` y termina en el panel con la sesión iniciada.
+- [ ] Al solicitar recuperar la contraseña, llega el correo correspondiente.
+- [ ] El enlace del correo abre una dirección con este formato: `/reset-password?token_hash=...&type=recovery`.
+- [ ] La aplicación permite establecer una contraseña nueva con un enlace válido.
+- [ ] Los enlaces vencidos o utilizados anteriormente son rechazados.
+- [ ] Al cerrar sesión, se eliminan las cookies de sesión del servidor.
+
+Si alguna prueba falla, no habilites todavía el flujo para usuarios reales: revisa primero las direcciones permitidas y las plantillas de correo.
+
+## Seguridad
+
+Nunca coloques claves secretas ni claves `service_role` en variables que comiencen con `PUBLIC_`, en el navegador ni en archivos versionados. La clave publicable puede utilizarse en el cliente; el acceso a los datos debe seguir protegido por las políticas RLS de la base de datos.
