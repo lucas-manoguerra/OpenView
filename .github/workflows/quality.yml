@@ -120,7 +120,7 @@ jobs:
       - name: Enforce maximum of five browser tests per shard
         shell: bash
         run: |
-          test_list="$(pnpm exec playwright test --list --shard=${{ matrix.shard }}/10 --reporter=list)"
+          test_list="$(pnpm exec playwright test --fully-parallel --list --shard=${{ matrix.shard }}/10 --reporter=list)"
           printf '%s\n' "$test_list"
 
           shard_tests="$(printf '%s\n' "$test_list" | sed -nE 's/^Total: ([0-9]+) tests?.*/\1/p' | tail -n 1)"
@@ -137,7 +137,7 @@ jobs:
           echo "Shard ${{ matrix.shard }}/10 contains $shard_tests tests (maximum: five)."
 
       - name: Run Playwright shard
-        run: pnpm exec playwright test --shard=${{ matrix.shard }}/10
+        run: pnpm exec playwright test --fully-parallel --shard=${{ matrix.shard }}/10
 
       - name: Upload browser test reports
         if: ${{ !cancelled() }}
