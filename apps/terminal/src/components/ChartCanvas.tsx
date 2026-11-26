@@ -959,6 +959,9 @@ export function ChartCanvas({
           selectedDrawingIdsRef.current = Object.freeze([]);
           setSelectedDrawingIds(selectedDrawingIdsRef.current);
           drawingsRef.current = restoredDrawingsRef.current;
+          renderableDrawingsRef.current = drawingsVisibleRef.current
+            ? drawingsRef.current.filter((drawing) => drawing.visible !== false)
+            : [];
           setDrawings(drawingsRef.current);
           setDrawingUndoCount(0);
           setDrawingRedoCount(0);
@@ -974,6 +977,13 @@ export function ChartCanvas({
 
   useEffect(() => {
     drawingsRef.current = restoredDrawings;
+    renderableDrawingsRef.current = drawingsVisibleRef.current
+      ? restoredDrawings.filter((drawing) => drawing.visible !== false)
+      : [];
+    selectedDrawingIdRef.current = null;
+    selectedDrawingIdsRef.current = Object.freeze([]);
+    setSelectedDrawingId(null);
+    setSelectedDrawingIds(selectedDrawingIdsRef.current);
     setDrawings(restoredDrawings);
     runtimeRef.current?.setDrawings(restoredDrawings);
     runtimeRef.current?.clearDrawingHistory();
