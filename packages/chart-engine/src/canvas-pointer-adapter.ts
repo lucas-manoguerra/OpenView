@@ -250,6 +250,8 @@ export const attachCanvasPointerEvents = (
       );
       activeDrawingTool = drawingTool;
       activePointerId = event.pointerId;
+      canvas.dataset['drawingPointerDownId'] = String(event.pointerId);
+      canvas.dataset['drawingPointerTool'] = drawingTool;
       event.preventDefault();
       canvas.setPointerCapture(event.pointerId);
       return;
@@ -323,9 +325,13 @@ export const attachCanvasPointerEvents = (
   };
 
   const handlePointerUp = (event: PointerEvent): void => {
+    canvas.dataset['drawingPointerUpId'] = String(event.pointerId);
+    canvas.dataset['drawingPointerActiveId'] = String(activePointerId);
     if (activePointerId === null || event.pointerId !== activePointerId) {
+      canvas.dataset['drawingPointerOutcome'] = 'pointer-id-mismatch';
       return;
     }
+    canvas.dataset['drawingPointerOutcome'] = 'pointer-up-matched';
 
     if (activeDrawingAreaSelection !== null) {
       const position = getCanvasPosition(canvas, event);
@@ -427,6 +433,7 @@ export const attachCanvasPointerEvents = (
   };
 
   const handlePointerCancel = (event: PointerEvent): void => {
+    canvas.dataset['drawingPointerCancelId'] = String(event.pointerId);
     if (activePointerId === null || event.pointerId !== activePointerId) {
       return;
     }
