@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import type { Database } from '../lib/supabase/database.types';
 import {
   SupabaseDrawingRepository,
-  type SupabaseDrawingClient,\n  type SupabaseDrawingQuery,\n  type SupabaseResult,
+  type SupabaseDrawingClient,
+  type SupabaseDrawingQuery,
+  type SupabaseResult,
 } from './supabase-drawing-repository';
 import {
   DrawingRevisionConflictError,
@@ -111,6 +113,7 @@ class MemorySupabase {
           const result = execute();
           return { data: result.data[0] ?? null, error: result.error };
         },
+        // biome-ignore lint/suspicious/noThenProperty: Supabase query builders are intentionally thenable.
         then: <TResult1 = SupabaseResult<readonly Row[]>, TResult2 = never>(
           onfulfilled?: ((value: SupabaseResult<readonly Row[]>) => TResult1 | PromiseLike<TResult1>) | null,
           onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
