@@ -26,7 +26,10 @@ class MemorySupabase {
       let values: Partial<Row> = {};
       let ordering: string | null = null;
 
-      const execute = (): { data: readonly Row[]; error: { code?: string; message: string } | null } => {
+      const execute = (): {
+        data: readonly Row[];
+        error: { code?: string; message: string } | null;
+      } => {
         const matches = (row: Row): boolean =>
           Object.entries(filters).every(([key, value]) => row[key as keyof Row] === value);
         const matching = this.rows.filter(matches);
@@ -113,14 +116,17 @@ class MemorySupabase {
           const result = execute();
           return { data: result.data[0] ?? null, error: result.error };
         },
-        // biome-ignore lint/suspicious/noThenProperty: Supabase query builders are intentionally thenable.
-        then: <TResult1 = SupabaseResult<readonly Row[]>, TResult2 = never>(
-          onfulfilled?: ((value: SupabaseResult<readonly Row[]>) => TResult1 | PromiseLike<TResult1>) | null,
+      };
+      Object.defineProperty(builder, 'then', {
+        value: <TResult1 = SupabaseResult<readonly Row[]>, TResult2 = never>(
+          onfulfilled?:
+            | ((value: SupabaseResult<readonly Row[]>) => TResult1 | PromiseLike<TResult1>)
+            | null,
           onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
         ): PromiseLike<TResult1 | TResult2> =>
           Promise.resolve(execute()).then(onfulfilled, onrejected),
-      };
-      return builder;
+      });
+      return builder as SupabaseDrawingQuery<Row>;
     },
   } as unknown as SupabaseDrawingClient;
 }
@@ -205,9 +211,9 @@ describe('Supabase drawing repository', () => {
         owner: { kind: 'anonymous', id: 'browser-1' },
       }),
     ).rejects.toThrow('authenticated account');
-    await expect(
-      repository.save(scope, { ...drawing, zOrder: -1 }, null),
-    ).rejects.toThrow('z-order');
+    await expect(repository.save(scope, { ...drawing, zOrder: -1 }, null)).rejects.toThrow(
+      'z-order',
+    );
   });
 
   it('keeps account and instrument identity in every database query', async () => {
@@ -221,8 +227,6 @@ describe('Supabase drawing repository', () => {
         owner: { kind: 'account', id: 'user-2' },
       }),
     ).toEqual([]);
-    expect(
-      await repository.list({ ...scope, instrumentId: 'okx-spot:BTC-USDT' }),
-    ).toEqual([]);
+    expect(await repository.list({ ...scope, instrumentId: 'okx-spot:BTC-USDT' })).toEqual([]);
   });
 });
