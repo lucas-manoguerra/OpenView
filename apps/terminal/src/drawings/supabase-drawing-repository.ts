@@ -231,11 +231,18 @@ export class SupabaseDrawingRepository implements DrawingRepository {
       payload: drawing.payload as unknown as Json,
       z_order: drawing.zOrder,
     };
-    let query = this.identityQuery(scope, drawing.drawingId)
-      .eq('revision', expectedRevision)
+    let query = this.client
+      .from('chart_drawings')
       .update(values)
-      .select('*');
-    const result = await query.maybeSingle();
+      .eq('user_id', scope.owner.id)
+      .eq('instrument_id', scope.instrumentId)
+      .eq('drawing_id', drawing.drawingId)
+      .eq('revision', expectedRevision);
+    query =
+      scope.timeframe === null
+        ? query.is('timeframe_scope', null)
+        : query.eq('timeframe_scope', scope.timeframe);
+    const result = await query.select('*').maybeSingle();
 
     throwIfError(result.error);
     if (result.data === null) {
@@ -259,11 +266,18 @@ export class SupabaseDrawingRepository implements DrawingRepository {
       throw new RangeError('A drawing identifier and positive expected revision are required.');
     }
 
-    const result = await this.identityQuery(scope, drawingId)
-      .eq('revision', expectedRevision)
+    let query = this.client
+      .from('chart_drawings')
       .delete()
-      .select('*')
-      .maybeSingle();
+      .eq('user_id', scope.owner.id)
+      .eq('instrument_id', scope.instrumentId)
+      .eq('drawing_id', drawingId)
+      .eq('revision', expectedRevision);
+    query =
+      scope.timeframe === null
+        ? query.is('timeframe_scope', null)
+        : query.eq('timeframe_scope', scope.timeframe);
+    const result = await query.select('*').maybeSingle();
 
     throwIfError(result.error);
     if (result.data === null) {
