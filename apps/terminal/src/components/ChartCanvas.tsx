@@ -31,7 +31,7 @@ import {
 } from '@openview/chart-engine';
 import type { CandleInterval } from '@openview/market-data';
 import type { Candle } from '@openview/market-domain';
-import { useCallback, useMemo, useRef, useState } from 'preact/hooks';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import {
   DEFAULT_DRAWING_INTERACTION_PREFERENCES,
   loadBrowserDrawingInteractionPreferences,
