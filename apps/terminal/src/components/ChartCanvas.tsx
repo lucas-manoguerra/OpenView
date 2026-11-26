@@ -2501,31 +2501,31 @@ export function ChartCanvas({
           selectedDrawing !== null &&
           drawingPanelLayout.visible.appearance && (
             <DrawingPropertiesPanel
-            selectedDrawing={selectedDrawing}
-            selectedDrawingIds={selectedDrawingIds}
-            selectedDrawingsShareType={selectedDrawingsShareType}
-            panelPosition={drawingPanelLayout.positions.appearance}
-            templates={drawingStyleTemplates}
-            activeDefaultStyle={activeDefaultStyle !== null}
-            activeTemplateTool={activeTemplateTool}
-            expanded={drawingTemplatesExpanded}
-            selectedTemplateId={selectedDrawingTemplateId}
-            newTemplateName={newDrawingTemplateName}
-            templateError={drawingTemplateError}
-            panelRef={(element) => attachDrawingPanelElement('appearance', element)}
-            onDragStart={(event) => handleDrawingPanelPointerDown('appearance', event)}
-            onClose={() => handleDrawingPanelVisibilityChange('appearance', false)}
-            onStyleChange={handleSelectedDrawingUpdate}
-            onToggleTemplates={handleToggleDrawingTemplates}
-            onTemplateChange={setSelectedDrawingTemplateId}
-            onApplyTemplate={handleApplyDrawingTemplate}
-            onDeleteTemplate={handleDeleteDrawingTemplate}
-            onTemplateNameChange={(name) => {
-              setNewDrawingTemplateName(name);
-              setDrawingTemplateError(null);
-            }}
-            onSaveTemplate={handleSaveDrawingTemplate}
-          />
+              selectedDrawing={selectedDrawing}
+              selectedDrawingIds={selectedDrawingIds}
+              selectedDrawingsShareType={selectedDrawingsShareType}
+              panelPosition={drawingPanelLayout.positions.appearance}
+              templates={drawingStyleTemplates}
+              activeDefaultStyle={activeDefaultStyle !== null}
+              activeTemplateTool={activeTemplateTool}
+              expanded={drawingTemplatesExpanded}
+              selectedTemplateId={selectedDrawingTemplateId}
+              newTemplateName={newDrawingTemplateName}
+              templateError={drawingTemplateError}
+              panelRef={(element) => attachDrawingPanelElement('appearance', element)}
+              onDragStart={(event) => handleDrawingPanelPointerDown('appearance', event)}
+              onClose={() => handleDrawingPanelVisibilityChange('appearance', false)}
+              onStyleChange={handleSelectedDrawingUpdate}
+              onToggleTemplates={handleToggleDrawingTemplates}
+              onTemplateChange={setSelectedDrawingTemplateId}
+              onApplyTemplate={handleApplyDrawingTemplate}
+              onDeleteTemplate={handleDeleteDrawingTemplate}
+              onTemplateNameChange={(name) => {
+                setNewDrawingTemplateName(name);
+                setDrawingTemplateError(null);
+              }}
+              onSaveTemplate={handleSaveDrawingTemplate}
+            />
         )}
         {loading && (
           <div class="pointer-events-none absolute inset-0 grid place-items-center bg-[#0b0f17]/70">
