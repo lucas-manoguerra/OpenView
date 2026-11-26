@@ -46,6 +46,18 @@
 - [ ] Layouts multipanel.
 - [ ] Sistema público de extensiones.
 
+## Fase 5 — Cuenta y persistencia de workspace
+
+- [ ] Definir identidad canónica de instrumentos (venue, mercado y producto cuando aplique).
+- [ ] Crear repositorios de Terminal para dibujos, plantillas y preferencias.
+- [ ] Persistir dibujos por usuario e instrumento, con alcance global o por temporalidad.
+- [ ] Añadir autenticación y sesiones con Supabase Auth.
+- [ ] Configurar PostgreSQL, migraciones y políticas RLS verificadas.
+- [ ] Implementar sincronización entre dispositivos y control optimista de revisiones.
+- [ ] Migrar preferencias locales a la cuenta sin pérdida ni duplicación.
+- [ ] Mantener caché offline local desacoplada de la fuente canónica remota.
+- [ ] Añadir pruebas de aislamiento entre usuarios y recuperación de workspace.
+
 ## Fase 5 — Preparación de distribución
 
 - [ ] Revisión de seguridad y dependencias.
