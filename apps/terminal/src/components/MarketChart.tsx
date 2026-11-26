@@ -219,12 +219,22 @@ export function MarketChart() {
     };
 
     let active = true;
-    void coordinator.activate(scope).then((workspace) => {
-      if (!active || requestId !== drawingLoadRequestRef.current) return;
-      drawingWorkspaceTokenRef.current = workspace.token;
-      setDrawingWorkspaceToken(workspace.token);
-      setRestoredDrawings(workspace.drawings);
-    });
+    void coordinator
+      .activate(scope)
+      .then((workspace) => {
+        if (!active || requestId !== drawingLoadRequestRef.current) return;
+        drawingWorkspaceTokenRef.current = workspace.token;
+        setDrawingWorkspaceToken(workspace.token);
+        setRestoredDrawings(workspace.drawings);
+      })
+      .catch((cause: unknown) => {
+        if (!active || requestId !== drawingLoadRequestRef.current) return;
+        setDrawingPersistenceError(
+          cause instanceof Error
+            ? cause.message
+            : 'No se pudieron restaurar los dibujos locales.',
+        );
+      });
 
     return () => {
       active = false;
