@@ -329,6 +329,11 @@ export function ChartCanvas({
   const [drawings, setDrawings] = useState<readonly ChartRenderDrawing[]>([]);
   const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null);
   const [selectedDrawingIds, setSelectedDrawingIds] = useState<readonly string[]>([]);
+  const [chartContextMenu, setChartContextMenu] = useState<{
+    request: ChartContextMenuRequest;
+    left: number;
+    top: number;
+  } | null>(null);
   const [drawingUndoCount, setDrawingUndoCount] = useState(0);
   const [drawingRedoCount, setDrawingRedoCount] = useState(0);
   const [drawingPanelLayout, setDrawingPanelLayout] = useState<DrawingPanelLayout>(
@@ -549,6 +554,12 @@ export function ChartCanvas({
             return;
           }
           if (event.type === 'context-menu-requested') {
+            const bounds = canvas.getBoundingClientRect();
+            setChartContextMenu({
+              request: event.request,
+              left: bounds.left + event.request.point.x,
+              top: bounds.top + event.request.point.y,
+            });
             onContextMenuRequestRef.current?.(event.request);
             return;
           }
@@ -1421,6 +1432,12 @@ export function ChartCanvas({
   };
 
   const selectedDrawing = drawings.find((drawing) => drawing.id === selectedDrawingId) ?? null;
+  const contextMenuDrawing =
+    chartContextMenu === null || chartContextMenu.request.drawingHit === null
+      ? null
+      : (drawings.find(
+          (drawing) => drawing.id === chartContextMenu.request.drawingHit?.drawingId,
+        ) ?? null);
   const selectedDrawings = drawings.filter((drawing) => selectedDrawingIds.includes(drawing.id));
   const selectedDrawingColors = selectedDrawings.map((drawing) => drawing.color).join(',');
   const selectedDrawingWidths = selectedDrawings
@@ -1457,12 +1474,28 @@ export function ChartCanvas({
       class="grid h-[390px] min-h-[340px] w-full grid-cols-[38px_minmax(0,1fr)] bg-[#0b0f17]"
       onKeyDownCapture={(event) => {
         if (event.key === 'Control' || event.key === 'Meta') setControlKeyPressed(true);
+        if (event.key === 'Escape' && chartContextMenu !== null) {
+          event.preventDefault();
+          event.stopPropagation();
+          setChartContextMenu(null);
+          return;
+        }
         if (event.key === 'Escape' && drawingToolRef.current !== 'cursor') {
           event.preventDefault();
           event.stopPropagation();
           pointerAdapterRef.current?.cancelDrawingCreation();
           drawingToolRef.current = 'cursor';
           setDrawingTool('cursor');
+        }
+      }}
+      onPointerDownCapture={(event) => {
+        if (chartContextMenu === null) return;
+        const target = event.target;
+        if (
+          target instanceof Element &&
+          target.closest('[data-testid="chart-context-menu"]') === null
+        ) {
+          setChartContextMenu(null);
         }
       }}
       onKeyUpCapture={(event) => {
@@ -2016,6 +2049,98 @@ export function ChartCanvas({
           data-drawing-redo-count={drawingRedoCount}
           data-interval={interval}
         />
+        {chartContextMenu !== null && (
+          <div
+            role="menu"
+            aria-label="Menú contextual del gráfico"
+            data-testid="chart-context-menu"
+            class="fixed z-[100] min-w-48 overflow-hidden rounded-lg border border-white/10 bg-[#101723] py-1 shadow-2xl"
+            style={{ left: chartContextMenu.left, top: chartContextMenu.top }}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
+          >
+            {contextMenuDrawing !== null ? (
+              <>
+                <button
+                  type="button"
+                  role="menuitem"
+                  data-testid="chart-context-select-drawing"
+                  class="block w-full px-3 py-2 text-left text-xs text-slate-200 hover:bg-white/10"
+                  onClick={() => {
+                    requestDrawingSelection([contextMenuDrawing.id]);
+                    setChartContextMenu(null);
+                  }}
+                >
+                  Seleccionar dibujo
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  data-testid="chart-context-toggle-lock"
+                  class="block w-full px-3 py-2 text-left text-xs text-slate-200 hover:bg-white/10"
+                  onClick={() => {
+                    runtimeRef.current?.updateDrawingProperties([contextMenuDrawing.id], {
+                      locked: contextMenuDrawing.locked !== true,
+                    });
+                    setChartContextMenu(null);
+                  }}
+                >
+                  {contextMenuDrawing.locked === true ? 'Desbloquear dibujo' : 'Bloquear dibujo'}
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  data-testid="chart-context-hide-drawing"
+                  class="block w-full px-3 py-2 text-left text-xs text-slate-200 hover:bg-white/10"
+                  onClick={() => {
+                    runtimeRef.current?.updateDrawingProperties([contextMenuDrawing.id], {
+                      visible: false,
+                    });
+                    setChartContextMenu(null);
+                  }}
+                >
+                  Ocultar dibujo
+                </button>
+                <div class="my-1 border-t border-white/10" />
+                <button
+                  type="button"
+                  role="menuitem"
+                  data-testid="chart-context-delete-drawing"
+                  class="block w-full px-3 py-2 text-left text-xs text-rose-300 hover:bg-rose-500/10"
+                  onClick={() => {
+                    runtimeRef.current?.deleteDrawings([contextMenuDrawing.id]);
+                    setChartContextMenu(null);
+                  }}
+                >
+                  Eliminar dibujo
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                role="menuitem"
+                data-testid="chart-context-toggle-all-drawings"
+                class="block w-full px-3 py-2 text-left text-xs text-slate-200 hover:bg-white/10"
+                onClick={() => {
+                  runtimeRef.current?.setDrawingsVisible(!drawingsVisible);
+                  setChartContextMenu(null);
+                }}
+              >
+                {drawingsVisible ? 'Ocultar todos los dibujos' : 'Mostrar todos los dibujos'}
+              </button>
+            )}
+            <div class="my-1 border-t border-white/10" />
+            <button
+              type="button"
+              role="menuitem"
+              data-testid="chart-context-close"
+              class="block w-full px-3 py-2 text-left text-xs text-slate-400 hover:bg-white/10"
+              onClick={() => setChartContextMenu(null)}
+            >
+              Cerrar
+            </button>
+          </div>
+        )}
         {drawingObjectTreeOpen && (
           <aside
             aria-label="Árbol de objetos"
