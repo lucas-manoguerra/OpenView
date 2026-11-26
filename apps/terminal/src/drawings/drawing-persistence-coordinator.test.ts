@@ -110,6 +110,31 @@ describe('drawing persistence coordinator', () => {
     );
   });
 
+  it('waits for queued writes before reloading a workspace', async () => {
+    const base = new MemoryDrawingRepository();
+    let releaseWrite: (() => void) | undefined;
+    const writeGate = new Promise<void>((resolve) => {
+      releaseWrite = resolve;
+    });
+    const repository: DrawingRepository = {
+      list: (requestedScope) => base.list(requestedScope),
+      save: async (requestedScope, input, revision) => {
+        await writeGate;
+        return base.save(requestedScope, input, revision);
+      },
+      delete: (requestedScope, id, revision) => base.delete(requestedScope, id, revision),
+    };
+    const coordinator = new DrawingPersistenceCoordinator(repository);
+    const first = await coordinator.activate(scope);
+    const pendingWrite = coordinator.persist(first.token, [chartDrawing('queued')]);
+    const nextActivation = coordinator.activate(scope);
+
+    releaseWrite?.();
+    await pendingWrite;
+    const restored = await nextActivation;
+    expect(restored.drawings).toEqual([chartDrawing('queued')]);
+  });
+
   it('preserves global timeframe scope when editing a global drawing', async () => {
     const repository = new MemoryDrawingRepository();
     const globalScope = { ...scope, timeframe: null };
