@@ -43,7 +43,12 @@ export type ChartDrawingEditPreview =
 export type ChartCommand =
   | Readonly<{ type: 'set-scene'; scene: ChartRenderScene }>
   | Readonly<{ type: 'set-drawings'; drawings: readonly ChartRenderDrawing[] }>
-  | Readonly<{ type: 'nudge-drawings'; drawingIds: readonly string[]; logicalDelta: number; priceDelta: number }>
+  | Readonly<{
+      type: 'nudge-drawings';
+      drawingIds: readonly string[];
+      logicalDelta: number;
+      priceDelta: number;
+    }>
   | Readonly<{
       type: 'update-drawing-properties';
       drawingIds: readonly string[];
