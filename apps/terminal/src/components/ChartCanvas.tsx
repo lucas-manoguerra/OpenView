@@ -2483,7 +2483,7 @@ export function ChartCanvas({
             Ver todo
           </button>
         </fieldset>
-        {(drawingTool === 'cursor' || drawingTool === 'select') &&
+        {drawingTool === 'cursor' &&
           selectedDrawingHasSingleSelection &&
           selectedDrawing !== null &&
           drawingPanelLayout.visible.coordinates && (
@@ -2497,7 +2497,7 @@ export function ChartCanvas({
             />
           )}
 
-        {(drawingTool === 'cursor' || drawingTool === 'select') &&
+        {drawingTool === 'cursor' &&
           selectedDrawing !== null &&
           drawingPanelLayout.visible.appearance && (
             <DrawingPropertiesPanel
