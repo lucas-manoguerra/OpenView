@@ -829,7 +829,14 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
       pointerAdapter?.destroy();
       pointerAdapter = attachCanvasPointerEvents(canvas, controller, {
         ...pointerOptions,
-        getDrawings: pointerOptions.getDrawings ?? (() => scene.drawings),
+        getIndicators: pointerOptions.getIndicators ?? (() => scene.indicators),
+        getCandles: pointerOptions.getCandles ?? (() => scene.candles),
+        getDrawings:
+          pointerOptions.getDrawings ??
+          (() =>
+            drawingsVisible
+              ? scene.drawings.filter((drawing) => drawing.visible !== false)
+              : []),
         getSelectedDrawingId:
           pointerOptions.getSelectedDrawingId ?? (() => scene.selectedDrawingId),
         getSelectedDrawingIds:
