@@ -31,8 +31,8 @@ const drawing = {
   drawingId: 'drawing-uuid-1',
   payload: {
     type: 'trend-line' as const,
-    start: { logicalIndex: 10, price: 100 },
-    end: { logicalIndex: 20, price: 120 },
+    start: { timestamp: 10, price: 100 },
+    end: { timestamp: 20, price: 120 },
     color: '#60a5fa',
     lineWidth: 1.5,
     lineStyle: 'solid' as const,
@@ -126,7 +126,7 @@ describe('local drawing repository', () => {
     await expect(
       repository.save(
         accountScope,
-        { ...drawing, payload: { ...drawing.payload, start: { logicalIndex: NaN, price: 1 } } },
+        { ...drawing, payload: { ...drawing.payload, start: { timestamp: NaN, price: 1 } } },
         null,
       ),
     ).rejects.toThrow('payload');
