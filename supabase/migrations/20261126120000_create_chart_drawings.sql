@@ -71,6 +71,27 @@ create index if not exists chart_drawings_global_order_idx
   on public.chart_drawings (user_id, instrument_id, z_order)
   where timeframe_scope is null;
 
+create or replace function public.set_chart_drawing_insert_metadata()
+returns trigger
+language plpgsql
+set search_path = pg_catalog
+as $
+begin
+  new.created_at := pg_catalog.now();
+  new.updated_at := new.created_at;
+  new.revision := 1;
+  return new;
+end;
+$;
+
+revoke all on function public.set_chart_drawing_insert_metadata() from public;
+
+drop trigger if exists chart_drawings_insert_metadata on public.chart_drawings;
+create trigger chart_drawings_insert_metadata
+before insert on public.chart_drawings
+for each row
+execute function public.set_chart_drawing_insert_metadata();
+
 create or replace function public.set_chart_drawing_update_metadata()
 returns trigger
 language plpgsql
@@ -80,6 +101,7 @@ begin
   if new.user_id is distinct from old.user_id
     or new.instrument_id is distinct from old.instrument_id
     or new.drawing_id is distinct from old.drawing_id
+    or new.timeframe_scope is distinct from old.timeframe_scope
     or new.created_at is distinct from old.created_at then
     raise exception 'Drawing ownership and identity fields are immutable'
       using errcode = '22000';
