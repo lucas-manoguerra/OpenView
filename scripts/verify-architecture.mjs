@@ -13,6 +13,9 @@ const collectFiles = async (directory) => {
       const entryPath = path.join(directory, entry.name);
 
       if (entry.isDirectory()) {
+        if (entry.name === 'node_modules' || entry.name === '.astro' || entry.name === 'dist') {
+          return [];
+        }
         return collectFiles(entryPath);
       }
 

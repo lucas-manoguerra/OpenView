@@ -17,6 +17,8 @@
     "@openview/chart-engine": "workspace:*",
     "@openview/market-data": "workspace:*",
     "@openview/market-domain": "workspace:*",
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.119.2",
     "@tailwindcss/vite": "4.3.5",
     "astro": "7.4.13",
     "lucide-preact": "1.79.0",
