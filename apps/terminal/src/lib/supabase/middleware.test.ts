@@ -19,7 +19,8 @@ describe('Supabase middleware helpers', () => {
     expect(hasSupabaseAuthCookie('sb-projectref-auth-token.abc=chunk')).toBe(false);
   });
 
-  it('classifies authentication entry points as public without widening route matches', () => {
+  it('keeps the terminal public while protecting account routes', () => {
+    expect(isPublicRoute('/')).toBe(true);
     expect(isPublicRoute('/login')).toBe(true);
     expect(isPublicRoute('/auth/callback/provider')).toBe(true);
     expect(isPublicRoute('/dashboard')).toBe(false);
