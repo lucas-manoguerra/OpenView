@@ -214,7 +214,9 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
     const renderScene = drawingsVisible
       ? previewScene
       : updateChartRenderScene(previewScene, { drawings: [] });
-    renderer.setScene(updateChartRenderScene(renderScene, { objectOrder, drawingSelectionPreview }));
+    renderer.setScene(
+      updateChartRenderScene(renderScene, { objectOrder, drawingSelectionPreview }),
+    );
   };
 
   const emitHistoryState = (): void => {
