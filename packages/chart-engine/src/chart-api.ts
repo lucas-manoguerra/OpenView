@@ -43,6 +43,17 @@ export type ChartDrawingEditPreview =
 export type ChartCommand =
   | Readonly<{ type: 'set-scene'; scene: ChartRenderScene }>
   | Readonly<{ type: 'set-drawings'; drawings: readonly ChartRenderDrawing[] }>
+  | Readonly<{
+      type: 'update-drawing-properties';
+      drawingIds: readonly string[];
+      updates: Partial<Omit<ChartRenderDrawing, 'id' | 'type' | 'start' | 'end'>>;
+    }>
+  | Readonly<{
+      type: 'update-drawing-anchor';
+      drawingId: string;
+      target: 'start' | 'end';
+      updates: Partial<ChartRenderDrawing['start']>;
+    }>
   | Readonly<{ type: 'add-drawing'; drawing: ChartRenderDrawing }>
   | Readonly<{ type: 'delete-drawings'; drawingIds: readonly string[] }>
   | Readonly<{ type: 'set-drawings-visible'; visible: boolean }>
@@ -238,6 +249,59 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
         render();
         emitDrawingState();
         emit(Object.freeze({ type: 'object-order-changed', order: objectOrder }));
+        emitHistoryState();
+        return;
+      }
+
+      if (command.type === 'update-drawing-properties') {
+        const drawingIds = new Set(command.drawingIds);
+        const nextDrawings = scene.drawings.map((drawing) =>
+          drawingIds.has(drawing.id)
+            ? Object.freeze({ ...drawing, ...command.updates })
+            : drawing,
+        );
+        if (nextDrawings.every((drawing, index) => drawing === scene.drawings[index])) return;
+        drawingUndoStack.push(scene.drawings);
+        if (drawingUndoStack.length > 50) drawingUndoStack.shift();
+        drawingRedoStack.length = 0;
+        scene = updateChartRenderScene(scene, { drawings: Object.freeze(nextDrawings) });
+        render();
+        emitDrawingState();
+        emitHistoryState();
+        return;
+      }
+
+      if (command.type === 'update-drawing-anchor') {
+        const { timestamp, price } = command.updates;
+        if (
+          (timestamp !== undefined && (!Number.isFinite(timestamp) || timestamp <= 0)) ||
+          (price !== undefined && !Number.isFinite(price))
+        ) {
+          throw new RangeError('Drawing anchor coordinates must be finite and timestamps positive.');
+        }
+        const targetDrawing = scene.drawings.find((drawing) => drawing.id === command.drawingId);
+        if (targetDrawing === undefined || (command.target === 'end' && targetDrawing.end === null)) {
+          return;
+        }
+        const nextDrawings = scene.drawings.map((drawing) => {
+          if (drawing.id !== command.drawingId) return drawing;
+          if (command.target === 'start') {
+            return Object.freeze({
+              ...drawing,
+              start: Object.freeze({ ...drawing.start, ...command.updates }),
+            });
+          }
+          return Object.freeze({
+            ...drawing,
+            end: Object.freeze({ ...drawing.end!, ...command.updates }),
+          });
+        });
+        drawingUndoStack.push(scene.drawings);
+        if (drawingUndoStack.length > 50) drawingUndoStack.shift();
+        drawingRedoStack.length = 0;
+        scene = updateChartRenderScene(scene, { drawings: Object.freeze(nextDrawings) });
+        render();
+        emitDrawingState();
         emitHistoryState();
         return;
       }
