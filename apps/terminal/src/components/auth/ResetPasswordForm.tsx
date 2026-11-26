@@ -4,8 +4,10 @@ import { createClient } from '../../lib/supabase/client';
 
 export function ResetPasswordForm() {
   const supabase: SupabaseClient<Database> = createClient();
-  const searchParams = new URL(window.location.href).searchParams;
-  const tokenHash = searchParams.get('token_hash');
+  const tokenHash =
+    typeof window === 'undefined'
+      ? null
+      : new URL(window.location.href).searchParams.get('token_hash');
   let password = '';
   let confirmPassword = '';
   let error: string | null = null;
