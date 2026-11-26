@@ -83,6 +83,7 @@ export type CanvasPointerAdapterOptions = Readonly<{
 }>;
 
 export type CanvasPointerAdapter = Readonly<{
+  cancelDrawingCreation(): void;
   destroy(): void;
 }>;
 
@@ -594,13 +595,7 @@ export const attachCanvasPointerEvents = (
           options.getDrawingTool?.() !== 'cursor' &&
           options.getDrawingTool?.() !== 'select'))
     ) {
-      drawingStart = null;
-      activeDrawingTool = null;
-      drawingAwaitingSecondPoint = false;
-      drawingPointerOrigin = null;
-      options.onDrawingCreationPreview?.(null);
-      releaseActivePointer();
-      options.onDrawingToolExit?.();
+      cancelDrawingCreation();
       event.preventDefault();
       return;
     }
@@ -638,6 +633,16 @@ export const attachCanvasPointerEvents = (
     }
   };
 
+  const cancelDrawingCreation = (): void => {
+    drawingStart = null;
+    activeDrawingTool = null;
+    drawingAwaitingSecondPoint = false;
+    drawingPointerOrigin = null;
+    options.onDrawingCreationPreview?.(null);
+    releaseActivePointer();
+    options.onDrawingToolExit?.();
+  };
+
   canvas.addEventListener('pointerdown', handlePointerDown);
   canvas.addEventListener('pointermove', handlePointerMove);
   canvas.addEventListener('pointerup', handlePointerUp);
@@ -648,6 +653,7 @@ export const attachCanvasPointerEvents = (
   canvas.addEventListener('keydown', handleKeyDown);
 
   return Object.freeze({
+    cancelDrawingCreation,
     destroy: (): void => {
       if (destroyed) {
         return;
