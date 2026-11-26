@@ -694,6 +694,28 @@ describe('chart public API', () => {
     chart.destroy();
   });
 
+  it('keeps drawing selection previews transient and outside snapshots', () => {
+    const { surface } = createSurface();
+    const chart = createChart({
+      surface,
+      initialScene: createScene(),
+      renderer: { scheduler: { requestFrame: () => 1, cancelFrame: () => {} } },
+    });
+
+    chart.execute({
+      type: 'set-drawing-selection-preview',
+      preview: {
+        start: { x: 24, y: 36 },
+        current: { x: 180, y: 140 },
+      },
+    });
+    expect(chart.exportSnapshot().scene.drawingSelectionPreview).toBeNull();
+
+    chart.execute({ type: 'set-drawing-selection-preview', preview: null });
+    expect(chart.exportSnapshot().scene.drawingSelectionPreview).toBeNull();
+    chart.destroy();
+  });
+
   it('creates drawings from logical gestures inside the chart engine', () => {
     vi.stubGlobal('crypto', {
       randomUUID: vi.fn(() => '550e8400-e29b-41d4-a716-446655440000'),
