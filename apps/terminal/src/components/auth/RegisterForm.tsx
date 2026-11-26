@@ -15,7 +15,13 @@ export function RegisterForm() {
     setError(null);
     setLoading(true);
     try {
-      const { error: authError } = await supabase.auth.signUp({ email, password });
+      const { error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+        },
+      });
       if (authError) throw authError;
       window.location.href = '/login';
     } catch (err) {
