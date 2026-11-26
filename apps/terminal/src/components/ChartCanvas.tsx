@@ -1571,8 +1571,7 @@ export function ChartCanvas({
       .every((drawing) => drawing.type === selectedDrawing.type);
 
   return (
-    <div
-      role="group"
+    <section
       aria-label="Herramientas y gráfico"
       class="grid h-[390px] min-h-[340px] w-full grid-cols-[38px_minmax(0,1fr)] bg-[#0b0f17]"
       onKeyDownCapture={(event) => {
@@ -2585,6 +2584,6 @@ export function ChartCanvas({
           Drag to pan · Scroll to zoom · Double-click price axis to fit
         </div>
       </div>
-    </div>
+    </section>
   );
 }
