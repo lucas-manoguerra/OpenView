@@ -205,6 +205,8 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
       }
 
       if (command.type === 'delete-drawings') {
+        drawingPreview = null;
+        drawingCreationPreview = null;
         const deletedIds = new Set(command.drawingIds);
         const nextDrawings = scene.drawings.filter((drawing) => !deletedIds.has(drawing.id));
         if (nextDrawings.length === scene.drawings.length) return;
@@ -240,6 +242,7 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
 
       if (command.type === 'set-drawings') {
         drawingPreview = null;
+        drawingCreationPreview = null;
         if (JSON.stringify(scene.drawings) !== JSON.stringify(command.drawings)) {
           drawingUndoStack.push(scene.drawings);
           if (drawingUndoStack.length > 50) drawingUndoStack.shift();
@@ -282,6 +285,7 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
         destination.push(scene.drawings);
         if (destination.length > 50) destination.shift();
         drawingPreview = null;
+        drawingCreationPreview = null;
         const availableIds = new Set(previousDrawings.map((drawing) => drawing.id));
         const selectedDrawingIds = Object.freeze(
           scene.selectedDrawingIds.filter((id) => availableIds.has(id)),
@@ -321,7 +325,11 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
 
       if (command.type === 'set-drawings-visible') {
         drawingsVisible = command.visible;
-        if (!drawingsVisible && scene.hoveredDrawingHit !== null) {
+        if (!drawingsVisible) {
+        drawingPreview = null;
+        drawingCreationPreview = null;
+      }
+      if (!drawingsVisible && scene.hoveredDrawingHit !== null) {
           scene = updateChartRenderScene(scene, { hoveredDrawingHit: null });
           emit(Object.freeze({ type: 'scene-changed', scene }));
         }
