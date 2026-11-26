@@ -16,6 +16,7 @@ import {
 } from './drawing-geometry';
 import {
   updateChartRenderScene,
+  type ChartDrawingSelectionPreview,
   type ChartRenderDrawing,
   type ChartRenderScene,
 } from './canvas-painter';
@@ -81,6 +82,10 @@ export type ChartCommand =
   | Readonly<{ type: 'set-drawing-selection'; drawingIds: readonly string[] }>
   | Readonly<{ type: 'select-drawings-within-area'; area: ChartDrawingSelectionArea }>
   | Readonly<{ type: 'set-drawing-hover'; hit: ChartDrawingHit | null }>
+  | Readonly<{
+      type: 'set-drawing-selection-preview';
+      preview: ChartDrawingSelectionPreview | null;
+    }>
   | Readonly<{ type: 'set-drawing-edit-preview'; gesture: ChartDrawingEditPreview | null }>
   | Readonly<{ type: 'set-drawing-creation-preview'; drawing: ChartRenderDrawing | null }>
   | Readonly<{
@@ -179,6 +184,7 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
   let drawingsVisible = true;
   let drawingPreview: readonly ChartRenderDrawing[] | null = null;
   let drawingCreationPreview: ChartRenderDrawing | null = null;
+  let drawingSelectionPreview: ChartDrawingSelectionPreview | null = null;
   const drawingUndoStack: (readonly ChartRenderDrawing[])[] = [];
   const drawingRedoStack: (readonly ChartRenderDrawing[])[] = [];
   let destroyed = false;
@@ -208,7 +214,7 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
     const renderScene = drawingsVisible
       ? previewScene
       : updateChartRenderScene(previewScene, { drawings: [] });
-    renderer.setScene(updateChartRenderScene(renderScene, { objectOrder }));
+    renderer.setScene(updateChartRenderScene(renderScene, { objectOrder, drawingSelectionPreview }));
   };
 
   const emitHistoryState = (): void => {
@@ -519,6 +525,7 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
         if (!drawingsVisible) {
           drawingPreview = null;
           drawingCreationPreview = null;
+          drawingSelectionPreview = null;
         }
         if (!drawingsVisible && scene.hoveredDrawingHit !== null) {
           scene = updateChartRenderScene(scene, { hoveredDrawingHit: null });
@@ -657,6 +664,12 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
         return;
       }
 
+      if (command.type === 'set-drawing-selection-preview') {
+        drawingSelectionPreview = command.preview;
+        render();
+        return;
+      }
+
       if (command.type === 'set-drawing-hover') {
         const hitIsVisible =
           command.hit !== null &&
@@ -744,6 +757,7 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
       const nextScene = snapshot.scene;
       drawingPreview = null;
       drawingCreationPreview = null;
+      drawingSelectionPreview = null;
       drawingUndoStack.length = 0;
       drawingRedoStack.length = 0;
       const available = getAvailableObjects(nextScene);
