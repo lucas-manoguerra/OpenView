@@ -22,11 +22,11 @@ export function UserSession({ user }: UserSessionProps) {
   );
 }
 
-export async function getUserSession(context: APIContext) {
+export async function getUserSession(context: APIContext, responseHeaders: Headers = new Headers()) {
   const { pathname } = new URL(context.request.url);
   if (isPublicRoute(pathname)) {
     return null;
   }
-  const { user } = await getAuthenticatedUser(context);
+  const { user } = await getAuthenticatedUser(context, responseHeaders);
   return user;
 }
