@@ -110,6 +110,23 @@ describe('drawing persistence coordinator', () => {
     );
   });
 
+  it('preserves global timeframe scope when editing a global drawing', async () => {
+    const repository = new MemoryDrawingRepository();
+    const globalScope = { ...scope, timeframe: null };
+    const coordinator = new DrawingPersistenceCoordinator(repository);
+    const seed = new DrawingPersistenceCoordinator(repository);
+    const globalWorkspace = await seed.activate(globalScope);
+    await seed.persist(globalWorkspace.token, [chartDrawing('global-drawing')]);
+
+    const workspace = await coordinator.activate(scope);
+    await coordinator.persist(workspace.token, [chartDrawing('global-drawing', 140)]);
+
+    const saved = [...repository.rows.values()][0];
+    expect(saved?.timeframeScope).toBeNull();
+    expect(saved?.payload).toMatchObject({ start: { price: 140 } });
+    expect(saved?.revision).toBe(2);
+  });
+
   it('does not allow a stale workspace token to write into the active workspace', async () => {
     const repository = new MemoryDrawingRepository();
     const coordinator = new DrawingPersistenceCoordinator(repository);
