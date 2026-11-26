@@ -21,16 +21,16 @@ pnpm dev
 
 La aplicación estará disponible en http://localhost:4321.
 
-## Cloudflare deployment
+## Despliegue en Cloudflare
 
-Cloudflare Workers deployment uses Wrangler from `apps/terminal/wrangler.jsonc`. The Worker name is `openview-terminal`.
+El despliegue de Cloudflare Workers utiliza Wrangler y la configuración `apps/terminal/wrangler.jsonc`. El nombre del Worker es `openview-terminal`.
 
-For local CLI deployment, copy `.env.cloudflare.example` to `.env.cloudflare`, then set:
+Para utilizar Wrangler localmente, copia `.env.cloudflare.example` como `.env.cloudflare` y configura:
 
-- `CLOUDFLARE_ACCOUNT_ID`: the Cloudflare account ID that owns the Worker.
-- `CLOUDFLARE_API_TOKEN`: a narrowly scoped API token with the Workers Scripts edit permission required by Wrangler.
+- `CLOUDFLARE_ACCOUNT_ID`: ID de la cuenta de Cloudflare propietaria del Worker.
+- `CLOUDFLARE_API_TOKEN`: token API de alcance mínimo con el permiso Workers Scripts Edit que requiere Wrangler.
 
-Load the local values into the current shell before running Wrangler:
+Carga los valores en la sesión actual de la terminal antes de ejecutar Wrangler:
 
 ```bash
 set -a
@@ -39,7 +39,7 @@ set +a
 pnpm --filter @openview/terminal exec wrangler deploy --dry-run
 ```
 
-Run a real deployment only after reviewing the dry-run output and explicitly authorizing the deployment. For GitHub Actions, store these values as repository or environment secrets named `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`; do not commit the local `.env.cloudflare` file or place the API token in the application `apps/terminal/.env`. The Cloudflare API token is a deployment credential, not a browser/runtime variable.
+Solo realiza un despliegue real después de revisar el resultado del dry-run y contar con autorización explícita. Para GitHub Actions, guarda estos valores como secretos del repositorio o del entorno con los nombres `CLOUDFLARE_ACCOUNT_ID` y `CLOUDFLARE_API_TOKEN`. Nunca subas `.env.cloudflare` al repositorio ni coloques el token API en `apps/terminal/.env`: es una credencial de despliegue, no una variable pública de la aplicación.
 
 ## Verificaciones
 
