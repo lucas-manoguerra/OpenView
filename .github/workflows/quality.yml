@@ -130,11 +130,11 @@ jobs:
           fi
 
           if (( shard_tests > 5 )); then
-            echo "::error::Shard ${{ matrix.shard }}/10 contains $shard_tests tests; the maximum is five."
+            echo "::error::Shard ${{ matrix.shard }}/11 contains $shard_tests tests; the maximum is five."
             exit 1
           fi
 
-          echo "Shard ${{ matrix.shard }}/10 contains $shard_tests tests (maximum: five)."
+          echo "Shard ${{ matrix.shard }}/11 contains $shard_tests tests (maximum: five)."
 
       - name: Run Playwright shard
         run: pnpm exec playwright test --fully-parallel --shard=${{ matrix.shard }}/11
