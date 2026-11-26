@@ -2766,7 +2766,6 @@ test('discovers drawing tools by family and activates implemented tools', async 
   await expect(page.getByTestId('drawing-tool-trend-line')).toHaveAttribute('aria-pressed', 'true');
 });
 
-
 test('cancels a two-click drawing preview with Escape and returns to the cursor', async ({
   page,
 }) => {
