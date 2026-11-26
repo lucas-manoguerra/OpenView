@@ -256,9 +256,7 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
       if (command.type === 'update-drawing-properties') {
         const drawingIds = new Set(command.drawingIds);
         const nextDrawings = scene.drawings.map((drawing) =>
-          drawingIds.has(drawing.id)
-            ? Object.freeze({ ...drawing, ...command.updates })
-            : drawing,
+          drawingIds.has(drawing.id) ? Object.freeze({ ...drawing, ...command.updates }) : drawing,
         );
         if (nextDrawings.every((drawing, index) => drawing === scene.drawings[index])) return;
         drawingUndoStack.push(scene.drawings);
@@ -277,10 +275,15 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
           (timestamp !== undefined && (!Number.isFinite(timestamp) || timestamp <= 0)) ||
           (price !== undefined && !Number.isFinite(price))
         ) {
-          throw new RangeError('Drawing anchor coordinates must be finite and timestamps positive.');
+          throw new RangeError(
+            'Drawing anchor coordinates must be finite and timestamps positive.',
+          );
         }
         const targetDrawing = scene.drawings.find((drawing) => drawing.id === command.drawingId);
-        if (targetDrawing === undefined || (command.target === 'end' && targetDrawing.end === null)) {
+        if (
+          targetDrawing === undefined ||
+          (command.target === 'end' && targetDrawing.end === null)
+        ) {
           return;
         }
         const nextDrawings = scene.drawings.map((drawing) => {
