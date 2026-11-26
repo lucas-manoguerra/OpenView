@@ -30,17 +30,21 @@ create table if not exists public.chart_drawings (
     )),
   constraint chart_drawings_payload_start
     check (
-      jsonb_typeof(payload -> 'start') = 'object'
+      payload ? 'start'
+      and jsonb_typeof(payload -> 'start') = 'object'
       and jsonb_typeof(payload #> '{start,timestamp}') = 'number'
       and jsonb_typeof(payload #> '{start,price}') = 'number'
     ),
   constraint chart_drawings_payload_end
     check (
-      payload -> 'end' = 'null'::jsonb
-      or (
+      payload ? 'end'
+      and (
+        payload -> 'end' = 'null'::jsonb
+        or (
         jsonb_typeof(payload -> 'end') = 'object'
         and jsonb_typeof(payload #> '{end,timestamp}') = 'number'
         and jsonb_typeof(payload #> '{end,price}') = 'number'
+        )
       )
     ),
   constraint chart_drawings_payload_color
