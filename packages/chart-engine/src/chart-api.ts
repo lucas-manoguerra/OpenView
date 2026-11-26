@@ -27,6 +27,11 @@ import {
   type CanvasSurface,
 } from './canvas-renderer';
 
+export type ChartContextMenuRequest = Readonly<{
+  point: ChartCoordinate;
+  drawingHit: ChartDrawingHit | null;
+}>;
+
 export type ChartDrawingEditPreview =
   | Readonly<{
       kind: 'single';
@@ -82,6 +87,7 @@ export type ChartCommand =
   | Readonly<{ type: 'set-drawing-selection'; drawingIds: readonly string[] }>
   | Readonly<{ type: 'select-drawings-within-area'; area: ChartDrawingSelectionArea }>
   | Readonly<{ type: 'set-drawing-hover'; hit: ChartDrawingHit | null }>
+  | Readonly<{ type: 'request-context-menu'; point: ChartCoordinate }>
   | Readonly<{
       type: 'set-drawing-selection-preview';
       preview: ChartDrawingSelectionPreview | null;
@@ -111,6 +117,7 @@ export type ChartEvent =
       selectedDrawingIds: readonly string[];
     }>
   | Readonly<{ type: 'history-state-changed'; undoCount: number; redoCount: number }>
+  | Readonly<{ type: 'context-menu-requested'; request: ChartContextMenuRequest }>
   | Readonly<{ type: 'destroyed' }>;
 
 export type ChartSnapshot = Readonly<{
@@ -663,6 +670,33 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
         } else {
           render();
         }
+        return;
+      }
+
+      if (command.type === 'request-context-menu') {
+        const visibleDrawings = drawingsVisible
+          ? scene.drawings.filter((drawing) => drawing.visible !== false)
+          : [];
+        const drawingHit =
+          visibleDrawings.length === 0
+            ? null
+            : hitTestChartDrawing(
+                command.point,
+                visibleDrawings,
+                scene.candles,
+                scene.frame,
+                8,
+                scene.selectedDrawingIds,
+              );
+        emit(
+          Object.freeze({
+            type: 'context-menu-requested',
+            request: Object.freeze({
+              point: Object.freeze({ ...command.point }),
+              drawingHit,
+            }),
+          }),
+        );
         return;
       }
 

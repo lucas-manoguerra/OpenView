@@ -46,6 +46,7 @@ import {
   createChartRenderScene,
   createChart,
   type ChartApi,
+  type ChartContextMenuRequest,
   type ChartDrawingCreationGesture,
   type ChartDrawingStyle,
   calculateExponentialMovingAverage,
@@ -79,6 +80,7 @@ type ChartCanvasProps = Readonly<{
   error: string | null;
   onRetry: () => void;
   onNeedMoreHistory: () => void;
+  onContextMenuRequest?: (request: ChartContextMenuRequest) => void;
 }>;
 
 type ChartRuntime = Readonly<{
@@ -311,13 +313,16 @@ export function ChartCanvas({
   error,
   onRetry,
   onNeedMoreHistory,
+  onContextMenuRequest,
 }: ChartCanvasProps) {
   const runtimeRef = useRef<ChartRuntime | null>(null);
+  const onContextMenuRequestRef = useRef(onContextMenuRequest);
   const pointerAdapterRef = useRef<CanvasPointerAdapter | null>(null);
   const rightOffsetInputRef = useRef<HTMLInputElement | null>(null);
   const [priceScaleMode, setPriceScaleMode] = useState<PriceScaleMode>('linear');
   const [chartType, setChartType] = useState<ChartType>('candles');
   const [activeIndicators, setActiveIndicators] = useState<readonly string[]>([]);
+  onContextMenuRequestRef.current = onContextMenuRequest;
   const [drawingTool, setDrawingTool] = useState<CanvasDrawingTool>('cursor');
   const [controlKeyPressed, setControlKeyPressed] = useState(false);
 
@@ -543,6 +548,10 @@ export function ChartCanvas({
             setDrawingRedoCount(event.redoCount);
             return;
           }
+          if (event.type === 'context-menu-requested') {
+            onContextMenuRequestRef.current?.(event.request);
+            return;
+          }
           if (event.type !== 'drawing-state-changed') return;
           if (scene !== null) {
             scene = updateChartRenderScene(scene, {
@@ -665,6 +674,9 @@ export function ChartCanvas({
           getSelectedDrawingId: () => selectedDrawingIdRef.current,
           getSelectedDrawingIds: () => selectedDrawingIdsRef.current,
           hitTestDrawing: (point, tolerance) => chartApi?.hitTestDrawing(point, tolerance) ?? null,
+          onContextMenu: (point): void => {
+            chartApi?.execute({ type: 'request-context-menu', point });
+          },
           getPriceIncrement: () => priceIncrementRef.current,
           onDrawingNudge: (direction: CanvasDrawingNudgeDirection): void => {
             handleSelectedDrawingsNudge(direction);

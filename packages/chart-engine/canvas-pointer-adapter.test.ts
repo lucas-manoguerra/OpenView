@@ -114,10 +114,29 @@ describe('canvas pointer event adapter', () => {
     );
     const adapter = attachCanvasPointerEvents(canvas, controller);
 
-    expect(listenerCount()).toBe(8);
+    expect(listenerCount()).toBe(9);
 
     adapter.destroy();
 
+    expect(listenerCount()).toBe(0);
+  });
+
+  it('forwards native context-menu requests with chart-local coordinates', () => {
+    const { canvas, dispatch, listenerCount } = createCanvasTarget();
+    const controller = createChartInteractionController(
+      createChartFrame(900, 500, { min: 90, max: 120 }, 99),
+    );
+    const onContextMenu = vi.fn();
+    const adapter = attachCanvasPointerEvents(canvas, controller, { onContextMenu });
+    const event = createDoubleClickEvent({ clientX: 420, clientY: 170 });
+
+    dispatch('contextmenu', event);
+
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+    expect(onContextMenu).toHaveBeenCalledWith({ x: 320, y: 120 });
+    expect(listenerCount()).toBe(9);
+
+    adapter.destroy();
     expect(listenerCount()).toBe(0);
   });
 
@@ -1284,7 +1303,7 @@ describe('canvas pointer event adapter', () => {
     );
     const adapter = attachCanvasPointerEvents(canvas, controller);
 
-    expect(listenerCount()).toBe(8);
+    expect(listenerCount()).toBe(9);
 
     dispatch('pointerdown', createPointerEvent());
     adapter.destroy();

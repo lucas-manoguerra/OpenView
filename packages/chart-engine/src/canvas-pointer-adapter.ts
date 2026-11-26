@@ -65,6 +65,7 @@ export type CanvasPointerAdapterOptions = Readonly<{
   getSelectedDrawingIds?: () => readonly string[];
   getPriceIncrement?: () => number | null;
   hitTestDrawing?: (point: ChartCoordinate, tolerance: number) => ChartDrawingHit | null;
+  onContextMenu?: (point: ChartCoordinate) => void;
   onDrawingNudge?: (direction: CanvasDrawingNudgeDirection) => void;
   onDrawingComplete?: (drawing: CanvasDrawingGesture) => void;
   onDrawingCreationPreview?: (drawing: CanvasDrawingGesture | null) => void;
@@ -611,6 +612,11 @@ export const attachCanvasPointerEvents = (
     controller.pointerLeave();
   };
 
+  const handleContextMenu = (event: MouseEvent): void => {
+    event.preventDefault();
+    options.onContextMenu?.(getCanvasPosition(canvas, event));
+  };
+
   const handleWheel = (event: WheelEvent): void => {
     const handled = controller.wheel(getCanvasPosition(canvas, event), event.deltaX, event.deltaY);
 
@@ -649,6 +655,7 @@ export const attachCanvasPointerEvents = (
   canvas.addEventListener('pointercancel', handlePointerCancel);
   canvas.addEventListener('pointerleave', handlePointerLeave);
   canvas.addEventListener('wheel', handleWheel, { passive: false });
+  canvas.addEventListener('contextmenu', handleContextMenu);
   canvas.addEventListener('dblclick', handleDoubleClick);
   canvas.addEventListener('keydown', handleKeyDown);
 
@@ -666,6 +673,7 @@ export const attachCanvasPointerEvents = (
       canvas.removeEventListener('pointercancel', handlePointerCancel);
       canvas.removeEventListener('pointerleave', handlePointerLeave);
       canvas.removeEventListener('wheel', handleWheel);
+      canvas.removeEventListener('contextmenu', handleContextMenu);
       canvas.removeEventListener('dblclick', handleDoubleClick);
       canvas.removeEventListener('keydown', handleKeyDown);
       drawingStart = null;
