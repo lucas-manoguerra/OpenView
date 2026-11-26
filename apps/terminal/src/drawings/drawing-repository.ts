@@ -17,6 +17,7 @@ export type PersistedDrawing = Readonly<{
   createdAt: string;
   updatedAt: string;
   revision: number;
+  timeframeScope: string | null;
 }>;
 
 export type SaveDrawingInput = Readonly<{
@@ -50,7 +51,7 @@ export class DrawingRevisionConflictError extends Error {
 
 type StorageAdapter = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
-type StoredDrawing = PersistedDrawing & Readonly<{ timeframeScope: string | null }>;
+type StoredDrawing = PersistedDrawing;
 
 const STORAGE_PREFIX = 'openview.terminal.drawings';
 const STORAGE_VERSION = 1;
@@ -150,7 +151,6 @@ export class LocalStorageDrawingRepository implements DrawingRepository {
       .filter(
         (drawing) => drawing.timeframeScope === null || drawing.timeframeScope === scope.timeframe,
       )
-      .map(({ timeframeScope: _timeframeScope, ...drawing }) => drawing)
       .sort((first, second) => first.zOrder - second.zOrder);
     return Object.freeze(drawings);
   }
@@ -196,8 +196,7 @@ export class LocalStorageDrawingRepository implements DrawingRepository {
     else collection[existingIndex] = saved;
 
     this.storage.setItem(key, JSON.stringify({ version: STORAGE_VERSION, drawings: collection }));
-    const { timeframeScope: _timeframeScope, ...document } = saved;
-    return document;
+    return saved;
   }
 
   async delete(
