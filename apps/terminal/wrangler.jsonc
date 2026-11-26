@@ -1,5 +1,6 @@
 {
   "$schema": "https://cloudflare-workers.cloudflareworkers.com/config_schema_2025.json",
+  "main": "@astrojs/cloudflare/entrypoints/server",
   "name": "openview-terminal",
   "compatibility_date": "2026-11-24",
   "compatibility_flags": ["nodejs_compat"],
