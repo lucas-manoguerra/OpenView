@@ -732,7 +732,7 @@ describe('chart public API', () => {
         type: 'context-menu-requested',
         request: expect.objectContaining({
           point,
-          drawingHit: { drawingId: 'context-menu-drawing', target: 'body' },
+          drawingHit: { drawingId: 'context-menu-drawing', target: 'start' },
         }),
       }),
     );
