@@ -2825,11 +2825,9 @@ test('opens the terminal context menu on right-click and closes it with Escape',
     throw new Error('The chart canvas must have a visible bounding box.');
   }
 
-  await page.mouse.click(
-    bounds.x + bounds.width * 0.55,
-    bounds.y + bounds.height * 0.45,
-    { button: 'right' },
-  );
+  await page.mouse.click(bounds.x + bounds.width * 0.55, bounds.y + bounds.height * 0.45, {
+    button: 'right',
+  });
 
   await expect(page.getByTestId('chart-context-menu')).toBeVisible();
   await expect(page.getByTestId('chart-context-toggle-all-drawings')).toBeVisible();
