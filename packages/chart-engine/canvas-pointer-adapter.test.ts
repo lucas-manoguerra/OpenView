@@ -501,7 +501,7 @@ describe('canvas pointer event adapter', () => {
     expect(controller.snapshot.dragging).toBe(false);
   });
 
-  it('selects a drawing and reports a moved control point', () => {
+  it('selects and edits a drawing directly with the cursor tool', () => {
     const { canvas, dispatch, capturedPointers } = createCanvasTarget();
     const frame = createChartFrame(900, 500, { min: 90, max: 120 }, 2);
     const controller = createChartInteractionController(frame);
@@ -544,7 +544,7 @@ describe('canvas pointer event adapter', () => {
     const selections: (string | null)[] = [];
     const edits: { drawingId: string; target: string; origin: unknown; current: unknown }[] = [];
     attachCanvasPointerEvents(canvas, controller, {
-      getDrawingTool: () => 'select',
+      getDrawingTool: () => 'cursor',
       getDrawings: () => [drawing],
       getCandles: () => candles,
       onDrawingSelect: (drawingId) => selections.push(drawingId),
@@ -1274,7 +1274,7 @@ describe('canvas pointer event adapter', () => {
     };
     const hoverHits: unknown[] = [];
     attachCanvasPointerEvents(canvas, controller, {
-      getDrawingTool: () => 'select',
+      getDrawingTool: () => 'cursor',
       getDrawings: () => [drawing],
       getCandles: () => candles,
       getSelectedDrawingIds: () => ['trend-1'],
