@@ -1,7 +1,7 @@
 import type { APIContext } from 'astro';
 import { describe, expect, it, vi } from 'vitest';
-import { createServerClient } from './server';
 import { getAuthenticatedUser, hasSupabaseAuthCookie, isPublicRoute } from './middleware';
+import { createServerClient } from './server';
 
 vi.mock('./server', () => ({
   createServerClient: vi.fn(),
@@ -27,6 +27,7 @@ describe('Supabase middleware helpers', () => {
     expect(result.error).toBeNull();
     expect(getClaims).toHaveBeenCalledOnce();
   });
+
   it('does not require remote auth validation when no Supabase session cookie exists', () => {
     expect(hasSupabaseAuthCookie(null)).toBe(false);
     expect(hasSupabaseAuthCookie('')).toBe(false);
