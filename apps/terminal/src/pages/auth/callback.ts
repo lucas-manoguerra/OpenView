@@ -1,18 +1,11 @@
 import type { APIContext } from 'astro';
 import { createServerClient } from '../../lib/supabase/server';
-
-function getSafeRedirectPath(value: string | null): string {
-  if (!value || !value.startsWith('/') || value.startsWith('//')) {
-    return '/dashboard';
-  }
-
-  return value;
-}
+import { getSafeRedirectPath } from '../../lib/supabase/safe-redirect';
 
 export async function GET(context: APIContext) {
   const requestUrl = new URL(context.request.url);
   const code = requestUrl.searchParams.get('code');
-  const next = getSafeRedirectPath(requestUrl.searchParams.get('next'));
+  const next = getSafeRedirectPath(requestUrl.searchParams.get('next'), requestUrl.origin);
 
   if (!code) {
     return context.redirect('/login?error=auth_callback', 303);
