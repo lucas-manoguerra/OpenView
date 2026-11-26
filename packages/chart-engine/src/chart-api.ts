@@ -49,6 +49,7 @@ export type ChartCommand =
   | Readonly<{ type: 'set-drawing-selection'; drawingIds: readonly string[] }>
   | Readonly<{ type: 'set-drawing-hover'; hit: ChartDrawingHit | null }>
   | Readonly<{ type: 'set-drawing-edit-preview'; gesture: ChartDrawingEditPreview | null }>
+  | Readonly<{ type: 'set-drawing-creation-preview'; drawing: ChartRenderDrawing | null }>
   | Readonly<{ type: 'commit-drawing-edit'; gesture: ChartDrawingEditPreview }>
   | Readonly<{ type: 'undo-drawings' }>
   | Readonly<{ type: 'redo-drawings' }>
@@ -106,6 +107,7 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
   let objectOrder = createChartObjectOrder(getAvailableObjects(scene));
   let drawingsVisible = true;
   let drawingPreview: readonly ChartRenderDrawing[] | null = null;
+  let drawingCreationPreview: ChartRenderDrawing | null = null;
   const drawingUndoStack: (readonly ChartRenderDrawing[])[] = [];
   const drawingRedoStack: (readonly ChartRenderDrawing[])[] = [];
   let destroyed = false;
@@ -123,8 +125,13 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
   };
 
   const render = (): void => {
+    const previewDrawings =
+      drawingPreview ??
+      (drawingCreationPreview === null
+        ? null
+        : Object.freeze([...scene.drawings, drawingCreationPreview]));
     const previewScene =
-      drawingPreview === null ? scene : updateChartRenderScene(scene, { drawings: drawingPreview });
+      previewDrawings === null ? scene : updateChartRenderScene(scene, { drawings: previewDrawings });
     const renderScene = drawingsVisible
       ? previewScene
       : updateChartRenderScene(previewScene, { drawings: [] });
@@ -179,6 +186,7 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
           throw new RangeError('A drawing with this id already exists.');
         }
         drawingPreview = null;
+        drawingCreationPreview = null;
         drawingUndoStack.push(scene.drawings);
         if (drawingUndoStack.length > 50) drawingUndoStack.shift();
         drawingRedoStack.length = 0;
@@ -333,7 +341,15 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
         return;
       }
 
+      if (command.type === 'set-drawing-creation-preview') {
+        drawingCreationPreview = command.drawing;
+        drawingPreview = null;
+        render();
+        return;
+      }
+
       if (command.type === 'set-drawing-edit-preview') {
+        drawingCreationPreview = null;
         const gesture = command.gesture;
         if (gesture === null) {
           drawingPreview = null;
@@ -510,6 +526,7 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
       }
       const nextScene = snapshot.scene;
       drawingPreview = null;
+      drawingCreationPreview = null;
       drawingUndoStack.length = 0;
       drawingRedoStack.length = 0;
       const available = getAvailableObjects(nextScene);
