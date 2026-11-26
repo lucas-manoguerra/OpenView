@@ -6,8 +6,11 @@ describe('getRecoveryTokenHash', () => {
     expect(getRecoveryTokenHash('?token_hash=recovery-token&type=recovery')).toBe('recovery-token');
   });
 
-  it('returns null when the URL has no recovery token hash', () => {
+  it('rejects missing token hashes and non-recovery token types', () => {
     expect(getRecoveryTokenHash('?type=recovery')).toBeNull();
+    expect(getRecoveryTokenHash('?token_hash=signup-token&type=signup')).toBeNull();
+    expect(getRecoveryTokenHash('?token_hash=invite-token&type=invite')).toBeNull();
+    expect(getRecoveryTokenHash('?token_hash=recovery-token')).toBeNull();
     expect(getRecoveryTokenHash('')).toBeNull();
   });
 });
