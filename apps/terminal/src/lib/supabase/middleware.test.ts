@@ -1,7 +1,32 @@
-import { describe, expect, it } from 'vitest';
-import { hasSupabaseAuthCookie, isPublicRoute } from './middleware';
+import type { APIContext } from 'astro';
+import { describe, expect, it, vi } from 'vitest';
+import { createServerClient } from './server';
+import { getAuthenticatedUser, hasSupabaseAuthCookie, isPublicRoute } from './middleware';
+
+vi.mock('./server', () => ({
+  createServerClient: vi.fn(),
+}));
 
 describe('Supabase middleware helpers', () => {
+  it('returns the verified claims nested in the Supabase response data', async () => {
+    const claims = { sub: 'user-123', email: 'trader@example.com' };
+    const getClaims = vi.fn().mockResolvedValue({ data: { claims }, error: null });
+    vi.mocked(createServerClient).mockReturnValue({
+      auth: { getClaims },
+    } as unknown as ReturnType<typeof createServerClient>);
+
+    const context = {
+      request: new Request('https://terminal.example/dashboard', {
+        headers: { Cookie: 'sb-projectref-auth-token=valid-token' },
+      }),
+    } as APIContext;
+
+    const result = await getAuthenticatedUser(context, new Headers());
+
+    expect(result.user).toEqual(claims);
+    expect(result.error).toBeNull();
+    expect(getClaims).toHaveBeenCalledOnce();
+  });
   it('does not require remote auth validation when no Supabase session cookie exists', () => {
     expect(hasSupabaseAuthCookie(null)).toBe(false);
     expect(hasSupabaseAuthCookie('')).toBe(false);
