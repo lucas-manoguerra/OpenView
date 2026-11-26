@@ -75,14 +75,14 @@ create or replace function public.set_chart_drawing_insert_metadata()
 returns trigger
 language plpgsql
 set search_path = pg_catalog
-as $
+as $function$
 begin
   new.created_at := pg_catalog.now();
   new.updated_at := new.created_at;
   new.revision := 1;
   return new;
 end;
-$;
+$function$;
 
 revoke all on function public.set_chart_drawing_insert_metadata() from public;
 
