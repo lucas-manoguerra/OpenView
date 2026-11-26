@@ -540,7 +540,17 @@ export function ChartCanvas({
     const publishScene = (nextScene: ChartRenderScene): void => {
       scene = nextScene;
       if (chartApi === null) {
-        chartApi = createChart({ surface: canvas, initialScene: nextScene });
+        chartApi = createChart({
+          surface: canvas,
+          initialScene: nextScene,
+          interactionOptions: {
+            onChange: handleControllerChange,
+            onPriceScaleInteraction: () => {
+              autoScaleRef.current = false;
+              setAutoScale(false);
+            },
+          },
+        });
         chartApi.subscribe((event) => {
           if (event.type === 'history-state-changed') {
             setDrawingUndoCount(event.undoCount);
