@@ -723,6 +723,35 @@ export function ChartCanvas({
           onDrawingDelete: (drawingId: string): void => {
             runtimeRef.current?.deleteDrawings([drawingId]);
           },
+          onDrawingCreationPreview: (gesture: CanvasDrawingGesture | null): void => {
+            if (gesture === null) {
+              chartApi?.execute({ type: 'set-drawing-creation-preview', drawing: null });
+              return;
+            }
+            const startTimestamp = getTimestampAtLogicalIndex(
+              gesture.start.logicalIndex,
+              currentCandles,
+            );
+            const endTimestamp =
+              gesture.end === null
+                ? null
+                : getTimestampAtLogicalIndex(gesture.end.logicalIndex, currentCandles);
+            if (startTimestamp === null || (gesture.end !== null && endTimestamp === null)) {
+              chartApi?.execute({ type: 'set-drawing-creation-preview', drawing: null });
+              return;
+            }
+            const preview: ChartRenderDrawing = Object.freeze({
+              id: 'chart-drawing-creation-preview',
+              type: gesture.type,
+              start: Object.freeze({ timestamp: startTimestamp, price: gesture.start.price }),
+              end:
+                gesture.end === null || endTimestamp === null
+                  ? null
+                  : Object.freeze({ timestamp: endTimestamp, price: gesture.end.price }),
+              ...drawingToolPreferencesRef.current[gesture.type],
+            });
+            chartApi?.execute({ type: 'set-drawing-creation-preview', drawing: preview });
+          },
           onDrawingComplete: (gesture: CanvasDrawingGesture): void => {
             canvas.dataset['drawingGestureReceived'] = gesture.type;
             canvas.dataset['drawingGestureIndexes'] = [
