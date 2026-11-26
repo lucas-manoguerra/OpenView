@@ -13,22 +13,22 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return await next();
   }
 
-  const { user, error } = await getAuthenticatedUser(context);
+  const responseHeaders = new Headers();
+  const { user } = await getAuthenticatedUser(context, responseHeaders);
 
-  if (error && !user) {
-    return await next();
-  }
+  let response: Response;
 
   if (isPublicRoute(pathname)) {
-    if (user) {
-      return context.redirect('/dashboard');
-    }
-    return await next();
+    response = user ? context.redirect('/dashboard') : await next();
+  } else if (!user) {
+    response = context.redirect('/login');
+  } else {
+    response = await next();
   }
 
-  if (!user) {
-    return context.redirect('/login');
-  }
+  responseHeaders.forEach((value, name) => {
+    response.headers.set(name, value);
+  });
 
-  return await next();
+  return response;
 });
