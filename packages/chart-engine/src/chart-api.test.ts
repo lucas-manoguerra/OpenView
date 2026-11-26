@@ -10,6 +10,30 @@ const createScene = () => {
   return createChartRenderScene(frame, []);
 };
 
+const createSceneWithCandles = () => {
+  const frame = createChartFrame(320, 240, { min: 0, max: 10 }, 1);
+  return createChartRenderScene(frame, [
+    {
+      timestamp: 1_000,
+      open: 2,
+      high: 4,
+      low: 1,
+      close: 3,
+      volume: 10,
+      logicalIndex: 0,
+    },
+    {
+      timestamp: 2_000,
+      open: 3,
+      high: 5,
+      low: 2,
+      close: 4,
+      volume: 12,
+      logicalIndex: 1,
+    },
+  ]);
+};
+
 const createSurface = () => {
   const context = {
     setTransform: vi.fn(),
@@ -624,6 +648,57 @@ describe('chart public API', () => {
     chart.execute({ type: 'set-drawing-creation-preview', drawing: null });
     expect(chart.exportSnapshot().scene.drawings).toHaveLength(0);
     chart.destroy();
+  });
+
+  it('creates drawings from logical gestures inside the chart engine', () => {
+    vi.stubGlobal('crypto', {
+      randomUUID: vi.fn(() => '550e8400-e29b-41d4-a716-446655440000'),
+    });
+    const { surface } = createSurface();
+    const chart = createChart({
+      surface,
+      initialScene: createSceneWithCandles(),
+      renderer: { scheduler: { requestFrame: () => 1, cancelFrame: () => {} } },
+    });
+
+    chart.execute({
+      type: 'preview-drawing-creation',
+      gesture: {
+        type: 'trend-line',
+        start: { logicalIndex: 0, price: 2 },
+        end: { logicalIndex: 1, price: 4 },
+      },
+      style: { color: '#60a5fa', lineWidth: 2, lineStyle: 'dashed' },
+    });
+    expect(chart.exportSnapshot().scene.drawings).toHaveLength(0);
+
+    chart.execute({
+      type: 'create-drawing',
+      gesture: {
+        type: 'trend-line',
+        start: { logicalIndex: 0, price: 2 },
+        end: { logicalIndex: 1, price: 4 },
+      },
+      style: { color: '#60a5fa', lineWidth: 2, lineStyle: 'dashed' },
+    });
+
+    const [drawing] = chart.exportSnapshot().scene.drawings;
+    expect(drawing).toMatchObject({
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      type: 'trend-line',
+      start: { timestamp: 1_000, price: 2 },
+      end: { timestamp: 2_000, price: 4 },
+      color: '#60a5fa',
+      lineWidth: 2,
+      lineStyle: 'dashed',
+    });
+    expect(chart.exportSnapshot().scene.selectedDrawingIds).toEqual([drawing?.id]);
+    expect(crypto.randomUUID).toHaveBeenCalledOnce();
+
+    chart.execute({ type: 'undo-drawings' });
+    expect(chart.exportSnapshot().scene.drawings).toHaveLength(0);
+    chart.destroy();
+    vi.unstubAllGlobals();
   });
 
   it('creates and deletes drawings through chart-owned commands with undo and redo', () => {
