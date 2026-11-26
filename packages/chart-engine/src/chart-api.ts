@@ -843,7 +843,21 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
           pointerOptions.getSelectedDrawingIds ?? (() => scene.selectedDrawingIds),
         hitTestDrawing:
           pointerOptions.hitTestDrawing ??
-          ((point, tolerance) => hitTestDrawing(point, tolerance)),
+          ((point, tolerance) => {
+            const visibleDrawings = drawingsVisible
+              ? scene.drawings.filter((drawing) => drawing.visible !== false)
+              : [];
+            return visibleDrawings.length === 0
+              ? null
+              : hitTestChartDrawing(
+                  point,
+                  visibleDrawings,
+                  scene.candles,
+                  scene.frame,
+                  tolerance,
+                  scene.selectedDrawingIds,
+                );
+          }),
       });
     },
 
