@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createChart, type ChartSnapshot } from './chart-api';
 import { createChartFrame } from './chart-frame';
+import { createChartInteractionController } from './chart-interaction';
 import { logicalIndexToCoordinate } from './time-scale';
 import { priceToCoordinate } from './price-scale';
 import { createChartRenderScene } from './canvas-painter';
@@ -83,6 +84,52 @@ describe('chart public API', () => {
     chart.destroy();
     chart.destroy();
     expect(() => chart.exportSnapshot()).toThrow('destroyed');
+  });
+
+  it('owns pointer adapter attachment, cancellation, and cleanup', () => {
+    const { surface } = createSurface();
+    const listeners = new Map<string, EventListener>();
+    const addEventListener = vi.fn((type: string, listener: EventListener) => {
+      listeners.set(type, listener);
+    });
+    const removeEventListener = vi.fn((type: string) => {
+      listeners.delete(type);
+    });
+    const canvas = {
+      dataset: {},
+      style: {},
+      addEventListener,
+      removeEventListener,
+      getBoundingClientRect: () =>
+        ({
+          left: 0,
+          top: 0,
+          width: 320,
+          height: 240,
+          right: 320,
+          bottom: 240,
+          x: 0,
+          y: 0,
+          toJSON: () => ({}),
+        }) as DOMRect,
+      setPointerCapture: vi.fn(),
+      hasPointerCapture: vi.fn(() => false),
+      releasePointerCapture: vi.fn(),
+    } as unknown as HTMLCanvasElement;
+    const chart = createChart({
+      surface,
+      initialScene: createScene(),
+      renderer: { scheduler: { requestFrame: () => 1, cancelFrame: () => {} } },
+    });
+    const controller = createChartInteractionController(createScene().frame);
+
+    chart.attachPointerEvents(canvas, controller);
+    expect(addEventListener).toHaveBeenCalledTimes(9);
+    chart.cancelDrawingCreation();
+    chart.destroy();
+
+    expect(removeEventListener).toHaveBeenCalledTimes(9);
+    expect(listeners.size).toBe(0);
   });
 
   it('owns drawing mutations and selection through public commands', () => {
