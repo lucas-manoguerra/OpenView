@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { useCallback, useMemo, useRef, useState } from 'preact/hooks';
 import type { Candle } from '@openview/market-domain';
 import type { CandleInterval } from '@openview/market-data';
 import { ChartTypeSelector, PriceScaleSelector, type ChartControlOption } from './ui';
@@ -313,24 +313,6 @@ export function ChartCanvas({
   const [drawingTool, setDrawingTool] = useState<CanvasDrawingTool>('cursor');
   const [controlKeyPressed, setControlKeyPressed] = useState(false);
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === 'Control' || event.key === 'Meta') setControlKeyPressed(true);
-    };
-    const handleKeyUp = (event: KeyboardEvent): void => {
-      if (event.key === 'Control' || event.key === 'Meta') setControlKeyPressed(false);
-    };
-    const handleWindowBlur = (): void => setControlKeyPressed(false);
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    window.addEventListener('blur', handleWindowBlur);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-      window.removeEventListener('blur', handleWindowBlur);
-    };
-  }, []);
   const [drawings, setDrawings] = useState<readonly ChartRenderDrawing[]>([]);
   const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null);
   const [selectedDrawingIds, setSelectedDrawingIds] = useState<readonly string[]>([]);
@@ -2088,6 +2070,13 @@ export function ChartCanvas({
           class="block h-full w-full touch-none outline-none focus-visible:ring-1 focus-visible:ring-blue-400/60"
           tabIndex={0}
           role="img"
+          onKeyDown={(event) => {
+            if (event.key === 'Control' || event.key === 'Meta') setControlKeyPressed(true);
+          }}
+          onKeyUp={(event) => {
+            if (event.key === 'Control' || event.key === 'Meta') setControlKeyPressed(false);
+          }}
+          onBlur={() => setControlKeyPressed(false)}
           aria-label={
             'Gráfico interactivo de velas y volumen para ' +
             symbol +
