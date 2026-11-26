@@ -45,7 +45,6 @@ import {
   createChart,
   type ChartApi,
   type ChartContextMenuRequest,
-  type ChartDrawingCreationGesture,
   type ChartDrawingStyle,
   calculateExponentialMovingAverage,
   calculateSimpleMovingAverage,
@@ -61,7 +60,6 @@ import {
   type ChartIndicatorSeries,
   type ChartRenderDrawing,
   type ChartDrawingMagnetMode,
-  type ChartDrawingSelectionArea,
   type CanvasDrawingNudgeDirection,
   type NumericRange,
   type PriceScaleMode,
@@ -679,30 +677,25 @@ export function ChartCanvas({
           getAutoScalePriceRange: () =>
             getVisiblePriceRange(chartApi?.getInteractionSnapshot() ?? null, currentCandles),
           getDrawingTool: () => drawingToolRef.current,
+          getDrawingStyle: (type) => drawingToolPreferencesRef.current[type] as ChartDrawingStyle,
           getDrawingMagnetMode: () => drawingMagnetModeRef.current,
           getSnapToIndicators: () => snapToIndicatorsRef.current,
           getKeepDrawing: () => keepDrawingRef.current,
-          onContextMenu: (point): void => {
-            activeChartApi.execute({ type: 'request-context-menu', point });
-          },
           getPriceIncrement: () => priceIncrementRef.current,
           onDrawingNudge: (direction: CanvasDrawingNudgeDirection): void => {
             handleSelectedDrawingsNudge(direction);
           },
-          onDrawingSelectionChange: (drawingIds: readonly string[]): void => {
-            requestDrawingSelection(drawingIds);
+          onDrawingSelectionChange: (): void => {
+            ensureDrawingPanelLayoutLoaded();
           },
           onDrawingHover: (hit: ChartDrawingHit | null): void => {
             canvas.style.cursor = hit === null ? '' : hit.target === 'body' ? 'move' : 'crosshair';
-            activeChartApi.execute({ type: 'set-drawing-hover', hit });
           },
           onDrawingAreaSelectionChange: (selection): void => {
             canvas.dataset['drawingSelectionPreview'] = String(selection !== null);
-            activeChartApi.execute({ type: 'set-drawing-selection-preview', preview: selection });
           },
-          onDrawingAreaSelectionComplete: (area: ChartDrawingSelectionArea): void => {
+          onDrawingAreaSelectionComplete: (): void => {
             ensureDrawingPanelLayoutLoaded();
-            activeChartApi.execute({ type: 'select-drawings-within-area', area });
           },
           onDrawingGroupEdit: (gesture: CanvasDrawingGroupEditGesture): void => {
             activeChartApi.execute({
@@ -734,27 +727,12 @@ export function ChartCanvas({
           onDrawingDelete: (drawingId: string): void => {
             runtimeRef.current?.deleteDrawings([drawingId]);
           },
-          onDrawingCreationPreview: (gesture: CanvasDrawingGesture | null): void => {
-            chartApi?.execute({
-              type: 'preview-drawing-creation',
-              gesture: gesture as ChartDrawingCreationGesture | null,
-              style:
-                gesture === null
-                  ? null
-                  : (drawingToolPreferencesRef.current[gesture.type] as ChartDrawingStyle),
-            });
-          },
           onDrawingComplete: (gesture: CanvasDrawingGesture): void => {
             canvas.dataset['drawingGestureReceived'] = gesture.type;
             canvas.dataset['drawingGestureIndexes'] = [
               gesture.start.logicalIndex,
               gesture.end?.logicalIndex ?? 'click',
             ].join(',');
-            chartApi?.execute({
-              type: 'create-drawing',
-              gesture: gesture as ChartDrawingCreationGesture,
-              style: drawingToolPreferencesRef.current[gesture.type] as ChartDrawingStyle,
-            });
             canvas.dataset['drawingCreationOutcome'] = 'create-drawing-dispatched';
           },
           onDrawingToolExit: (): void => {

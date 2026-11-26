@@ -135,6 +135,7 @@ export {
   type ChartApi,
   type ChartContextMenuRequest,
   type ChartCommand,
+  type ChartPointerAdapterOptions,
   type ChartDrawingEditPreview,
   type ChartDrawingCreationGesture,
   type ChartDrawingStyle,
