@@ -306,6 +306,7 @@ export function ChartCanvas({
   onNeedMoreHistory,
 }: ChartCanvasProps) {
   const runtimeRef = useRef<ChartRuntime | null>(null);
+  const pointerAdapterRef = useRef<CanvasPointerAdapter | null>(null);
   const rightOffsetInputRef = useRef<HTMLInputElement | null>(null);
   const [priceScaleMode, setPriceScaleMode] = useState<PriceScaleMode>('linear');
   const [chartType, setChartType] = useState<ChartType>('candles');
@@ -1007,6 +1008,7 @@ export function ChartCanvas({
       },
       destroy: (): void => {
         pointerAdapter?.destroy();
+        pointerAdapterRef.current = null;
         resizeAdapter.destroy();
         chartApi?.destroy();
         chartApi = null;
@@ -1606,8 +1608,7 @@ export function ChartCanvas({
         if (event.key === 'Escape' && drawingToolRef.current !== 'cursor') {
           event.preventDefault();
           event.stopPropagation();
-          const canvas = event.currentTarget.querySelector('canvas');
-          canvas?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+          pointerAdapterRef.current?.cancelDrawingCreation();
           drawingToolRef.current = 'cursor';
           setDrawingTool('cursor');
         }
