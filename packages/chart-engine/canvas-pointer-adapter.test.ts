@@ -11,6 +11,7 @@ import {
   type CanvasDrawingAreaSelection,
   type CanvasDrawingGesture,
   type CanvasDrawingGroupEditGesture,
+  type CanvasDrawingTool,
 } from './src/canvas-pointer-adapter';
 
 type Listener = EventListenerOrEventListenerObject;
