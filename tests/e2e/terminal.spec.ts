@@ -1580,8 +1580,6 @@ test('locks all drawings and prevents selection until they are unlocked', async 
   await lockButton.click();
   await expect(lockButton).toHaveAttribute('aria-pressed', 'true');
   await expect(canvas).toHaveAttribute('data-drawings-locked', 'true');
-
-  await page.getByTestId('drawing-tool-select').click();
   await page.mouse.click((startX + endX) / 2, (startY + endY) / 2);
   await expect(canvas).toHaveAttribute('data-selected-drawing-id', '');
 
@@ -1643,8 +1641,6 @@ test('hides drawings without deleting them and restores their selection', async 
   if (restoredBounds === null) {
     throw new Error('The chart canvas must remain visible after restoring drawings.');
   }
-
-  await page.getByTestId('drawing-tool-select').click();
   await page.mouse.click(
     restoredBounds.x + restoredBounds.width * 0.44,
     restoredBounds.y + restoredBounds.height * 0.45,
@@ -1694,9 +1690,6 @@ test('selects multiple drawings with Ctrl click and marquee, then moves them tog
   await drawLine(firstStart, firstEnd);
   await drawLine(secondStart, secondEnd);
   await expect(canvas).toHaveAttribute('data-drawing-count', '2');
-
-  const selectTool = page.getByTestId('drawing-tool-select');
-  await selectTool.click();
   await page.mouse.click(bounds.x + bounds.width * 0.84, bounds.y + bounds.height * 0.48);
   await expect(canvas).toHaveAttribute('data-selected-drawing-count', '0');
   await page.keyboard.down('Control');
@@ -1826,8 +1819,6 @@ test('moves all selected drawings by one bar and one market tick with arrow keys
   await drawLine(firstStart, firstEnd);
   await drawLine(secondStart, secondEnd);
   await expect(canvas).toHaveAttribute('data-drawing-count', '2');
-
-  await page.getByTestId('drawing-tool-select').click();
   await page.mouse.click(bounds.x + bounds.width * 0.84, bounds.y + bounds.height * 0.48);
   await expect(canvas).toHaveAttribute('data-selected-drawing-count', '0');
   await page.keyboard.down('Control');
@@ -1906,8 +1897,6 @@ test('nudges every selected drawing by one bar and one provider tick', async ({ 
   await drawLine(firstStart, firstEnd);
   await drawLine(secondStart, secondEnd);
   await expect(canvas).toHaveAttribute('data-drawing-count', '2');
-
-  await page.getByTestId('drawing-tool-select').click();
   await page.mouse.click(bounds.x + bounds.width * 0.84, bounds.y + bounds.height * 0.48);
   await expect(canvas).toHaveAttribute('data-selected-drawing-count', '0');
   await page.keyboard.down('Control');
@@ -1993,7 +1982,6 @@ test('manages individual drawing visibility and lock from the object tree', asyn
 
   await page.getByTestId('drawing-object-lock-1').click();
   await expect(firstRow).toHaveAttribute('data-drawing-locked', 'true');
-  await page.getByTestId('drawing-tool-select').click();
   await page.mouse.click((firstStart.x + firstEnd.x) / 2, (firstStart.y + firstEnd.y) / 2);
   await expect(canvas).toHaveAttribute('data-selected-drawing-id', '');
 
@@ -2040,9 +2028,6 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
   await page.mouse.move(endX, endY);
   await page.mouse.up();
   await expect(canvas).toHaveAttribute('data-drawing-count', '1');
-
-  const selectTool = page.getByTestId('drawing-tool-select');
-  await selectTool.click();
   const middleX = (startX + endX) / 2;
   const middleY = (startY + endY) / 2;
   await page.mouse.click(middleX, middleY);
@@ -2346,7 +2331,6 @@ test('selects, moves, edits and deletes a drawing individually', async ({ page }
   await page.mouse.move(reloadedEndX, reloadedEndY);
   await page.mouse.up();
   await expect(canvas).toHaveAttribute('data-drawing-count', '1');
-  await page.getByTestId('drawing-tool-select').click();
   await page.mouse.click((reloadedStartX + reloadedEndX) / 2, (reloadedStartY + reloadedEndY) / 2);
 
   await expect(canvas).toHaveAttribute('data-selected-drawing-indexes', '1');
@@ -2417,8 +2401,6 @@ test('edits rectangle fill color and opacity', async ({ page }) => {
   await page.mouse.move(endX, endY);
   await page.mouse.up();
   await expect(canvas).toHaveAttribute('data-drawing-count', '1');
-
-  await page.getByTestId('drawing-tool-select').click();
   await page.mouse.click((startX + endX) / 2, (startY + endY) / 2);
   await expect(canvas).toHaveAttribute('data-selected-drawing-type', 'rectangle');
 
@@ -2478,8 +2460,6 @@ test('selects drawings with Control and moves and deletes the group together', a
   await expect(canvas).toHaveAttribute('data-drawing-count', '1');
   await drawLine(0.42, 0.5);
   await expect(canvas).toHaveAttribute('data-drawing-count', '2');
-
-  await page.getByTestId('drawing-tool-select').click();
   const selectionBounds = await canvas.boundingBox();
 
   if (selectionBounds === null) {
@@ -2588,8 +2568,6 @@ test('saves and reapplies custom drawing style templates across reloads', async 
     await page.mouse.move(endX, endY);
     await page.mouse.up();
     await expect(canvas).toHaveAttribute('data-drawing-count', '1');
-
-    await page.getByTestId('drawing-tool-select').click();
     await page.mouse.click((startX + endX) / 2, (startY + endY) / 2);
     await expect(canvas).toHaveAttribute('data-selected-drawing-count', '1');
   };
@@ -2686,8 +2664,6 @@ test('uses quick drawing templates and contextual coordinate controls', async ({
   await page.mouse.down();
   await page.mouse.up();
   await expect(canvas).toHaveAttribute('data-drawing-count', '1');
-
-  await page.getByTestId('drawing-tool-select').click();
   await page.mouse.click(bounds.x + bounds.width * 0.5, horizontalY);
   await expect(canvas).toHaveAttribute('data-selected-drawing-type', 'horizontal-line');
   await expect(canvas).toHaveAttribute('data-selected-drawing-color', '#ef5350');
@@ -2707,8 +2683,6 @@ test('uses quick drawing templates and contextual coordinate controls', async ({
   await page.mouse.move(verticalX, bounds.y + bounds.height * 0.65);
   await page.mouse.up();
   await expect(canvas).toHaveAttribute('data-drawing-count', '2');
-
-  await page.getByTestId('drawing-tool-select').click();
   await page.mouse.click(verticalX, bounds.y + bounds.height * 0.5);
   await expect(canvas).toHaveAttribute('data-selected-drawing-type', 'vertical-line');
   await expect(page.getByTestId('drawing-vertical-time')).toBeVisible();
