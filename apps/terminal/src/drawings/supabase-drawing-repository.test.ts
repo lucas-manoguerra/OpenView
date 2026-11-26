@@ -183,8 +183,16 @@ describe('Supabase drawing repository', () => {
     const database = new MemorySupabase();
     const repository = new SupabaseDrawingRepository(database.client);
 
-    await repository.save({ ...scope, timeframe: null }, { ...drawing, drawingId: '00000000-0000-4000-8000-000000000011' }, null);
-    await repository.save(scope, { ...drawing, drawingId: '00000000-0000-4000-8000-000000000012' }, null);
+    await repository.save(
+      { ...scope, timeframe: null },
+      { ...drawing, drawingId: '00000000-0000-4000-8000-000000000011' },
+      null,
+    );
+    await repository.save(
+      scope,
+      { ...drawing, drawingId: '00000000-0000-4000-8000-000000000012' },
+      null,
+    );
     await repository.save(
       { ...scope, timeframe: '4h' },
       { ...drawing, drawingId: '00000000-0000-4000-8000-000000000013' },
