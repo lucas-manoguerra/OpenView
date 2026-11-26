@@ -316,9 +316,7 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
     const hitIsVisible =
       hit !== null &&
       drawingsVisible &&
-      scene.drawings.some(
-        (drawing) => drawing.id === hit.drawingId && drawing.visible !== false,
-      );
+      scene.drawings.some((drawing) => drawing.id === hit.drawingId && drawing.visible !== false);
     const nextHit = hitIsVisible ? hit : null;
     if (
       scene.hoveredDrawingHit?.drawingId === nextHit?.drawingId &&
@@ -331,9 +329,7 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
     emit(Object.freeze({ type: 'scene-changed', scene }));
   };
 
-  const setDrawingSelectionPreview = (
-    preview: ChartDrawingSelectionPreview | null,
-  ): void => {
+  const setDrawingSelectionPreview = (preview: ChartDrawingSelectionPreview | null): void => {
     drawingSelectionPreview = preview;
     render();
   };
@@ -380,12 +376,7 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
     drawingCreationPreview =
       gesture === null || style === null
         ? null
-        : createDrawingFromGesture(
-            gesture,
-            style,
-            scene.candles,
-            'chart-drawing-creation-preview',
-          );
+        : createDrawingFromGesture(gesture, style, scene.candles, 'chart-drawing-creation-preview');
     drawingPreview = null;
     render();
   };
