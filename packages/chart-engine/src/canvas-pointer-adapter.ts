@@ -156,6 +156,10 @@ export const attachCanvasPointerEvents = (
     activePointerId = null;
   };
 
+  const setDiagnostic = (key: string, value: string): void => {
+    if (canvas.dataset !== undefined) canvas.dataset[key] = value;
+  };
+
   const handlePointerDown = (event: PointerEvent): void => {
     if (activePointerId !== null) {
       return;
@@ -250,8 +254,8 @@ export const attachCanvasPointerEvents = (
       );
       activeDrawingTool = drawingTool;
       activePointerId = event.pointerId;
-      canvas.dataset['drawingPointerDownId'] = String(event.pointerId);
-      canvas.dataset['drawingPointerTool'] = drawingTool;
+      setDiagnostic('drawingPointerDownId', String(event.pointerId));
+      setDiagnostic('drawingPointerTool', drawingTool);
       event.preventDefault();
       canvas.setPointerCapture(event.pointerId);
       return;
@@ -325,13 +329,13 @@ export const attachCanvasPointerEvents = (
   };
 
   const handlePointerUp = (event: PointerEvent): void => {
-    canvas.dataset['drawingPointerUpId'] = String(event.pointerId);
-    canvas.dataset['drawingPointerActiveId'] = String(activePointerId);
+    setDiagnostic('drawingPointerUpId', String(event.pointerId));
+    setDiagnostic('drawingPointerActiveId', String(activePointerId));
     if (activePointerId === null || event.pointerId !== activePointerId) {
-      canvas.dataset['drawingPointerOutcome'] = 'pointer-id-mismatch';
+      setDiagnostic('drawingPointerOutcome', 'pointer-id-mismatch');
       return;
     }
-    canvas.dataset['drawingPointerOutcome'] = 'pointer-up-matched';
+    setDiagnostic('drawingPointerOutcome', 'pointer-up-matched');
 
     if (activeDrawingAreaSelection !== null) {
       const position = getCanvasPosition(canvas, event);
@@ -433,7 +437,7 @@ export const attachCanvasPointerEvents = (
   };
 
   const handlePointerCancel = (event: PointerEvent): void => {
-    canvas.dataset['drawingPointerCancelId'] = String(event.pointerId);
+    setDiagnostic('drawingPointerCancelId', String(event.pointerId));
     if (activePointerId === null || event.pointerId !== activePointerId) {
       return;
     }
