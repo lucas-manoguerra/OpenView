@@ -8,7 +8,11 @@ export function isPublicRoute(pathname: string): boolean {
     return true;
   }
 
-  return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+  return PUBLIC_ROUTES.some((route) =>
+    route === '/auth/callback'
+      ? pathname === route
+      : pathname === route || pathname.startsWith(`${route}/`),
+  );
 }
 
 export function hasSupabaseAuthCookie(cookieHeader: string | null): boolean {
