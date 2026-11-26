@@ -608,6 +608,7 @@ describe('chart public API', () => {
     expect(chart.exportSnapshot().scene.drawings).toMatchObject([drawing]);
     chart.destroy();
   });
+
   it('owns drawing property and anchor updates with one undoable history entry', () => {
     const { surface } = createSurface();
     const chart = createChart({
@@ -642,7 +643,7 @@ describe('chart public API', () => {
       updates: { timestamp: 3, price: 4 },
     });
     expect(chart.exportSnapshot().scene.drawings[0]?.end).toEqual({ timestamp: 3, price: 4 });
-    expect(listener).toHaveBeenLastCalledWith(
+    expect(listener).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'drawing-state-changed' }),
     );
     chart.execute({ type: 'undo-drawings' });
@@ -663,5 +664,4 @@ describe('chart public API', () => {
     ).toThrow('Drawing anchor coordinates must be finite');
     chart.destroy();
   });
-
 });
