@@ -96,9 +96,9 @@ describe('local drawing repository', () => {
         owner: { kind: 'account', id: 'user-2' },
       }),
     ).toEqual([]);
-    expect(
-      await repository.list({ ...accountScope, instrumentId: 'okx-spot:BTC-USDT' }),
-    ).toEqual([]);
+    expect(await repository.list({ ...accountScope, instrumentId: 'okx-spot:BTC-USDT' })).toEqual(
+      [],
+    );
   });
 
   it('uses optimistic revisions to reject stale updates and deletes', async () => {
@@ -120,9 +120,9 @@ describe('local drawing repository', () => {
   it('rejects invalid payloads and invalid z-order values', async () => {
     const repository = new LocalStorageDrawingRepository(new MemoryStorage());
 
-    await expect(
-      repository.save(accountScope, { ...drawing, zOrder: -1 }, null),
-    ).rejects.toThrow('z-order');
+    await expect(repository.save(accountScope, { ...drawing, zOrder: -1 }, null)).rejects.toThrow(
+      'z-order',
+    );
     await expect(
       repository.save(
         accountScope,
