@@ -184,7 +184,6 @@ export const attachCanvasPointerEvents = (
 
     if (activeDrawingTool !== null && drawingStart !== null && drawingAwaitingSecondPoint) {
       activePointerId = event.pointerId;
-      drawingAwaitingSecondPoint = false;
       event.preventDefault();
       canvas.setPointerCapture(event.pointerId);
       return;
