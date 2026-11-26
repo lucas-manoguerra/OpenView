@@ -11,7 +11,12 @@ import {
   type CanvasPointerAdapter,
   type CanvasPointerAdapterOptions,
 } from './canvas-pointer-adapter';
-import type { ChartInteractionController } from './chart-interaction';
+import {
+  createChartInteractionController,
+  type ChartInteractionController,
+  type ChartInteractionOptions,
+  type ChartInteractionSnapshot,
+} from './chart-interaction';
 import {
   getTimestampAtLogicalIndex,
   hitTestChartDrawing,
@@ -139,11 +144,16 @@ export type ChartApi = Readonly<{
   importSnapshot(snapshot: ChartSnapshot): void;
   hitTestDrawing(point: ChartCoordinate, tolerance?: number): ChartDrawingHit | null;
   selectDrawingsWithinArea(area: ChartDrawingSelectionArea): readonly string[];
-  attachPointerEvents(
-    canvas: HTMLCanvasElement,
-    controller: ChartInteractionController,
-    options?: CanvasPointerAdapterOptions,
-  ): void;
+  getInteractionSnapshot(): ChartInteractionSnapshot;
+  setInteractionFrame(frame: ChartRenderScene['frame']): void;
+  fitPriceScale(range: ChartRenderScene['frame']['priceScale']['range']): boolean;
+  scrollTimeByBars(bars: number): boolean;
+  setRightOffset(offset: number): boolean;
+  scrollToRealtime(): boolean;
+  zoomTime(factor: number): boolean;
+  setPriceScaleLocked(locked: boolean): boolean;
+  invertPriceScale(): boolean;
+  attachPointerEvents(canvas: HTMLCanvasElement, options?: CanvasPointerAdapterOptions): void;
   cancelDrawingCreation(): void;
   destroy(): void;
 }>;
@@ -152,6 +162,7 @@ export type CreateChartOptions = Readonly<{
   surface: CanvasSurface;
   initialScene: ChartRenderScene;
   renderer?: CanvasRendererOptions;
+  interactionOptions?: ChartInteractionOptions;
 }>;
 
 const getAvailableObjects = (scene: ChartRenderScene): readonly ChartObjectOrderItem[] =>
@@ -205,6 +216,7 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
   let drawingCreationPreview: ChartRenderDrawing | null = null;
   let drawingSelectionPreview: ChartDrawingSelectionPreview | null = null;
   let pointerAdapter: CanvasPointerAdapter | null = null;
+  const interactionController = createChartInteractionController(scene.frame, options.interactionOptions);
   const drawingUndoStack: (readonly ChartRenderDrawing[])[] = [];
   const drawingRedoStack: (readonly ChartRenderDrawing[])[] = [];
   let destroyed = false;
@@ -820,14 +832,58 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
       emitHistoryState();
     },
 
+    getInteractionSnapshot(): ChartInteractionSnapshot {
+      assertActive();
+      return interactionController.snapshot;
+    },
+
+    setInteractionFrame(frame: ChartRenderScene['frame']): void {
+      assertActive();
+      interactionController.setFrame(frame);
+    },
+
+    fitPriceScale(range: ChartRenderScene['frame']['priceScale']['range']): boolean {
+      assertActive();
+      return interactionController.fitPriceScale(range);
+    },
+
+    scrollTimeByBars(bars: number): boolean {
+      assertActive();
+      return interactionController.scrollTimeByBars(bars);
+    },
+
+    setRightOffset(offset: number): boolean {
+      assertActive();
+      return interactionController.setRightOffset(offset);
+    },
+
+    scrollToRealtime(): boolean {
+      assertActive();
+      return interactionController.scrollToRealtime();
+    },
+
+    zoomTime(factor: number): boolean {
+      assertActive();
+      return interactionController.zoomTime(factor);
+    },
+
+    setPriceScaleLocked(locked: boolean): boolean {
+      assertActive();
+      return interactionController.setPriceScaleLocked(locked);
+    },
+
+    invertPriceScale(): boolean {
+      assertActive();
+      return interactionController.invertPriceScale();
+    },
+
     attachPointerEvents(
       canvas: HTMLCanvasElement,
-      controller: ChartInteractionController,
       pointerOptions: CanvasPointerAdapterOptions = {},
     ): void {
       assertActive();
       pointerAdapter?.destroy();
-      pointerAdapter = attachCanvasPointerEvents(canvas, controller, {
+      pointerAdapter = attachCanvasPointerEvents(canvas, interactionController, {
         ...pointerOptions,
         getIndicators: pointerOptions.getIndicators ?? (() => scene.indicators),
         getCandles: pointerOptions.getCandles ?? (() => scene.candles),
