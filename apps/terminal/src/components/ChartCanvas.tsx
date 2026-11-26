@@ -111,7 +111,6 @@ type ChartRuntime = Readonly<{
   undoDrawings(): void;
   redoDrawings(): void;
   clearDrawingHistory(): void;
-  setSelectedDrawingId(drawingId: string | null): void;
   setSelectedDrawingIds(drawingIds: readonly string[]): void;
   destroy(): void;
 }>;
@@ -486,17 +485,9 @@ export function ChartCanvas({
       () => saveBrowserDrawingPanelLayout(drawingPanelLayoutRef.current),
     );
   };
-  const updateDrawingSelection = (drawingIds: readonly string[]): void => {
+  const requestDrawingSelection = (drawingIds: readonly string[]): void => {
     ensureDrawingPanelLayoutLoaded();
-    const availableIds = new Set(drawingsRef.current.map((drawing) => drawing.id));
-    const nextSelection = Object.freeze(
-      [...new Set(drawingIds)].filter((drawingId) => availableIds.has(drawingId)),
-    );
-    selectedDrawingIdsRef.current = nextSelection;
-    selectedDrawingIdRef.current = nextSelection[nextSelection.length - 1] ?? null;
-    setSelectedDrawingIds(nextSelection);
-    setSelectedDrawingId(selectedDrawingIdRef.current);
-    runtimeRef.current?.setSelectedDrawingIds(nextSelection);
+    runtimeRef.current?.setSelectedDrawingIds(drawingIds);
   };
   autoScaleRef.current = autoScale;
   priceScaleLockedRef.current = priceScaleLocked;
@@ -682,7 +673,7 @@ export function ChartCanvas({
             handleSelectedDrawingsNudge(direction);
           },
           onDrawingSelectionChange: (drawingIds: readonly string[]): void => {
-            updateDrawingSelection(drawingIds);
+            requestDrawingSelection(drawingIds);
           },
           onDrawingHover: (hit: ChartDrawingHit | null): void => {
             canvas.style.cursor = hit === null ? '' : hit.target === 'body' ? 'move' : 'crosshair';
@@ -692,7 +683,8 @@ export function ChartCanvas({
             setDrawingSelectionArea(selection);
           },
           onDrawingAreaSelectionComplete: (area: ChartDrawingSelectionArea): void => {
-            updateDrawingSelection(chartApi?.selectDrawingsWithinArea(area) ?? []);
+            ensureDrawingPanelLayoutLoaded();
+            chartApi?.execute({ type: 'select-drawings-within-area', area });
           },
           onDrawingGroupEdit: (gesture: CanvasDrawingGroupEditGesture): void => {
             chartApi?.execute({
@@ -872,27 +864,7 @@ export function ChartCanvas({
       undoDrawings: (): void => chartApi?.execute({ type: 'undo-drawings' }),
       redoDrawings: (): void => chartApi?.execute({ type: 'redo-drawings' }),
       clearDrawingHistory: (): void => chartApi?.execute({ type: 'clear-drawing-history' }),
-      setSelectedDrawingId: (drawingId: string | null): void => {
-        if (scene === null) {
-          return;
-        }
-
-        const drawingIds = drawingId === null ? [] : [drawingId];
-        scene = updateChartRenderScene(scene, {
-          selectedDrawingId: drawingId,
-          selectedDrawingIds: drawingIds,
-        });
-        chartApi?.execute({ type: 'set-drawing-selection', drawingIds });
-      },
       setSelectedDrawingIds: (drawingIds: readonly string[]): void => {
-        if (scene === null) {
-          return;
-        }
-
-        scene = updateChartRenderScene(scene, {
-          selectedDrawingId: drawingIds[drawingIds.length - 1] ?? null,
-          selectedDrawingIds: drawingIds,
-        });
         chartApi?.execute({ type: 'set-drawing-selection', drawingIds });
       },
       setChartType: (nextChartType: ChartType): void => {
@@ -1296,7 +1268,7 @@ export function ChartCanvas({
 
   const handleClearDrawings = (): void => {
     runtimeRef.current?.deleteDrawings(drawingsRef.current.map((drawing) => drawing.id));
-    updateDrawingSelection([]);
+    requestDrawingSelection([]);
   };
 
   const handleSelectDrawingFromObjectTree = (drawingId: string): void => {
@@ -1318,7 +1290,7 @@ export function ChartCanvas({
 
     drawingToolRef.current = 'cursor';
     setDrawingTool('cursor');
-    updateDrawingSelection([drawingId]);
+    requestDrawingSelection([drawingId]);
   };
 
   const handleToggleDrawingObjectVisibility = (drawingId: string): void => {
@@ -1333,7 +1305,7 @@ export function ChartCanvas({
     runtimeRef.current?.updateDrawingProperties([drawingId], { visible: nextVisible });
 
     if (!nextVisible) {
-      updateDrawingSelection(selectedDrawingIdsRef.current.filter((id) => id !== drawingId));
+      requestDrawingSelection(selectedDrawingIdsRef.current.filter((id) => id !== drawingId));
     }
   };
 
@@ -1349,7 +1321,7 @@ export function ChartCanvas({
     runtimeRef.current?.updateDrawingProperties([drawingId], { locked: nextLocked });
 
     if (nextLocked) {
-      updateDrawingSelection(selectedDrawingIdsRef.current.filter((id) => id !== drawingId));
+      requestDrawingSelection(selectedDrawingIdsRef.current.filter((id) => id !== drawingId));
     }
   };
 
@@ -1359,7 +1331,7 @@ export function ChartCanvas({
     }
 
     runtimeRef.current?.deleteDrawings([drawingId]);
-    updateDrawingSelection(selectedDrawingIdsRef.current.filter((id) => id !== drawingId));
+    requestDrawingSelection(selectedDrawingIdsRef.current.filter((id) => id !== drawingId));
   };
 
   const handleToggleAllDrawingsLock = (): void => {
@@ -1374,7 +1346,7 @@ export function ChartCanvas({
       currentDrawings.map((drawing) => drawing.id),
       { locked: nextLocked },
     );
-    updateDrawingSelection([]);
+    requestDrawingSelection([]);
   };
 
   const handleToggleDrawingsVisibility = (): void => {
@@ -1387,7 +1359,7 @@ export function ChartCanvas({
     runtimeRef.current?.setDrawingsVisible(nextVisible);
 
     if (!nextVisible) {
-      updateDrawingSelection([]);
+      requestDrawingSelection([]);
     }
   };
 
@@ -1399,7 +1371,7 @@ export function ChartCanvas({
     }
 
     runtimeRef.current?.deleteDrawings([...selectedIds]);
-    updateDrawingSelection([]);
+    requestDrawingSelection([]);
   };
 
   const handleDrawingUndo = (): void => runtimeRef.current?.undoDrawings();

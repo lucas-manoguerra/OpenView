@@ -79,6 +79,7 @@ export type ChartCommand =
   | Readonly<{ type: 'delete-drawings'; drawingIds: readonly string[] }>
   | Readonly<{ type: 'set-drawings-visible'; visible: boolean }>
   | Readonly<{ type: 'set-drawing-selection'; drawingIds: readonly string[] }>
+  | Readonly<{ type: 'select-drawings-within-area'; area: ChartDrawingSelectionArea }>
   | Readonly<{ type: 'set-drawing-hover'; hit: ChartDrawingHit | null }>
   | Readonly<{ type: 'set-drawing-edit-preview'; gesture: ChartDrawingEditPreview | null }>
   | Readonly<{ type: 'set-drawing-creation-preview'; drawing: ChartRenderDrawing | null }>
@@ -229,6 +230,17 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
         selectedDrawingIds: scene.selectedDrawingIds,
       }),
     );
+  };
+
+  const setDrawingSelection = (drawingIds: readonly string[]): void => {
+    const availableIds = new Set(scene.drawings.map((drawing) => drawing.id));
+    const selectedDrawingIds = Object.freeze(
+      [...new Set(drawingIds)].filter((id) => availableIds.has(id)),
+    );
+    const selectedDrawingId = selectedDrawingIds[selectedDrawingIds.length - 1] ?? null;
+    scene = updateChartRenderScene(scene, { selectedDrawingId, selectedDrawingIds });
+    render();
+    emitDrawingState();
   };
 
   const commitDrawing = (drawing: ChartRenderDrawing): void => {
@@ -517,14 +529,17 @@ export const createChart = (options: CreateChartOptions): ChartApi => {
       }
 
       if (command.type === 'set-drawing-selection') {
-        const availableIds = new Set(scene.drawings.map((drawing) => drawing.id));
-        const selectedDrawingIds = Object.freeze(
-          [...new Set(command.drawingIds)].filter((id) => availableIds.has(id)),
+        setDrawingSelection(command.drawingIds);
+        return;
+      }
+
+      if (command.type === 'select-drawings-within-area') {
+        const visibleDrawings = drawingsVisible
+          ? scene.drawings.filter((drawing) => drawing.visible !== false)
+          : [];
+        setDrawingSelection(
+          selectChartDrawingsWithinArea(command.area, visibleDrawings, scene.candles, scene.frame),
         );
-        const selectedDrawingId = selectedDrawingIds[selectedDrawingIds.length - 1] ?? null;
-        scene = updateChartRenderScene(scene, { selectedDrawingId, selectedDrawingIds });
-        render();
-        emitDrawingState();
         return;
       }
 
