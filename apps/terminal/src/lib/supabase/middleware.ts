@@ -3,6 +3,7 @@ import { createServerClient } from './server';
 
 export const PUBLIC_ROUTES = [
   '/login',
+  '/component-lab',
   '/register',
   '/auth/callback',
   '/forgot-password',
