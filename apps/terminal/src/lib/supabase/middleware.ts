@@ -5,6 +5,7 @@ export const PUBLIC_ROUTES = [
   '/login',
   '/register',
   '/auth/callback',
+  '/auth/signout',
   '/forgot-password',
   '/reset-password',
 ];
