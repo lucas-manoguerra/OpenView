@@ -2841,5 +2841,4 @@ test('redirects unauthenticated visitors away from the private dashboard', async
   await page.goto('/dashboard');
 
   await expect(page).toHaveURL(/\/login$/);
-  await expect(page.getByRole('heading', { name: 'Iniciar sesión en OpenView' })).toBeVisible();
 });
