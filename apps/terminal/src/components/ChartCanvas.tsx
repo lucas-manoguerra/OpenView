@@ -96,6 +96,15 @@ type ChartRuntime = Readonly<{
   invertPriceScale(): void;
   setIndicators(indicators: readonly ChartIndicatorSeries[]): void;
   setDrawings(drawings: readonly ChartRenderDrawing[]): void;
+  updateDrawingProperties(
+    drawingIds: readonly string[],
+    updates: Partial<Omit<ChartRenderDrawing, 'id' | 'type' | 'start' | 'end'>>,
+  ): void;
+  updateDrawingAnchor(
+    drawingId: string,
+    target: 'start' | 'end',
+    updates: Partial<ChartRenderDrawing['start']>,
+  ): void;
   addDrawing(drawing: ChartRenderDrawing): void;
   deleteDrawings(drawingIds: readonly string[]): void;
   setDrawingsVisible(visible: boolean): void;
@@ -905,12 +914,13 @@ export function ChartCanvas({
         publishScene(scene);
       },
       setDrawings: (nextDrawings: readonly ChartRenderDrawing[]): void => {
-        if (scene === null) {
-          return;
-        }
-
-        scene = updateChartRenderScene(scene, { drawings: nextDrawings });
         chartApi?.execute({ type: 'set-drawings', drawings: nextDrawings });
+      },
+      updateDrawingProperties: (drawingIds, updates): void => {
+        chartApi?.execute({ type: 'update-drawing-properties', drawingIds, updates });
+      },
+      updateDrawingAnchor: (drawingId, target, updates): void => {
+        chartApi?.execute({ type: 'update-drawing-anchor', drawingId, target, updates });
       },
       addDrawing: (drawing: ChartRenderDrawing): void => {
         chartApi?.execute({ type: 'add-drawing', drawing });
@@ -1241,10 +1251,7 @@ export function ChartCanvas({
     }
 
     if (selectedIds.size > 0) {
-      const nextDrawings = drawingsRef.current.map((drawing) =>
-        selectedIds.has(drawing.id) ? Object.freeze({ ...drawing, ...updates }) : drawing,
-      );
-      commitDrawingsRef.current(nextDrawings);
+      runtimeRef.current?.updateDrawingProperties([...selectedIds], updates);
     }
 
     const preferenceUpdates: Partial<
@@ -1287,26 +1294,7 @@ export function ChartCanvas({
       return;
     }
 
-    const selectedId = selectedDrawingIdRef.current;
-    const nextDrawings = drawingsRef.current.map((drawing) => {
-      if (drawing.id !== selectedId || (target === 'end' && drawing.end === null)) {
-        return drawing;
-      }
-
-      if (target === 'start') {
-        return Object.freeze({
-          ...drawing,
-          start: Object.freeze({ ...drawing.start, ...updates }),
-        });
-      }
-
-      return Object.freeze({
-        ...drawing,
-        end: Object.freeze({ ...drawing.end!, ...updates }),
-      });
-    });
-
-    commitDrawingsRef.current(nextDrawings);
+    runtimeRef.current?.updateDrawingAnchor(selectedDrawingIdRef.current, target, updates);
   };
 
   const handleQuickDrawingTemplateApply = (template: DrawingStyleTemplate): void => {

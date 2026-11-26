@@ -608,4 +608,60 @@ describe('chart public API', () => {
     expect(chart.exportSnapshot().scene.drawings).toMatchObject([drawing]);
     chart.destroy();
   });
+
+  it('owns drawing property and anchor updates with one undoable history entry', () => {
+    const { surface } = createSurface();
+    const chart = createChart({
+      surface,
+      initialScene: createScene(),
+      renderer: { scheduler: { requestFrame: () => 1, cancelFrame: () => {} } },
+    });
+    const drawing = {
+      id: 'drawing-property-update',
+      type: 'trend-line' as const,
+      start: { timestamp: 1, price: 2 },
+      end: { timestamp: 2, price: 3 },
+      color: '#ffffff',
+    };
+    const listener = vi.fn();
+    chart.subscribe(listener);
+    chart.execute({ type: 'set-drawings', drawings: [drawing] });
+    chart.execute({
+      type: 'update-drawing-properties',
+      drawingIds: [drawing.id],
+      updates: { color: '#ff0000', lineWidth: 2.5, locked: true },
+    });
+    expect(chart.exportSnapshot().scene.drawings[0]).toMatchObject({
+      color: '#ff0000',
+      lineWidth: 2.5,
+      locked: true,
+    });
+    chart.execute({
+      type: 'update-drawing-anchor',
+      drawingId: drawing.id,
+      target: 'end',
+      updates: { timestamp: 3, price: 4 },
+    });
+    expect(chart.exportSnapshot().scene.drawings[0]?.end).toEqual({ timestamp: 3, price: 4 });
+    expect(listener).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'drawing-state-changed' }),
+    );
+    chart.execute({ type: 'undo-drawings' });
+    expect(chart.exportSnapshot().scene.drawings[0]?.end).toEqual({ timestamp: 2, price: 3 });
+    chart.execute({ type: 'undo-drawings' });
+    expect(chart.exportSnapshot().scene.drawings[0]).toMatchObject({
+      color: '#ffffff',
+      lineWidth: 1.5,
+      locked: false,
+    });
+    expect(() =>
+      chart.execute({
+        type: 'update-drawing-anchor',
+        drawingId: drawing.id,
+        target: 'start',
+        updates: { price: Number.NaN },
+      }),
+    ).toThrow('Drawing anchor coordinates must be finite');
+    chart.destroy();
+  });
 });
