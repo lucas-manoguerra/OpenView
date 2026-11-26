@@ -41,7 +41,6 @@ import {
   type CanvasDrawingTool,
   attachCanvasResizeObserver,
   createChartFrame,
-  createChartInteractionController,
   createChartRenderScene,
   createChart,
   type ChartApi,
@@ -55,7 +54,6 @@ import {
   updateChartRenderScene,
   type CanvasResize,
   type CanvasResizeAdapter,
-  type ChartInteractionController,
   type ChartInteractionSnapshot,
   type ChartRenderCandle,
   type ChartRenderScene,
@@ -176,7 +174,7 @@ const getPriceRange = (candles: readonly ChartRenderCandle[]): NumericRange => {
 };
 
 const getPreservedPriceRange = (
-  previousScale: ChartInteractionController['snapshot']['frame']['priceScale'],
+  previousScale: ChartInteractionSnapshot['frame']['priceScale'],
   previousCandles: readonly ChartRenderCandle[],
   nextCandles: readonly ChartRenderCandle[],
 ): NumericRange => {
@@ -214,7 +212,7 @@ const getPreservedPriceRange = (
 
 const createFrame = (
   size: CanvasResize,
-  controller: ChartInteractionController | null,
+  interactionSnapshot: ChartInteractionSnapshot | null,
   candles: readonly ChartRenderCandle[],
   previousCandles: readonly ChartRenderCandle[],
   preservePriceZoom: boolean,
@@ -222,8 +220,8 @@ const createFrame = (
   fitContent = false,
   rightOffsetOverride?: number,
 ) => {
-  const previousScale = controller?.snapshot.frame.timeScale;
-  const previousPriceScale = controller?.snapshot.frame.priceScale;
+  const previousScale = interactionSnapshot?.frame.timeScale;
+  const previousPriceScale = interactionSnapshot?.frame.priceScale;
   const modeChanged =
     previousPriceScale !== undefined && previousPriceScale.mode !== priceScaleMode;
   const priceRange =
@@ -271,10 +269,10 @@ const createFrame = (
 };
 
 const getVisiblePriceRange = (
-  controller: ChartInteractionController,
+  interactionSnapshot: ChartInteractionSnapshot,
   candles: readonly ChartRenderCandle[],
 ): NumericRange => {
-  const { from, to } = controller.snapshot.frame.timeScale.visibleLogicalRange;
+  const { from, to } = interactionSnapshot.frame.timeScale.visibleLogicalRange;
   let minimum = Number.POSITIVE_INFINITY;
   let maximum = Number.NEGATIVE_INFINITY;
 
@@ -536,7 +534,6 @@ export function ChartCanvas({
 
     let chartApi: ChartApi | null = null;
     let currentCandles = renderDataRef.current.candles;
-    let controller: ChartInteractionController | null = null;
     let scene: ChartRenderScene | null = null;
     let lastSize: CanvasResize | null = null;
 
