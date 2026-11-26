@@ -187,9 +187,7 @@ export class SupabaseDrawingRepository implements DrawingRepository {
     const rows = result.data ?? [];
     return Object.freeze(
       rows
-        .filter(
-          (row) => row.timeframe_scope === null || row.timeframe_scope === scope.timeframe,
-        )
+        .filter((row) => row.timeframe_scope === null || row.timeframe_scope === scope.timeframe)
         .map(mapRow),
     );
   }
@@ -211,10 +209,7 @@ export class SupabaseDrawingRepository implements DrawingRepository {
         payload: drawing.payload as unknown as Json,
         z_order: drawing.zOrder,
       };
-      const result = await this.table()
-        .insert(values)
-        .select('*')
-        .maybeSingle();
+      const result = await this.table().insert(values).select('*').maybeSingle();
 
       if (result.error?.code === '23505') {
         const actualRevision = await this.findCurrentRevision(scope, drawing.drawingId);
@@ -250,11 +245,7 @@ export class SupabaseDrawingRepository implements DrawingRepository {
     throwIfError(result.error);
     if (result.data === null) {
       const actualRevision = await this.findCurrentRevision(scope, drawing.drawingId);
-      throw new DrawingRevisionConflictError(
-        drawing.drawingId,
-        expectedRevision,
-        actualRevision,
-      );
+      throw new DrawingRevisionConflictError(drawing.drawingId, expectedRevision, actualRevision);
     }
     return mapRow(result.data);
   }
