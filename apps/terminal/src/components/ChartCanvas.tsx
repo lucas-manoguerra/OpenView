@@ -722,6 +722,11 @@ export function ChartCanvas({
             runtimeRef.current?.deleteDrawings([drawingId]);
           },
           onDrawingComplete: (gesture: CanvasDrawingGesture): void => {
+            canvas.dataset['drawingGestureReceived'] = gesture.type;
+            canvas.dataset['drawingGestureIndexes'] = [
+              gesture.start.logicalIndex,
+              gesture.end?.logicalIndex ?? 'click',
+            ].join(',');
             const startTimestamp = getTimestampAtLogicalIndex(
               gesture.start.logicalIndex,
               currentCandles,
@@ -732,6 +737,11 @@ export function ChartCanvas({
                 : getTimestampAtLogicalIndex(gesture.end.logicalIndex, currentCandles);
 
             if (startTimestamp === null || (gesture.end !== null && endTimestamp === null)) {
+              canvas.dataset['drawingCreationOutcome'] = 'timestamp-conversion-rejected';
+              canvas.dataset['drawingCreationTimestamps'] = [
+                startTimestamp ?? 'null',
+                endTimestamp ?? 'null',
+              ].join(',');
               return;
             }
 
@@ -752,6 +762,8 @@ export function ChartCanvas({
               ...drawingToolPreferencesRef.current[gesture.type],
             });
             runtimeRef.current?.addDrawing(drawing);
+            canvas.dataset['drawingCreationOutcome'] = 'add-drawing-dispatched';
+            canvas.dataset['drawingCreationTimestamps'] = [startTimestamp, endTimestamp ?? 'click'].join(',');
           },
           onDrawingToolExit: (): void => {
             drawingToolRef.current = 'cursor';
