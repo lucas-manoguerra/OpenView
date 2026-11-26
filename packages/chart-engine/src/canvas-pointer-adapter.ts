@@ -146,14 +146,18 @@ export const attachCanvasPointerEvents = (
 
   const releaseActivePointer = (): void => {
     if (activePointerId === null) {
+      setDiagnostic('drawingPointerActiveAfterRelease', 'null');
       return;
     }
 
-    if (canvas.hasPointerCapture(activePointerId)) {
-      canvas.releasePointerCapture(activePointerId);
+    const releasedPointerId = activePointerId;
+    if (canvas.hasPointerCapture(releasedPointerId)) {
+      canvas.releasePointerCapture(releasedPointerId);
     }
 
     activePointerId = null;
+    setDiagnostic('drawingPointerReleasedId', String(releasedPointerId));
+    setDiagnostic('drawingPointerActiveAfterRelease', 'null');
   };
 
   const setDiagnostic = (key: string, value: string): void => {
@@ -161,7 +165,10 @@ export const attachCanvasPointerEvents = (
   };
 
   const handlePointerDown = (event: PointerEvent): void => {
+    setDiagnostic('drawingPointerDownEventId', String(event.pointerId));
+    setDiagnostic('drawingPointerActiveAtDown', String(activePointerId));
     if (activePointerId !== null) {
+      setDiagnostic('drawingPointerDownOutcome', 'blocked-active-pointer');
       return;
     }
 
@@ -169,6 +176,7 @@ export const attachCanvasPointerEvents = (
     const drawingTool = options.getDrawingTool?.() ?? 'cursor';
 
     if (event.button !== 0) {
+      setDiagnostic('drawingPointerDownOutcome', 'ignored-non-primary-button');
       return;
     }
 
@@ -245,6 +253,7 @@ export const attachCanvasPointerEvents = (
         position.y <= plotArea.y + plotArea.height;
 
       if (!insidePlot) {
+        setDiagnostic('drawingPointerDownOutcome', 'ignored-outside-plot');
         return;
       }
 
@@ -255,6 +264,7 @@ export const attachCanvasPointerEvents = (
       activeDrawingTool = drawingTool;
       activePointerId = event.pointerId;
       setDiagnostic('drawingPointerDownId', String(event.pointerId));
+      setDiagnostic('drawingPointerDownOutcome', 'drawing-started');
       setDiagnostic('drawingPointerTool', drawingTool);
       event.preventDefault();
       canvas.setPointerCapture(event.pointerId);
